@@ -4,7 +4,7 @@
 
 ## Status
 - **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System „Quiet Ink“
-- **Aktuelle Phase:** 3b erledigt (PR offen). Als Nächstes: Rest der Gesamt-Überarbeitung (siehe „Offene Befunde“), dann Phase 4 – Details & Trailer
+- **Aktuelle Phase:** 4 (Detailseite) umgesetzt, PR offen. 3b ist gemergt. Als Nächstes: Rest der Gesamt-Überarbeitung (siehe „Offene Befunde“), dann Phase 4 – Details & Trailer
 - **Nächster konkreter Schritt:** Befunde in `docs/reviews/backend-findings-partial.md` prüfen und die High-Punkte umsetzen (Erst-Admin-Bootstrap absichern, gemeinsamer Titel-Katalog prüfen), restliche Review-Bereiche (Edge Functions, CI, Produkt, Doku) günstig selbst durchgehen; danach Phase 4.
 
 ## Repo-Überblick
@@ -16,7 +16,7 @@ tests/*.test.{js,ts}             auth (Einladungen), isolation (RLS), tmdb
 supabase/config.toml             CLI-Config; Functions mit verify_jwt=false (Login-Prüfung im Code)
 supabase/migrations/*.sql        Schema, RLS, Trigger, RPCs – nur additive Migrationen!
 supabase/functions/_shared/      tmdb.ts (testbare Logik), auth.ts (requireUser), cors.ts
-supabase/functions/tmdb/         Edge Function: {action:'search'|'title'} → TMDb (de-CH), Key = Secret TMDB_API_KEY
+supabase/functions/tmdb/         Edge Function: {action:'search'|'title'|'details'} → TMDb (de-CH), Key = Secret TMDB_API_KEY; details 24 h in tmdb_cache
 supabase/functions/imdb/         Edge Function: start (CSV parsen, Job anlegen) / continue (Batch à 40) / resolve (manuelle Zuordnung) / export (IMDb-CSV)
 supabase/functions/_shared/      csv.ts, imdb.ts (Parser, Merge-Regeln, Export), importJob.ts (Batch mit injizierten Deps), admin.ts (Service-Role-Client)
 frontend/                        React 18 + Vite 5 + react-router 6 + supabase-js 2.45.4
@@ -27,7 +27,8 @@ frontend/                        React 18 + Vite 5 + react-router 6 + supabase-j
   src/hooks/                     useWatchlist (Query + Mutationen), useTitleSearch, useUrlView, useImportRunner, useDocumentTitle
   src/lib/api/                   watchlist, tmdb, imports, profile, invites, account, auth (einziger Ort für Supabase-Aufrufe)
   src/lib/                       watchlistView (Filter/Sortierung, rein), watchlistRules (Spiegel des DB-Triggers), importRunner, queryClient, errors
-  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist, ImportExport, NotFound
+  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist, ImportExport, TitleDetails, NotFound
+  src/components/details/        DetailActions, Trailer, StreamingProviders, CastList, SimilarTitles (Detailseite)
   src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions, ImportProgress, NotFoundResolver, Skeleton
   src/lib/                       supabase, errors, labels, watchlist, imdb, download
   src/styles/                    tokens.css, base.css, components.css, motion.css (index.css importiert alles + Fonts)
@@ -94,9 +95,12 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Router mit Lazy-Loading, Fehlerseite, 404-Seite, Scroll-Wiederherstellung, Seitentitel, Fokus auf h1; Login: Rücksprung inkl. Query, abgelaufene Mail-Links, Bestätigungsmail erneut senden, Passwort festlegen für Dashboard-Einladungen
   - [x] Edge Functions liefern `code` statt Admin-Texte; Export über 1000 Titel, IMDb-ID-Nachschlag parallel; Import: Gesehen-Datum = IMDb-Bewertungsdatum; DB: Bewertung von „Geplant“ → „Gesehen“
   - [x] ESLint (react-hooks), Komponenten-Tests (jsdom + Testing Library), CI prüft Pull Requests (Lint, Tests, Build, Deno-Typcheck) – Root 86, Frontend 33 Tests grün
-- [ ] Phase 4 – Details & Trailer
-  - Detailseite (Poster, Backdrop, Beschreibung, Genres, Laufzeit, TMDb-Bewertung, Cast & Crew, Trailer via youtube-nocookie, Streaming CH Flatrate/Leihen/Kaufen, Ähnliche Titel, Watchlist/Bewerten), Cache 24 h
-  - Soundtrack-Album verlinken, sobald Phase 8 (Musik) steht
+- [x] **Phase 4 – Details & Trailer** (PR offen)
+  - [x] TMDb-Function: Action `details` (ein Aufruf mit `append_to_response`, englische Beschreibung als Fallback), Cache 24 h in `tmdb_cache` (`details:movie:603:de-CH`), Cache-Fehler brechen nichts
+  - [x] Detailseite `/title/:mediaType/:tmdbId`: Poster, Backdrop, Beschreibung, Genres, Laufzeit/Staffeln, TMDb-Bewertung, Regie/Drehbuch bzw. Idee, Cast (12), IMDb-Link, Merken/Gesehen bzw. Status + Bewertung
+  - [x] Trailer (youtube-nocookie, lädt erst beim Klick), Streaming CH (Im Abo inkl. gratis/Werbung, Leihen, Kaufen, Quelle JustWatch), Ähnliche Titel (TMDb-Empfehlungen, Fallback „similar“, max. 12) mit Markierung „in deiner Liste“
+  - [x] Titel in Watchlist und Suche verlinken auf die Detailseite; Tests Root 92, Frontend 38 grün
+  - [ ] Soundtrack-Album verlinken, sobald Phase 8 (Musik) steht
 - [ ] Phase 5 – Serien-Tracking (pg_cron 07:15 Europe/Zurich → Edge Function)
   - Episoden abhaken, „bis hier gesehen“, Up next, Kalender 30 Tage, neue Staffeln → Benachrichtigung
   - **Binge-Rechner:** „Bei 2 Folgen/Tag bist du am 3.11. durch“

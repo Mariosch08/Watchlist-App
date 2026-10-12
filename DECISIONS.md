@@ -54,3 +54,9 @@
 **D25 – Regel „Bewertung heisst gesehen“** lebt im DB-Trigger und wird im Frontend (`watchlistRules.js`) nur für die optimistische Anzeige gespiegelt. Gilt nur für „Geplant“; laufende Serien bleiben offen.
 
 **D26 – Edge Functions senden `{ error, code }`**; das Frontend übersetzt Codes in deutsche Texte. Freunde sehen keine Admin-Hinweise mehr.
+
+**D27 – Detailseite mit einem TMDb-Aufruf** (Phase 4): `details` holt Details, Credits (Serien: `aggregate_credits`), Videos, `watch/providers`, Empfehlungen und `similar` per `append_to_response` und liefert ein schlankes Objekt. Ergebnis 24 h in `tmdb_cache` (für alle Nutzer gleich, keine persönlichen Daten); fällt der Cache aus, wird direkt TMDb gefragt. Fehlt die deutsche Beschreibung, kommt die englische.
+
+**D28 – Trailer erst nach Klick:** Bis „Trailer abspielen“ gedrückt wird, geht keine Anfrage an YouTube; danach `youtube-nocookie.com`. Nur YouTube-Keys mit sicherem Zeichensatz werden übernommen. Reihenfolge: Trailer vor Teaser, Deutsch vor Englisch, offiziell bevorzugt.
+
+**D29 – „Ähnliche Titel“ = TMDb-Empfehlungen** (was andere auch geschaut haben), Fallback auf das genrebasierte `similar`, wenn es keine Empfehlungen gibt. Streaming CH: Gratis- und Werbe-Angebote zählen zu „Im Abo“; TMDb verlangt die Quellenangabe JustWatch.

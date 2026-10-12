@@ -88,6 +88,133 @@ export function rankResults(query: string, movies: any[], series: any[]) {
   return scored.map((x) => x.t);
 }
 
+// ---- Detail page (Phase 4) ----------------------------------------------------------
+
+export const DETAILS_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_CAST = 12;
+const MAX_SIMILAR = 12;
+const YOUTUBE_KEY = /^[A-Za-z0-9_-]{6,20}$/;
+
+type Provider = { id: number; name: string; logo_path: string | null };
+
+// Best YouTube trailer: official trailers first, German before English, then teasers.
+export function pickTrailer(videos: any[] | undefined) {
+  const candidates = (videos ?? []).filter((v) => v?.site === 'YouTube' && YOUTUBE_KEY.test(v.key ?? ''));
+  const score = (v: any) =>
+    (v.type === 'Trailer' ? 100 : v.type === 'Teaser' ? 50 : 0) +
+    (v.iso_639_1 === 'de' ? 20 : v.iso_639_1 === 'en' ? 10 : 0) +
+    (v.official ? 5 : 0);
+  const best = candidates.filter((v) => score(v) >= 50).sort((a, b) => score(b) - score(a))[0];
+  return best ? { key: best.key as string, name: (best.name as string) ?? null, language: best.iso_639_1 ?? null } : null;
+}
+
+const toProviders = (...lists: any[][]): Provider[] => {
+  const seen = new Set<number>();
+  return lists
+    .flat()
+    .filter((p) => p && Number.isInteger(p.provider_id))
+    .sort((a, b) => (a.display_priority ?? 999) - (b.display_priority ?? 999))
+    .filter((p) => !seen.has(p.provider_id) && seen.add(p.provider_id))
+    .map((p) => ({ id: p.provider_id, name: p.provider_name ?? '', logo_path: p.logo_path ?? null }));
+};
+
+// Streaming offers in Switzerland. Free and ad-supported offers count as flatrate (nothing to pay).
+export function normalizeProviders(raw: any) {
+  const ch = raw?.results?.[WATCH_REGION];
+  if (!ch) return { link: null, flatrate: [], rent: [], buy: [] };
+  return {
+    link: typeof ch.link === 'string' ? ch.link : null,
+    flatrate: toProviders(ch.flatrate ?? [], ch.free ?? [], ch.ads ?? []),
+    rent: toProviders(ch.rent ?? []),
+    buy: toProviders(ch.buy ?? []),
+  };
+}
+
+function normalizeCast(raw: Record<string, any>, mediaType: MediaType) {
+  const credits = mediaType === 'tv' ? (raw.aggregate_credits ?? raw.credits) : raw.credits;
+  return (credits?.cast ?? []).slice(0, MAX_CAST).map((c: any) => ({
+    id: c.id,
+    name: c.name ?? '',
+    character: c.character ?? c.roles?.[0]?.character ?? null,
+    profile_path: c.profile_path ?? null,
+  }));
+}
+
+// Key people: creators/directors first, then writers. Names only, deduplicated.
+function normalizeCrew(raw: Record<string, any>, mediaType: MediaType) {
+  const crew: any[] = raw.credits?.crew ?? [];
+  const names = (jobs: string[]) => [...new Set(crew.filter((c) => jobs.includes(c.job)).map((c) => c.name as string))].slice(0, 3);
+  if (mediaType === 'tv') {
+    const creators = (raw.created_by ?? []).map((c: any) => c.name as string).slice(0, 3);
+    return creators.length ? [{ job: 'Idee', names: creators }] : [];
+  }
+  return [
+    { job: 'Regie', names: names(['Director']) },
+    { job: 'Drehbuch', names: names(['Screenplay', 'Writer']) },
+  ].filter((g) => g.names.length > 0);
+}
+
+// Recommendations (what people also watched) are better than TMDb's genre-based "similar";
+// "similar" is only the fallback for titles without recommendations.
+function normalizeSimilar(raw: Record<string, any>, mediaType: MediaType) {
+  const recs = raw.recommendations?.results ?? [];
+  const list = recs.length > 0 ? recs : (raw.similar?.results ?? []);
+  return list
+    .map((r: any) => ({ r, type: MEDIA_TYPES.includes(r.media_type) ? (r.media_type as MediaType) : mediaType }))
+    .filter(({ r }: any) => r && Number.isInteger(r.id) && r.id !== raw.id && !r.adult)
+    .slice(0, MAX_SIMILAR)
+    .map(({ r, type }: any) => normalizeTitle(r, type));
+}
+
+export function normalizeDetails(raw: Record<string, any>, mediaType: MediaType, fallbackOverview: string | null = null) {
+  return {
+    ...normalizeTitle(raw, mediaType),
+    backdrop_path: raw.backdrop_path ?? null,
+    overview: raw.overview || fallbackOverview || null,
+    tagline: raw.tagline || null,
+    genres: (raw.genres ?? []).map((g: any) => g.name as string).filter(Boolean),
+    runtime: mediaType === 'movie' ? (raw.runtime || null) : (raw.episode_run_time?.[0] ?? null),
+    number_of_seasons: raw.number_of_seasons ?? null,
+    number_of_episodes: raw.number_of_episodes ?? null,
+    imdb_id: raw.imdb_id ?? raw.external_ids?.imdb_id ?? null,
+    cast: normalizeCast(raw, mediaType),
+    crew: normalizeCrew(raw, mediaType),
+    trailer: pickTrailer(raw.videos?.results),
+    providers: normalizeProviders(raw['watch/providers']),
+    similar: normalizeSimilar(raw, mediaType),
+  };
+}
+
+// One TMDb request for the whole page (append_to_response); a second one only if there is no German overview.
+export async function fetchDetails(mediaType: MediaType, id: number, token: string, fetchImpl: Fetch) {
+  const credits = mediaType === 'tv' ? 'aggregate_credits' : 'credits';
+  const raw = await tmdbGet(
+    `/${mediaType}/${id}`,
+    {
+      language: TMDB_LANGUAGE,
+      append_to_response: `${credits},videos,watch/providers,recommendations,similar,external_ids`,
+      include_video_language: 'de,en,null',
+    },
+    token,
+    fetchImpl,
+  );
+  if (!raw) return null;
+  let fallback: string | null = null;
+  if (!raw.overview) {
+    const en = await tmdbGet(`/${mediaType}/${id}`, { language: TMDB_FALLBACK_LANGUAGE }, token, fetchImpl);
+    fallback = en?.overview || null;
+  }
+  return normalizeDetails(raw, mediaType, fallback);
+}
+
+// Optional cache (tmdb_cache via service role). Failures never break the request.
+export type DetailsCache = {
+  get: (key: string) => Promise<unknown | null>;
+  set: (key: string, data: unknown, ttlMs: number) => Promise<void>;
+};
+
+export const detailsCacheKey = (mediaType: MediaType, id: number) => `details:${mediaType}:${id}:${TMDB_LANGUAGE}`;
+
 function intParam(value: unknown, name: string, min: number, max: number, fallback?: number): number {
   if (value === undefined && fallback !== undefined) return fallback;
   const n = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
@@ -100,8 +227,8 @@ function mediaTypeParam(value: unknown): MediaType {
   return value as MediaType;
 }
 
-// Request body: { action: 'search', query, page? } | { action: 'title', media_type, tmdb_id }
-export async function handleTmdbRequest(body: any, token: string | undefined, fetchImpl: Fetch) {
+// Request body: { action: 'search', query, page? } | { action: 'title' | 'details', media_type, tmdb_id }
+export async function handleTmdbRequest(body: any, token: string | undefined, fetchImpl: Fetch, cache?: DetailsCache) {
   try {
     if (!token) throw new HttpError(500, 'TMDB_API_KEY is not configured', 'TMDB_NOT_CONFIGURED');
     if (!body || typeof body !== 'object') throw new HttpError(400, 'Invalid body', 'INVALID_INPUT');
@@ -125,6 +252,17 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         const raw = await tmdbGet(`/${mediaType}/${id}`, { language: TMDB_LANGUAGE }, token, fetchImpl);
         if (!raw) throw new HttpError(404, 'Not found', 'NOT_FOUND');
         return { status: 200, body: normalizeTitle(raw, mediaType) };
+      }
+      case 'details': {
+        const mediaType = mediaTypeParam(body.media_type);
+        const id = intParam(body.tmdb_id, 'tmdb_id', 1, 1e9);
+        const key = detailsCacheKey(mediaType, id);
+        const cached = await cache?.get(key).catch((err) => (console.error('cache read', err), null));
+        if (cached) return { status: 200, body: cached };
+        const details = await fetchDetails(mediaType, id, token, fetchImpl);
+        if (!details) throw new HttpError(404, 'Not found', 'NOT_FOUND');
+        await cache?.set(key, details, DETAILS_TTL_MS).catch((err) => console.error('cache write', err));
+        return { status: 200, body: details };
       }
       default:
         throw new HttpError(400, 'Unknown action', 'INVALID_INPUT');

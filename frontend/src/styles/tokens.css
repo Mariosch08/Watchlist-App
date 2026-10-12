@@ -113,3 +113,10 @@
     --color-danger-soft: #3a2422;
   }
 }
+
+/* Detail page sizes (Phase 4). */
+:root {
+  --poster-large-w: 120px;
+  --avatar-size: 48px;
+  --provider-logo: 32px;
+}

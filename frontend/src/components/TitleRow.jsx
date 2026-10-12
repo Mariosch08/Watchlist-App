@@ -1,8 +1,9 @@
 import { Star } from 'lucide-react';
 import { memo } from 'react';
-import { POSTER_BASE, TYPE_LABEL } from '../lib/labels.js';
+import { Link } from 'react-router-dom';
+import { detailPath, POSTER_BASE, TYPE_LABEL } from '../lib/labels.js';
 
-// One movie/series row: poster, title, meta line (type, year, rating, original title) and actions.
+// One movie/series row: poster, title (links to the detail page), meta line (type, year, rating, original title) and actions.
 function TitleRow({ item, busy = false, extraMeta = null, children }) {
   const year = item.release_date?.slice(0, 4);
   const score = Number(item.vote_average);
@@ -15,7 +16,9 @@ function TitleRow({ item, busy = false, extraMeta = null, children }) {
         <span className="poster" aria-hidden="true" />
       )}
       <div className="title-main">
-        <span className="title-name">{item.title}</span>
+        <Link className="title-name title-link" to={detailPath(item)}>
+          {item.title}
+        </Link>
         <div className="meta">
           <span>{TYPE_LABEL[item.media_type]}</span>
           {year && <span>{year}</span>}

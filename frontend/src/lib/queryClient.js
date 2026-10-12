@@ -22,6 +22,7 @@ export const queryClient = createQueryClient();
 export const queryKeys = {
   watchlist: (userId) => ['watchlist', userId],
   search: (query) => ['search', query],
+  details: (mediaType, tmdbId) => ['details', mediaType, tmdbId],
   profile: (userId) => ['profile', userId],
   invites: (userId) => ['invites', userId],
   importJobs: (userId) => ['importJobs', userId],
