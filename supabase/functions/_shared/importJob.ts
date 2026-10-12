@@ -1,4 +1,4 @@
-// Processes an IMDb import job in small batches (each Edge Function call handles one batch,
+// Processes an import job (IMDb, Letterboxd, Trakt) in small batches (each Edge Function call handles one batch,
 // the client keeps calling "continue" until done). All I/O is injected for testing.
 import { ExistingEntry, ImportRow, MediaType, mergeImportRow } from './imdb.ts';
 
@@ -18,6 +18,8 @@ export interface ImportDeps {
   isTombstoned(mediaType: MediaType, tmdbId: number): Promise<boolean>;
   insert(title: MatchedTitle, values: Record<string, unknown>): Promise<void>;
   update(mediaType: MediaType, tmdbId: number, values: Record<string, unknown>): Promise<void>;
+  // Called for every matched row (e.g. to write Letterboxd diary entries).
+  afterApply?(row: ImportRow, title: MatchedTitle): Promise<void>;
 }
 
 export interface BatchResult {
@@ -72,4 +74,5 @@ export async function applyRow(row: ImportRow, match: MatchedTitle, deps: Import
   } else {
     result.skipped++;
   }
+  await deps.afterApply?.(row, match);
 }

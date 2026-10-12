@@ -30,6 +30,7 @@ const DB_RAISES = {
 // Machine-readable codes returned by our Edge Functions ({ error, code }).
 const FUNCTION_CODES = {
   NOT_IMDB_CSV: 'Das ist keine IMDb-CSV-Datei (die Spalte „Const“ fehlt).',
+  UNSUPPORTED_FILE: 'Diese Datei kenne ich nicht. Unterstützt werden Exporte von IMDb (CSV), Letterboxd (CSV) und Trakt (JSON).',
   CSV_TOO_LARGE: 'Die Datei ist zu gross (max. 5 MB).',
   TOO_MANY_ROWS: 'Die Datei hat zu viele Zeilen (max. 20 000).',
   TMDB_NOT_CONFIGURED: 'Die Filmdatenbank ist noch nicht eingerichtet (TMDb-Schlüssel fehlt).',

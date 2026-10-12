@@ -31,6 +31,7 @@ export const routes = [
           { index: true, lazy: page(() => import('./pages/Watchlist.jsx')) },
           { path: 'import', lazy: page(() => import('./pages/ImportExport.jsx')) },
           { path: 'discover', lazy: page(() => import('./pages/Discover.jsx')) },
+          { path: 'diary', lazy: page(() => import('./pages/Diary.jsx')) },
           { path: 'friends', lazy: page(() => import('./pages/Friends.jsx')) },
           { path: 'lists', lazy: page(() => import('./pages/Lists.jsx')) },
           { path: 'lists/:listId', lazy: page(() => import('./pages/ListDetail.jsx')) },

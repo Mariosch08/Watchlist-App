@@ -10,7 +10,7 @@ import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { useImportRunner } from '../hooks/useImportRunner.js';
 import { exportJson } from '../lib/api/account.js';
-import { continueImport, dismissNotFound, exportImdbCsv, fetchRecentJobs, resolveNotFound, startImport } from '../lib/api/imports.js';
+import { continueImport, dismissNotFound, exportImdbCsv, fetchRecentJobs, resolveNotFound, rowRef, startImport } from '../lib/api/imports.js';
 import { errorMessage } from '../lib/errors.js';
 import { ensureImportRunning, updateImportJob } from '../lib/importRunner.js';
 import { queryKeys } from '../lib/queryClient.js';
@@ -67,15 +67,23 @@ function ImportCard() {
   return (
     <section className="card" aria-labelledby="import-title">
       <h1 id="import-title" tabIndex={-1}>
-        IMDb importieren
+        Importieren
       </h1>
-      <ol className="steps">
+      <ul className="steps">
         <li>
-          Auf <a href="https://www.imdb.com" target="_blank" rel="noreferrer">imdb.com</a> anmelden und „Your ratings“ oder „Your watchlist“ öffnen.
+          <strong>IMDb:</strong> Auf <a href="https://www.imdb.com" target="_blank" rel="noreferrer">imdb.com</a> „Your ratings“ oder „Your watchlist“ öffnen →
+          „Export“ → unter „Your exports“ herunterladen.
         </li>
-        <li>Auf „Export“ klicken. Die Datei erscheint unter „Your exports“ und lässt sich dort herunterladen.</li>
-        <li>CSV hier auswählen. Bewertete Titel werden als „Gesehen“ übernommen, Watchlist-Titel als „Geplant“.</li>
-      </ol>
+        <li>
+          <strong>Letterboxd:</strong> Settings → Data → „Export your data“, ZIP entpacken und <code>diary.csv</code>, <code>ratings.csv</code>,{' '}
+          <code>watched.csv</code> oder <code>watchlist.csv</code> wählen. Das Tagebuch landet auch in deinem <Link to="/diary">Tagebuch</Link>.
+        </li>
+        <li>
+          <strong>Trakt:</strong> Settings → Data → Export, dann <code>ratings-movies.json</code>, <code>ratings-shows.json</code>, <code>watched-movies.json</code>{' '}
+          oder <code>watchlist-*.json</code> wählen.
+        </li>
+      </ul>
+      <p className="muted">Bewertete und gesehene Titel werden als „Gesehen“ übernommen, Watchlist-Titel als „Geplant“.</p>
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -84,8 +92,8 @@ function ImportCard() {
         }}
       >
         <label>
-          IMDb-CSV-Datei
-          <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} disabled={busy} />
+          Export-Datei (CSV oder JSON)
+          <input type="file" accept=".csv,.json,text/csv,application/json" onChange={(e) => setFile(e.target.files?.[0] ?? null)} disabled={busy} />
         </label>
         <button className="btn-primary" disabled={busy || !file}>
           {start.isPending ? 'Wird hochgeladen …' : running ? 'Import läuft …' : 'Datei importieren'}
@@ -123,7 +131,7 @@ function UnresolvedCard() {
   if (rows.length === 0) return null;
 
   const act = async (row, fn, success) => {
-    setPending(`${row.jobId}:${row.imdb_id}`);
+    setPending(`${row.jobId}:${rowRef(row)}`);
     try {
       replaceJob(await fn());
       toast.success(success);
@@ -145,11 +153,11 @@ function UnresolvedCard() {
       <ul className="list">
         {rows.map((row) => (
           <NotFoundResolver
-            key={`${row.jobId}:${row.imdb_id}`}
+            key={`${row.jobId}:${rowRef(row)}`}
             row={row}
-            pending={pending === `${row.jobId}:${row.imdb_id}`}
-            onResolve={(match) => act(row, () => resolveNotFound(row.jobId, row.imdb_id, match), `„${match.title}“ übernommen.`)}
-            onDismiss={() => act(row, () => dismissNotFound(row.jobId, row.imdb_id), `„${row.title}“ ignoriert.`)}
+            pending={pending === `${row.jobId}:${rowRef(row)}`}
+            onResolve={(match) => act(row, () => resolveNotFound(row.jobId, rowRef(row), match), `„${match.title}“ übernommen.`)}
+            onDismiss={() => act(row, () => dismissNotFound(row.jobId, rowRef(row)), `„${row.title}“ ignoriert.`)}
           />
         ))}
       </ul>

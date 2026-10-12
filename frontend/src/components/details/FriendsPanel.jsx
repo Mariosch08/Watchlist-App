@@ -96,7 +96,7 @@ export default function FriendsPanel({ details }) {
           }}
         >
           <label>
-            Zu einer gemeinsamen Liste
+            Zu einer Liste oder Sammlung
             <select value={list} onChange={(e) => setList(e.target.value)}>
               <option value="">Liste wählen …</option>
               {lists.data.map((l) => (

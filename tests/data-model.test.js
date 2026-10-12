@@ -161,7 +161,7 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(6);
+    expect(data.version).toBe(7);
     expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
@@ -371,7 +371,7 @@ describe('music (phase 8)', () => {
       asUser(db, b, "insert into public.spotify_connections (user_id, spotify_user_id, refresh_token_enc) values ($1, 'x', 'y')", [b]),
     ).rejects.toThrow(/permission denied/);
     const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
-    expect(exported.version).toBe(6);
+    expect(exported.version).toBe(7);
     expect(exported.spotify).toMatchObject({ display_name: 'Mario' });
     expect(JSON.stringify(exported)).not.toContain('v1.secret');
     expect(exported.music_artists).toHaveLength(1);
@@ -396,5 +396,29 @@ describe('music (phase 8)', () => {
     await asUser(db, a, "update public.user_settings set lastfm_username = 'mario_08' where user_id = $1", [a]);
     await expect(asUser(db, a, "update public.user_settings set lastfm_username = '1; drop' where user_id = $1", [a])).rejects.toThrow(/check constraint/);
     await expect(asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'concert', 'Konzert')", [a])).resolves.toBeDefined();
+  });
+});
+
+describe('diary (phase 10)', () => {
+  it('is private, validated and deduplicates Letterboxd imports only', async () => {
+    await asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, place, rating) values ('movie', 603, 'Matrix', '2026-10-01', 'cinema', 9)");
+    await asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, rewatch) values ('movie', 603, 'Matrix', '2026-10-01', true)");
+    expect(await rows(b, 'select * from public.diary_entries')).toEqual([]);
+    await expect(asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, place) values ('movie', 1, 'x', '2026-10-01', 'moon')")).rejects.toThrow(
+      /check constraint/,
+    );
+    await expect(
+      asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, import_ref) values ('movie', 1, 'x', '2026-10-01', 'letterboxd')"),
+    ).rejects.toThrow(/permission denied/);
+    await asUser(db, a, "update public.diary_entries set note = 'Mit Popcorn' where rewatch");
+    await asUser(db, b, 'delete from public.diary_entries');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.diary_entries')).rows[0].n).toBe(2);
+
+    const lb = "insert into public.diary_entries (user_id, media_type, tmdb_id, title, watched_on, import_ref) values ($1, 'movie', 603, 'Matrix', '2026-10-01', 'letterboxd') on conflict do nothing";
+    await asAdmin(db, lb, [a]);
+    await asAdmin(db, lb, [a]);
+    expect((await asAdmin(db, 'select count(*)::int as n from public.diary_entries')).rows[0].n).toBe(3);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.diary).toHaveLength(3);
   });
 });

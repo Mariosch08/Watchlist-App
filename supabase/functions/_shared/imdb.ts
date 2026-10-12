@@ -2,11 +2,28 @@
 // users export CSVs from imdb.com (ratings, watchlist, lists).
 import { parseCsvObjects, toCsv } from './csv.ts';
 
-export type ImportKind = 'imdb_ratings' | 'imdb_watchlist' | 'imdb_list';
+export type ImportKind =
+  | 'imdb_ratings'
+  | 'imdb_watchlist'
+  | 'imdb_list'
+  | 'letterboxd_diary'
+  | 'letterboxd_ratings'
+  | 'letterboxd_watchlist'
+  | 'trakt_ratings'
+  | 'trakt_watchlist'
+  | 'trakt_watched';
+export type ImportSource = 'imdb' | 'letterboxd' | 'trakt';
 export type MediaType = 'movie' | 'tv';
 
 export interface ImportRow {
-  imdb_id: string;
+  imdb_id: string; // '' when the source has none (Letterboxd)
+  ref?: string; // stable id for "not found" handling when there is no IMDb id ('lb:…', 'trakt:…')
+  tmdb_id?: number | null; // known TMDb id (Trakt)
+  media_hint?: MediaType | null;
+  source?: ImportSource;
+  status_hint?: 'planned' | 'completed' | null; // watched without rating → completed
+  watched_at?: string | null; // known viewing date
+  diary?: { watched_on: string; rewatch: boolean; rating: number | null } | null;
   title: string;
   title_type: string;   // normalised, e.g. "movie", "tvseries"
   year: number | null;
@@ -21,7 +38,8 @@ export interface ParsedImport {
   skipped: { imdb_id: string; title: string; reason: string }[];
 }
 
-const IMDB_ID = /^tt\d{5,10}$/;
+export const IMDB_ID = /^tt\d{5,10}$/;
+export const rowRef = (r: Pick<ImportRow, 'ref' | 'imdb_id'>) => r.ref ?? r.imdb_id;
 const UNSUPPORTED_TYPES = new Set(['tvepisode', 'videogame', 'podcastseries', 'podcastepisode', 'musicvideo']);
 export const SERIES_TYPES = new Set(['tvseries', 'tvminiseries']);
 
@@ -113,22 +131,23 @@ export type MergeDecision =
 export function mergeImportRow(row: ImportRow, existing: ExistingEntry | null, tombstoned: boolean): MergeDecision {
   if (!existing) {
     if (tombstoned) return { action: 'skip', reason: 'tombstoned' };
+    const seen = Boolean(row.rating) || row.status_hint === 'completed';
     return {
       action: 'insert',
       values: {
-        imdb_id: row.imdb_id,
-        status: row.rating ? 'completed' : 'planned',
+        imdb_id: row.imdb_id || null,
+        status: seen ? 'completed' : 'planned',
         my_rating: row.rating,
         rated_at: row.rating ? (row.rated_at ?? null) : null,
-        // The rating date is the best known viewing date; without it the trigger uses today.
-        watched_at: row.rating ? (row.rated_at ?? null) : null,
+        // The viewing date, else the rating date; without either the trigger uses today.
+        watched_at: seen ? (row.watched_at ?? row.rated_at ?? null) : null,
         runtime: row.runtime,
-        source: 'imdb',
+        source: row.source ?? 'imdb',
       },
     };
   }
   const values: Record<string, unknown> = {};
-  if (!existing.imdb_id) values.imdb_id = row.imdb_id;
+  if (!existing.imdb_id && row.imdb_id) values.imdb_id = row.imdb_id;
   if (!existing.runtime && row.runtime) values.runtime = row.runtime;
   if (row.rating) {
     const existingDate = existing.rated_at?.slice(0, 10) ?? '';
@@ -139,8 +158,11 @@ export function mergeImportRow(row: ImportRow, existing: ExistingEntry | null, t
     }
     if (existing.status !== 'completed' && (isNewer || !existing.my_rating)) {
       values.status = 'completed';
-      if (row.rated_at) values.watched_at = row.rated_at;
+      if (row.watched_at ?? row.rated_at) values.watched_at = row.watched_at ?? row.rated_at;
     }
+  } else if (row.status_hint === 'completed' && existing.status !== 'completed') {
+    values.status = 'completed';
+    if (row.watched_at) values.watched_at = row.watched_at;
   }
   return Object.keys(values).length ? { action: 'update', values } : { action: 'skip', reason: 'unchanged' };
 }

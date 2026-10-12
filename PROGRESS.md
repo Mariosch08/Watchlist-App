@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–9 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** 10 – Tagebuch & Sammlungen
-- **Nächster konkreter Schritt:** Tabelle `diary_entries` (Titel, Datum, Ort Kino/zuhause, mit wem, Notiz, Rewatch) + Eintrag „Gesehen am …“ auf der Detailseite → Seite „Tagebuch“ (Monate, Zähler) → eigene Sammlungen (privat, mit Titeln) → Letterboxd-CSV-Import (`diary.csv`, `ratings.csv`, `watchlist.csv`) und Trakt-JSON-Import über den bestehenden Import-Job.
+- **Erledigt:** Phase 0–10 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 11 – Statistiken & Herausforderungen
+- **Nächster konkreter Schritt:** Seite „Statistik“ (Watchlist + Tagebuch: pro Monat/Jahr, Genres, Jahrzehnte, Bewertungsverteilung, Stunden; Musik-Top-Artists) mit leichtgewichtigen eigenen SVG-Diagrammen → Jahresrückblick (teilbare Seite/Bild) → Herausforderungen („52 Filme im Jahr“, „jedes Jahrzehnt“, IMDb Top 250, Oscar-Gewinner).
 
 ## Repo-Überblick
 ```
@@ -139,10 +139,12 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Filmabend-Planer: Terminumfrage (bis 4 Termine), Host/Owner legt fest, Titel aus den Stimmen, ICS-Download, Benachrichtigungen
   - [x] Aktivitäts-Feed (opt-in), Schalter im Profil; Navigation: „Import“ jetzt im Watchlist-Kopf und Profil
   - [x] Strenge Rechte-Tests (`tests/friends.test.js`): Nicht-Freunde sehen nichts, keine E-Mails, nur eigene Stimmen; Tests Root 155, Frontend 66 grün
-- [ ] Phase 10 – Tagebuch & Sammlungen (neu)
-  - **Film-Tagebuch:** wann, wo (Kino/zuhause), mit wem, Notiz, Rewatch-Zähler
-  - **Eigene Sammlungen** (z. B. „Weihnachten“, „Mit den Eltern“)
-  - **Letterboxd- und Trakt-Import** (CSV, Erweiterung von Phase 3)
+- [x] Phase 10 – Tagebuch, Sammlungen & Importe
+  - [x] Tabelle `diary_entries` (Datum, Ort, mit wem, Notiz, Bewertung, Rewatch), „Gesehen am …“ auf der Detailseite (setzt Filme auf „Gesehen“ mit diesem Datum), Seite „Tagebuch“ mit Monaten und Jahreszahlen
+  - [x] Sammlungen = Listen ohne Mitglieder (keine zweite Datenstruktur, siehe D48); Seite heisst „Listen & Sammlungen“
+  - [x] Letterboxd-Import (diary/ratings/watched/watchlist.csv; Abgleich per Titel + Jahr über die TMDb-Suche; Tagebuch wird mit übernommen, Re-Import ohne Duplikate)
+  - [x] Trakt-Import (ratings/watchlist/watched JSON, direkte TMDb-IDs)
+  - [x] Tests: Root 163, Frontend 69 grün
 - [ ] Phase 11 – Statistiken & Herausforderungen
   - Statistiken, Jahresrückblick (teilbar), Musik-Stats
   - **Herausforderungen:** „52 Filme im Jahr“, IMDb Top 250, Oscar-Gewinner, „jedes Jahrzehnt“

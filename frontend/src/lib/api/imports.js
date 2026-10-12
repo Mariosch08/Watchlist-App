@@ -19,20 +19,23 @@ export async function continueImport(jobId) {
   return (await invokeFunction('imdb', { action: 'continue', job_id: jobId })).job;
 }
 
-export async function resolveNotFound(jobId, imdbId, match) {
+// Rows are identified by their IMDb id or, for Letterboxd/Trakt rows without one, by `ref`.
+export const rowRef = (row) => row.ref ?? row.imdb_id;
+
+export async function resolveNotFound(jobId, ref, match) {
   return (
     await invokeFunction('imdb', {
       action: 'resolve',
       job_id: jobId,
-      imdb_id: imdbId,
+      ref,
       media_type: match.media_type,
       tmdb_id: match.tmdb_id,
     })
   ).job;
 }
 
-export async function dismissNotFound(jobId, imdbId) {
-  return (await invokeFunction('imdb', { action: 'dismiss', job_id: jobId, imdb_id: imdbId })).job;
+export async function dismissNotFound(jobId, ref) {
+  return (await invokeFunction('imdb', { action: 'dismiss', job_id: jobId, ref })).job;
 }
 
 export async function exportImdbCsv() {

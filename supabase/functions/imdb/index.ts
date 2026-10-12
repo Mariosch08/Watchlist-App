@@ -1,13 +1,14 @@
-// IMDb import/export. Actions:
-//  start    { csv, filename }                          -> parses CSV, creates import job
+// Imports (IMDb CSV, Letterboxd CSV, Trakt JSON) and IMDb export. Actions:
+//  start    { csv, filename }                          -> detects the format, creates import job
 //  continue { job_id }                                 -> processes the next batch
-//  resolve  { job_id, imdb_id, media_type, tmdb_id }   -> manual match for a not-found title
-//  dismiss  { job_id, imdb_id }                        -> drops a not-found title without importing it
+//  resolve  { job_id, ref, media_type, tmdb_id }       -> manual match for a not-found title (ref = imdb id or 'lb:…'/'trakt:…')
+//  dismiss  { job_id, ref }                            -> drops a not-found title without importing it
 //  export   { }                                        -> IMDb-compatible CSV of the watchlist
 import { adminClient } from '../_shared/admin.ts';
 import { requireUser } from '../_shared/auth.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { buildImdbCsv, ExistingEntry, ImportRow, MediaType, parseImdbExport, pickFindResult } from '../_shared/imdb.ts';
+import { buildImdbCsv, ExistingEntry, ImportRow, MediaType, parseImdbExport, pickFindResult, rowRef } from '../_shared/imdb.ts';
+import { isLetterboxdCsv, parseLetterboxd, parseTrakt, pickSearchResult } from '../_shared/letterboxd.ts';
 import { applyRow, BATCH_SIZE, BatchResult, ImportDeps, mapLimited, MatchedTitle, processBatch } from '../_shared/importJob.ts';
 import { HttpError, normalizeTitle, tmdbGet, TMDB_LANGUAGE } from '../_shared/tmdb.ts';
 
@@ -26,24 +27,65 @@ const tmdbToken = () => {
 };
 
 function deps(db: ReturnType<typeof adminClient>, userId: string): ImportDeps {
+  // Matches are cached forever, misses for a week (the title may appear on TMDb later).
+  async function cachedMatch(key: string, find: () => Promise<MatchedTitle | null>) {
+    const { data: cached } = await db.from('tmdb_cache').select('data, expires_at').eq('cache_key', key.slice(0, 200)).maybeSingle();
+    if (cached && (!cached.expires_at || new Date(cached.expires_at) > new Date())) {
+      return cached.data?.none ? null : (cached.data as MatchedTitle);
+    }
+    const match = await find();
+    await db.from('tmdb_cache').upsert({
+      cache_key: key.slice(0, 200),
+      kind: 'mapping',
+      data: match ?? { none: true },
+      fetched_at: new Date().toISOString(),
+      expires_at: match ? null : new Date(Date.now() + NEGATIVE_CACHE_DAYS * 86_400_000).toISOString(),
+    });
+    return match;
+  }
+  async function byImdbId(row: ImportRow) {
+    const find = await tmdbGet(`/find/${row.imdb_id}`, { external_source: 'imdb_id', language: TMDB_LANGUAGE }, tmdbToken(), fetch);
+    const picked = pickFindResult(find, row.title_type);
+    return picked ? (normalizeTitle(picked.raw, picked.media_type) as MatchedTitle) : null;
+  }
+  async function byTmdbId(mediaType: MediaType, tmdbId: number) {
+    const raw = await tmdbGet(`/${mediaType}/${tmdbId}`, { language: TMDB_LANGUAGE }, tmdbToken(), fetch);
+    return raw ? (normalizeTitle(raw, mediaType) as MatchedTitle) : null;
+  }
+  async function byTitle(row: ImportRow) {
+    const mediaType = row.media_hint ?? 'movie';
+    const params: Record<string, unknown> = { query: row.title, language: TMDB_LANGUAGE, include_adult: false };
+    const res = await tmdbGet(`/search/${mediaType}`, params, tmdbToken(), fetch);
+    const hit = pickSearchResult(res?.results ?? [], row.title, row.year);
+    return hit ? (normalizeTitle(hit, mediaType) as MatchedTitle) : null;
+  }
   return {
     async lookup(row: ImportRow) {
-      const key = `imdb:${row.imdb_id}`;
-      const { data: cached } = await db.from('tmdb_cache').select('data, expires_at').eq('cache_key', key).maybeSingle();
-      if (cached && (!cached.expires_at || new Date(cached.expires_at) > new Date())) {
-        return cached.data?.none ? null : (cached.data as MatchedTitle);
+      if (row.tmdb_id && row.media_hint) return cachedMatch(`tmdb:${row.media_hint}:${row.tmdb_id}`, () => byTmdbId(row.media_hint!, row.tmdb_id!));
+      if (row.imdb_id) return cachedMatch(`imdb:${row.imdb_id}`, () => byImdbId(row));
+      if (row.title) {
+        const key = `title:${row.media_hint ?? 'movie'}:${row.title.toLowerCase().slice(0, 120)}:${row.year ?? ''}`;
+        return cachedMatch(key, () => byTitle(row));
       }
-      const find = await tmdbGet(`/find/${row.imdb_id}`, { external_source: 'imdb_id', language: TMDB_LANGUAGE }, tmdbToken(), fetch);
-      const picked = pickFindResult(find, row.title_type);
-      const match = picked ? (normalizeTitle(picked.raw, picked.media_type) as MatchedTitle) : null;
-      await db.from('tmdb_cache').upsert({
-        cache_key: key,
-        kind: 'mapping',
-        data: match ?? { none: true },
-        fetched_at: new Date().toISOString(),
-        expires_at: match ? null : new Date(Date.now() + NEGATIVE_CACHE_DAYS * 86_400_000).toISOString(),
-      });
-      return match;
+      return null;
+    },
+    async afterApply(row: ImportRow, title: MatchedTitle) {
+      if (!row.diary) return;
+      const { error } = await db.from('diary_entries').upsert(
+        {
+          user_id: userId,
+          media_type: title.media_type,
+          tmdb_id: title.tmdb_id,
+          title: title.title.slice(0, 300),
+          poster_path: title.poster_path,
+          watched_on: row.diary.watched_on,
+          rating: row.diary.rating,
+          rewatch: row.diary.rewatch,
+          import_ref: 'letterboxd',
+        },
+        { onConflict: 'user_id,media_type,tmdb_id,watched_on,import_ref', ignoreDuplicates: true },
+      );
+      if (error) throw error;
     },
     async getExisting(mediaType: MediaType, tmdbId: number) {
       const { data, error } = await db
@@ -99,9 +141,13 @@ async function start(db: ReturnType<typeof adminClient>, userId: string, body: a
   const filename = typeof body.filename === 'string' ? body.filename.slice(0, 300) : null;
   let parsed;
   try {
-    parsed = parseImdbExport(body.csv, filename ?? '');
+    parsed = /^\s*[[{]/.test(body.csv)
+      ? parseTrakt(body.csv, filename ?? '')
+      : isLetterboxdCsv(body.csv)
+        ? parseLetterboxd(body.csv, filename ?? '')
+        : parseImdbExport(body.csv, filename ?? '');
   } catch {
-    throw new HttpError(400, 'NOT_IMDB_CSV', 'NOT_IMDB_CSV');
+    throw new HttpError(400, 'Unsupported file', 'UNSUPPORTED_FILE');
   }
   if (parsed.rows.length > MAX_ROWS) throw new HttpError(413, 'Too many rows', 'TOO_MANY_ROWS');
   const { data, error } = await db
@@ -162,7 +208,8 @@ async function advance(db: ReturnType<typeof adminClient>, userId: string, body:
 async function resolve(db: ReturnType<typeof adminClient>, userId: string, body: any) {
   const job = await loadJob(db, userId, body.job_id);
   const notFound = job.not_found as ImportRow[];
-  const row = notFound.find((r) => r.imdb_id === body.imdb_id);
+  const ref = body.ref ?? body.imdb_id;
+  const row = notFound.find((r) => rowRef(r) === ref);
   if (!row) throw new HttpError(404, 'Title not in not-found list', 'NOT_IN_LIST');
   const mediaType = body.media_type;
   const tmdbId = body.tmdb_id;
@@ -170,7 +217,7 @@ async function resolve(db: ReturnType<typeof adminClient>, userId: string, body:
   const raw = await tmdbGet(`/${mediaType}/${tmdbId}`, { language: TMDB_LANGUAGE }, tmdbToken(), fetch);
   if (!raw) throw new HttpError(404, 'TMDb title not found', 'NOT_FOUND');
   const match = normalizeTitle(raw, mediaType) as MatchedTitle;
-  await db.from('tmdb_cache').upsert({ cache_key: `imdb:${row.imdb_id}`, kind: 'mapping', data: match, expires_at: null });
+  if (row.imdb_id) await db.from('tmdb_cache').upsert({ cache_key: `imdb:${row.imdb_id}`, kind: 'mapping', data: match, expires_at: null });
   const result: BatchResult = { processed: 0, imported: 0, updated: 0, skipped: 0, not_found: [] };
   await applyRow(row, match, deps(db, userId), result);
   const { data, error } = await db
@@ -179,7 +226,7 @@ async function resolve(db: ReturnType<typeof adminClient>, userId: string, body:
       imported: job.imported + result.imported,
       updated: job.updated + result.updated,
       skipped: job.skipped + result.skipped,
-      not_found: notFound.filter((r) => r.imdb_id !== row.imdb_id),
+      not_found: notFound.filter((r) => rowRef(r) !== ref),
     })
     .eq('id', job.id)
     .select(JOB_FIELDS)
@@ -191,10 +238,11 @@ async function resolve(db: ReturnType<typeof adminClient>, userId: string, body:
 async function dismiss(db: ReturnType<typeof adminClient>, userId: string, body: any) {
   const job = await loadJob(db, userId, body.job_id);
   const notFound = job.not_found as ImportRow[];
-  if (!notFound.some((r) => r.imdb_id === body.imdb_id)) throw new HttpError(404, 'Title not in not-found list', 'NOT_IN_LIST');
+  const ref = body.ref ?? body.imdb_id;
+  if (!notFound.some((r) => rowRef(r) === ref)) throw new HttpError(404, 'Title not in not-found list', 'NOT_IN_LIST');
   const { data, error } = await db
     .from('import_jobs')
-    .update({ not_found: notFound.filter((r) => r.imdb_id !== body.imdb_id), skipped: job.skipped + 1 })
+    .update({ not_found: notFound.filter((r) => rowRef(r) !== ref), skipped: job.skipped + 1 })
     .eq('id', job.id)
     .select(JOB_FIELDS)
     .single();

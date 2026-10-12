@@ -308,7 +308,7 @@ export default function FriendsPage() {
           Freunde
         </h1>
         <Link className="button-link btn-compact" to="/lists">
-          Gemeinsame Listen
+          Listen & Sammlungen
         </Link>
       </div>
       <Recommendations />

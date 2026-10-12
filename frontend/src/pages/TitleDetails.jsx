@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import CastList from '../components/details/CastList.jsx';
 import DetailActions from '../components/details/DetailActions.jsx';
 import SimilarTitles from '../components/details/SimilarTitles.jsx';
+import DiaryLog from '../components/details/DiaryLog.jsx';
 import FriendsPanel from '../components/details/FriendsPanel.jsx';
 import StreamingProviders from '../components/details/StreamingProviders.jsx';
 import Trailer from '../components/details/Trailer.jsx';
@@ -115,6 +116,7 @@ function Details({ details: d }) {
         </p>
       </section>
       {d.media_type === 'tv' && <SeriesProgress details={d} />}
+      <DiaryLog details={d} entry={entry} />
       <FriendsPanel details={d} />
 
       {d.trailer && (

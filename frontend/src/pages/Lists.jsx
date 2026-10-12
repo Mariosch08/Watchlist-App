@@ -12,7 +12,7 @@ import { errorMessage } from '../lib/errors.js';
 const count = (rel) => rel?.[0]?.count ?? 0;
 
 export default function ListsPage() {
-  useDocumentTitle('Listen');
+  useDocumentTitle('Listen & Sammlungen');
   const user = useUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -29,7 +29,7 @@ export default function ListsPage() {
     <>
       <div className="page-head">
         <h1 id="lists-title" tabIndex={-1}>
-          Gemeinsame Listen
+          Listen & Sammlungen
         </h1>
       </div>
       <section className="card" aria-labelledby="new-list-title">
@@ -43,7 +43,7 @@ export default function ListsPage() {
         >
           <label>
             Name
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="z. B. Filmabend mit Anna" />
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="z. B. Weihnachten oder Filmabend mit Anna" />
           </label>
           <button type="submit" className="btn-compact" disabled={create.isPending || !name.trim()}>
             <Plus size={16} aria-hidden="true" />
@@ -51,7 +51,10 @@ export default function ListsPage() {
           </button>
         </form>
         <Messages error={create.isError ? errorMessage(create.error) : ''} />
-        <p className="caption">Lade danach Freunde ein, sammelt Titel, stimmt ab oder swipt – und plant euren nächsten Filmabend.</p>
+        <p className="caption">
+          Ohne Mitglieder ist es deine private Sammlung („Weihnachten“, „Mit den Eltern“). Lädst du Freunde ein, sammelt ihr gemeinsam, stimmt ab oder swipt – und plant
+          euren nächsten Filmabend.
+        </p>
       </section>
       <section className="card" aria-labelledby="my-lists-title">
         <h2 id="my-lists-title">Meine Listen</h2>
@@ -71,7 +74,7 @@ export default function ListsPage() {
                   </Link>
                   <div className="meta">
                     <span>{count(l.list_items) === 1 ? '1 Titel' : `${count(l.list_items)} Titel`}</span>
-                    <span>{count(l.list_members) === 1 ? 'nur du' : `${count(l.list_members)} Mitglieder`}</span>
+                    <span>{count(l.list_members) === 1 ? 'Sammlung' : `${count(l.list_members)} Mitglieder`}</span>
                     {l.owner_id !== user.id && <span>geteilt mit dir</span>}
                   </div>
                 </div>

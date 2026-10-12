@@ -96,3 +96,9 @@
 
 **D47 – Filmabend ohne eigene Titel-Abstimmung:** Der Titel kommt aus den Stimmen der Liste (bester ohne Gegenstimme); die Terminumfrage ist eine eigene kleine Tabelle. Die Kalenderdatei entsteht im Browser mit demselben ICS-Code wie das Kalender-Abo (jetzt auch mit Uhrzeit).
 
+**D48 – Sammlungen sind Listen ohne Mitglieder** (Phase 10): Eine „Sammlung“ („Weihnachten“, „Mit den Eltern“) ist technisch eine gemeinsame Liste, in die niemand eingeladen wurde. Das spart doppelte Tabellen, Rechte und Oberflächen, und eine Sammlung lässt sich jederzeit mit Freunden teilen.
+
+**D49 – Ein Import-Weg für alle Quellen:** IMDb, Letterboxd und Trakt laufen durch denselben Import-Job (Batches, Wiederaufnahme, „nicht gefunden“ manuell zuordnen). Jede Zeile hat eine `ref` (IMDb-ID, `lb:…`, `trakt:…`); gesucht wird über TMDb-ID (Trakt), IMDb-ID (`/find`) oder Titel + Jahr (Letterboxd, `/search`, Toleranz ±1 Jahr). Treffer werden für immer, Fehlschläge 7 Tage gecacht.
+
+**D50 – Tagebuch getrennt von der Watchlist:** Ein Titel steht einmal in der Watchlist, kann aber beliebig oft im Tagebuch stehen. Ein Eintrag „Gesehen am …“ setzt Filme auf „Gesehen“ (mit diesem Datum); Serien behalten ihren Fortschritt. Letterboxd-Einträge tragen `import_ref`, damit ein erneuter Import nichts doppelt anlegt – von Hand erfasste Einträge werden nie dedupliziert.
+
