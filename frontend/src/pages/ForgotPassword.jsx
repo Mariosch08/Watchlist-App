@@ -17,18 +17,21 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
-      <p className="eyebrow">Kein Problem</p>
-      <h1>Passwort vergessen</h1>
-      <label>
-        E-Mail
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-      </label>
-      <Messages error={error} info={info} />
-      <button disabled={busy}>Link anfordern</button>
+    <section className="card card--auth" aria-labelledby="forgot-title">
+      <h1 id="forgot-title">Passwort zurücksetzen</h1>
+      <form onSubmit={onSubmit}>
+        <label>
+          E-Mail
+          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </label>
+        <Messages error={error} info={info} />
+        <button className="btn-primary" disabled={busy}>
+          Link senden
+        </button>
+      </form>
       <p className="links">
         <Link to="/login">Zurück zur Anmeldung</Link>
       </p>
-    </form>
+    </section>
   );
 }

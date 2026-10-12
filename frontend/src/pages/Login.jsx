@@ -20,22 +20,26 @@ export default function LoginPage() {
   };
 
   return (
-    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
-      <p className="eyebrow">Dein Kinoprogramm, mit Freunden geteilt</p>
-      <h1>Anmelden</h1>
-      <label>
-        E-Mail
-        <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-      </label>
-      <label>
-        Passwort
-        <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-      </label>
-      <Messages error={error} />
-      <button disabled={busy}>{busy ? 'Anmelden …' : 'Anmelden'}</button>
+    <section className="card card--auth" aria-labelledby="login-title">
+      <h1 id="login-title">Anmelden</h1>
+      <p className="muted">Deine Filme und Serien, mit Freunden geteilt.</p>
+      <form onSubmit={onSubmit}>
+        <label>
+          E-Mail
+          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </label>
+        <label>
+          Passwort
+          <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        </label>
+        <Messages error={error} />
+        <button className="btn-primary" disabled={busy}>
+          {busy ? 'Anmelden …' : 'Anmelden'}
+        </button>
+      </form>
       <p className="links">
-        <Link to="/forgot-password">Passwort vergessen?</Link> · <Link to="/register">Registrieren (mit Einladung)</Link>
+        <Link to="/forgot-password">Passwort vergessen</Link> · <Link to="/register">Mit Einladung registrieren</Link>
       </p>
-    </form>
+    </section>
   );
 }

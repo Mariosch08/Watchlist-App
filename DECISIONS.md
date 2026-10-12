@@ -42,3 +42,5 @@
 **D19 – Merge-Regeln:** Neue Titel: bewertet → `completed` + Bewertung, sonst `planned`; `source='imdb'`. Bestehende: Bewertung nur ersetzen, wenn das IMDb-Datum neuer ist; „Geplant“ wird bei Bewertung zu „Gesehen“; fehlende IMDb-ID/Laufzeit werden ergänzt; sonst unverändert. Tombstones verhindern Wiederanlage. TV-Episoden, Spiele, Podcasts werden übersprungen.
 
 **D20 – Edge Functions schreiben mit Service-Role**, filtern aber jede Abfrage explizit auf die verifizierte `user.id` (`requireUser`). `import_jobs` kann der Client nur lesen/löschen.
+
+**D21 – Design „Quiet Ink“ ersetzt „Projektionsraum“** (Vorgabe von Mario, `docs/DESIGN.md`). Konflikte mit den früheren Regeln (Filmkorn, Verläufe, Einblend-Animationen, Versalien) entschieden zugunsten von Quiet Ink. Abweichung: Schriften selbst gehostet statt Google Fonts (Datenschutz, gleiche Optik).

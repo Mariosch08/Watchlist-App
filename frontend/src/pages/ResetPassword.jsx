@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import { CardSkeleton } from '../components/Skeleton.jsx';
 import { unwrap } from '../lib/errors.js';
 import { supabase } from '../lib/supabase.js';
 
@@ -21,17 +22,31 @@ export default function ResetPasswordPage() {
     });
   };
 
-  if (loading) return <p>Lade …</p>;
-  if (!user) return <p className="panel panel--narrow panel--ticket reveal">Der Link ist ungültig oder abgelaufen. Fordere unter „Passwort vergessen“ einen neuen an.</p>;
+  if (loading) return <CardSkeleton />;
+  if (!user) {
+    return (
+      <section className="card card--auth">
+        <h1>Link abgelaufen</h1>
+        <p>Der Link ist ungültig oder abgelaufen.</p>
+        <p className="links">
+          <Link to="/forgot-password">Neuen Link anfordern</Link>
+        </p>
+      </section>
+    );
+  }
   return (
-    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
-      <h1>Neues Passwort setzen</h1>
-      <label>
-        Neues Passwort
-        <input type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
-      </label>
-      <Messages error={error} />
-      <button disabled={busy}>Passwort speichern</button>
-    </form>
+    <section className="card card--auth" aria-labelledby="reset-title">
+      <h1 id="reset-title">Neues Passwort</h1>
+      <form onSubmit={onSubmit}>
+        <label>
+          Neues Passwort
+          <input type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
+        </label>
+        <Messages error={error} />
+        <button className="btn-primary" disabled={busy}>
+          Passwort speichern
+        </button>
+      </form>
+    </section>
   );
 }

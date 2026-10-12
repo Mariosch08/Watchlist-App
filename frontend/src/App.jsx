@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
+import { CardSkeleton } from './components/Skeleton.jsx';
 import ForgotPasswordPage from './pages/ForgotPassword.jsx';
 import ImportExportPage from './pages/ImportExport.jsx';
 import LoginPage from './pages/Login.jsx';
@@ -12,14 +13,14 @@ import WatchlistPage from './pages/Watchlist.jsx';
 function RequireAuth({ children }) {
   const { user, loading, recovery } = useAuth();
   const location = useLocation();
-  if (loading) return <p>Lade …</p>;
+  if (loading) return <CardSkeleton />;
   if (recovery) return <Navigate to="/reset-password" replace />;
   return user ? children : <Navigate to="/login" replace state={{ from: location.pathname }} />;
 }
 
 function PublicOnly({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <p>Lade …</p>;
+  if (loading) return <CardSkeleton />;
   return user ? <Navigate to="/" replace /> : children;
 }
 

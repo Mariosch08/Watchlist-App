@@ -3,7 +3,7 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System
+- **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System „Quiet Ink“
 - **Nächste Phase:** Phase 4 – Details & Trailer
 - **Nächster konkreter Schritt:** Edge Function `tmdb` um Aktion `details` erweitern (Details + `/credits` + `/videos` + `/watch/providers` CH + `/similar` in einem Aufruf via `append_to_response`, de-CH mit en-US-Fallback für Overview/Trailer), Cache in `tmdb_cache` (`details:<type>:<id>:de-CH`, TTL 24 h); Route `/title/:type/:id` mit Poster/Backdrop, Trailer via `youtube-nocookie.com`, Anbieter-Logos (Flatrate/Leihen/Kaufen), Ähnliche Titel, Zur Watchlist, Bewerten; Titel in Watchlist/Suche verlinken. Vorher `docs/DESIGN.md` lesen.
 
@@ -24,12 +24,12 @@ frontend/                        React 18 + Vite 5 + react-router 6 + supabase-j
   src/lib/errors.js              errorMessage() DE, unwrap()
   src/auth/AuthContext.jsx       useAuth()/useUser(), Recovery-Erkennung
   src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist, ImportExport
-  src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions, ImportProgress, NotFoundResolver
+  src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions, ImportProgress, NotFoundResolver, Skeleton
   src/lib/                       supabase, errors, labels, watchlist, imdb, download
   src/styles/                    tokens.css, base.css, components.css, motion.css (index.css importiert alles + Fonts)
 .github/workflows/deploy.yml     push main / manuell: Tests → supabase db push + functions deploy → GitHub Pages
 docs/SETUP.md                    Einrichtung für Mario (nur Browser)
-docs/DESIGN.md                   **Design-Regeln – vor jeder UI-Arbeit lesen** (Tokens, Schriften, Primitive, Motion)
+docs/DESIGN.md                   **Design-System „Quiet Ink“ – vor jeder UI-Arbeit lesen** (Tokens, Primitive, Checkliste; Anhang = Umsetzung im Projekt)
 ```
 
 ### Befehle

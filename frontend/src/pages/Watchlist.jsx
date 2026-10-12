@@ -1,5 +1,7 @@
+import { Check, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import TitleRow from '../components/TitleRow.jsx';
 import WatchlistActions from '../components/WatchlistActions.jsx';
 import { titleKey } from '../lib/labels.js';
@@ -8,7 +10,7 @@ import { addToWatchlist, loadWatchlist, removeFromWatchlist, searchTitles, updat
 export default function WatchlistPage() {
   const [items, setItems] = useState(null);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState(null);
   const { busy, error, run } = useSubmit();
 
   useEffect(() => {
@@ -36,50 +38,58 @@ export default function WatchlistPage() {
 
   return (
     <>
-      <section className="panel reveal" style={{ '--i': 0 }}>
-        <p className="eyebrow">Suchen</p>
-        <form className="row search-form" onSubmit={search}>
+      <section className="card" aria-labelledby="search-title">
+        <h2 id="search-title">Titel suchen</h2>
+        <form className="inline-form" onSubmit={search} role="search">
           <input
-            className="search-input"
-            placeholder="Film oder Serie …"
+            type="search"
+            aria-label="Film oder Serie"
+            placeholder="z. B. Dune oder Severance"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             required
             maxLength={100}
           />
-          <button disabled={busy}>Suchen</button>
+          <button className="btn-primary" disabled={busy}>
+            Suchen
+          </button>
         </form>
-        {results.length > 0 && (
-          <ul className="plain">
-            {results.map((r, index) => (
-              <TitleRow key={titleKey(r)} item={r} index={index}>
-                <button
-                  className="icon-button"
-                  aria-label={inList.has(titleKey(r)) ? 'Bereits in der Watchlist' : 'Zur Watchlist hinzufügen'}
-                  disabled={busy || inList.has(titleKey(r))}
-                  onClick={() => add(r)}
-                >
-                  {inList.has(titleKey(r)) ? '✓' : '+'}
-                </button>
-              </TitleRow>
-            ))}
+        {results?.length === 0 && <p className="empty">Keine Treffer für „{query}“. Versuche den Originaltitel.</p>}
+        {results?.length > 0 && (
+          <ul className="list">
+            {results.map((r) => {
+              const added = inList.has(titleKey(r));
+              return (
+                <TitleRow key={titleKey(r)} item={r}>
+                  <button
+                    className="btn-icon"
+                    aria-label={added ? `${r.title} ist in der Watchlist` : `${r.title} zur Watchlist hinzufügen`}
+                    title={added ? 'In der Watchlist' : 'Zur Watchlist hinzufügen'}
+                    disabled={busy || added}
+                    onClick={() => add(r)}
+                  >
+                    {added ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+                  </button>
+                </TitleRow>
+              );
+            })}
           </ul>
         )}
       </section>
       <Messages error={error} />
-      <section className="panel reveal" style={{ '--i': 1 }}>
-        <div className="panel-head">
-          <h1>Meine Watchlist</h1>
-          {items?.length > 0 && <span className="eyebrow">{items.length} Titel</span>}
+      <section className="card" aria-labelledby="watchlist-title">
+        <div className="card-head">
+          <h1 id="watchlist-title">Meine Watchlist</h1>
+          {items?.length > 0 && <span className="caption">{items.length} Titel</span>}
         </div>
         {items === null ? (
-          <p className="muted">Lade …</p>
+          <TitleRowSkeleton />
         ) : items.length === 0 ? (
-          <p className="muted">Noch leer. Suche oben nach Filmen und Serien.</p>
+          <p className="empty">Noch keine Titel. Suche oben nach einem Film oder einer Serie, oder importiere deine IMDb-Daten.</p>
         ) : (
-          <ul className="plain">
-            {items.map((i, index) => (
-              <TitleRow key={titleKey(i)} item={i} index={index + 2}>
+          <ul className="list">
+            {items.map((i) => (
+              <TitleRow key={titleKey(i)} item={i}>
                 <WatchlistActions item={i} busy={busy} onUpdate={(changes) => update(i, changes)} onRemove={() => remove(i)} />
               </TitleRow>
             ))}
