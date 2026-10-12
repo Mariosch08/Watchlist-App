@@ -4,7 +4,7 @@
 
 ## Status
 - **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System „Quiet Ink“
-- **Nächste Phase:** Phase 4 – Details & Trailer
+- **Aktuelle Phase:** 3b – Frontend-Logik überarbeiten, danach Phase 4 – Details & Trailer
 - **Nächster konkreter Schritt:** Edge Function `tmdb` um Aktion `details` erweitern (Details + `/credits` + `/videos` + `/watch/providers` CH + `/similar` in einem Aufruf via `append_to_response`, de-CH mit en-US-Fallback für Overview/Trailer), Cache in `tmdb_cache` (`details:<type>:<id>:de-CH`, TTL 24 h); Route `/title/:type/:id` mit Poster/Backdrop, Trailer via `youtube-nocookie.com`, Anbieter-Logos (Flatrate/Leihen/Kaufen), Ähnliche Titel, Zur Watchlist, Bewerten; Titel in Watchlist/Suche verlinken. Vorher `docs/DESIGN.md` lesen.
 
 ## Repo-Überblick
@@ -81,14 +81,44 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Batch-Verarbeitung (Client ruft `continue`, Fortsetzen nach Abbruch), manuelle Zuordnung nicht gefundener Titel
   - [x] Export IMDb-CSV (fehlende IMDb-IDs via `/external_ids` ergänzt) + JSON
   - [x] Tests (Root 84 grün), Deno-Typcheck der Functions ok
+- [ ] **Phase 3b – Frontend-Logik überarbeiten** (Wunsch Mario, hat Vorrang): Datenschicht mit Cache und optimistischen Updates, Aktionen blockieren sich nicht gegenseitig, Filter/Sortierung/Gruppierung der Watchlist, Suche mit Debounce, Entfernen mit Rückgängig, Toasts, URL-Zustand, Code-Splitting, Tests
 - [ ] Phase 4 – Details & Trailer
+  - Detailseite (Poster, Backdrop, Beschreibung, Genres, Laufzeit, TMDb-Bewertung, Cast & Crew, Trailer via youtube-nocookie, Streaming CH Flatrate/Leihen/Kaufen, Ähnliche Titel, Watchlist/Bewerten), Cache 24 h
+  - Soundtrack-Album verlinken, sobald Phase 8 (Musik) steht
 - [ ] Phase 5 – Serien-Tracking (pg_cron 07:15 Europe/Zurich → Edge Function)
+  - Episoden abhaken, „bis hier gesehen“, Up next, Kalender 30 Tage, neue Staffeln → Benachrichtigung
+  - **Binge-Rechner:** „Bei 2 Folgen/Tag bist du am 3.11. durch“
+  - **Vergessene Serien:** nach 30 Tagen ohne Fortschritt „pausieren oder abbrechen?“
+  - **Spoiler-Schutz:** Titel/Beschreibung ungesehener Folgen verborgen
+  - **Kalender-Abo (ICS):** kommende Episoden als abonnierbarer Kalender (geheimer Token-Link)
 - [ ] Phase 6 – Empfehlungen Filme/Serien (pg_cron 06:45)
-- [ ] Phase 7 – Musik
-- [ ] Phase 8 – Freunde & gemeinsame Listen
-- [ ] Phase 9 – Statistiken
-- [ ] Phase 10 – E-Mail-Benachrichtigungen (Brevo)
-- [ ] Phase 11 – Abschluss
+  - Profil aus Bewertungen, Quellen, Scoring, Feed mit Begründung, 👍/👎/＋, Streaming-Abos in Einstellungen, Genre-Slider
+  - **„Was schauen wir heute?“:** Zeit/Stimmung/nur meine Abos → ein Vorschlag aus der Watchlist; „Überrasch mich“
+- [ ] Phase 7 – Streaming-Tools (neu)
+  - **Abo-Optimierer:** pro Anbieter zählen, wie viele Watchlist-Titel in CH verfügbar sind (inkl. „bald weg“), Empfehlung welches Abo diesen Monat
+  - **Verfügbarkeits-Alarm:** „Sag mir, wenn X auf einem meiner Abos kommt“ (täglicher Abgleich `/watch/providers`)
+  - **Kinostarts CH** im Kalender-Abo
+- [ ] Phase 8 – Musik (Last.fm, Spotify optional, MusicBrainz)
+  - **Konzerte in der Schweiz** für Lieblings-Artists (Ticketmaster Discovery API, eigener Key → „Offen für Mario“)
+  - Soundtrack zum Film auf der Detailseite (Spotify-Link)
+- [ ] Phase 9 – Freunde & gemeinsame Listen
+  - Freundschaften, Listen mit Rollen, Abstimmung, „Was schauen wir?“ für die Gruppe, Freunde-Bewertungen (abschaltbar)
+  - **Geschmacks-Match** in % zwischen Freunden
+  - **„Schau das!“:** Titel mit Nachricht an Freund empfehlen → Bereich „Von Freunden empfohlen“
+  - **Wer hat es gesehen?** auf der Detailseite
+  - **Filmabend-Planer:** Terminumfrage + Titel-Abstimmung + ICS-Eintrag für alle
+  - **Aktivitäts-Feed** (opt-in)
+- [ ] Phase 10 – Tagebuch & Sammlungen (neu)
+  - **Film-Tagebuch:** wann, wo (Kino/zuhause), mit wem, Notiz, Rewatch-Zähler
+  - **Eigene Sammlungen** (z. B. „Weihnachten“, „Mit den Eltern“)
+  - **Letterboxd- und Trakt-Import** (CSV, Erweiterung von Phase 3)
+- [ ] Phase 11 – Statistiken & Herausforderungen
+  - Statistiken, Jahresrückblick (teilbar), Musik-Stats
+  - **Herausforderungen:** „52 Filme im Jahr“, IMDb Top 250, Oscar-Gewinner, „jedes Jahrzehnt“
+- [ ] Phase 12 – Benachrichtigungen & App
+  - E-Mail (Brevo): Wochen-Digest So 18:00, Sofort-Mails, Abmeldelink
+  - **PWA:** installierbar, Share-Target („Teilen → Watchlist“ aus IMDb/Netflix-App), Web-Push als Alternative zu E-Mail
+- [ ] Phase 13 – Abschluss (README mit Architektur, Setup, alles grün)
 
 ## Offene Probleme
 - Migrationen + Function laufen auf dem echten Supabase-Projekt (Deploy grün). Claude-Umgebung erreicht github.io/supabase.co nicht direkt → App-Verhalten nur über Marios Rückmeldung prüfbar.
@@ -100,5 +130,7 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
 - Hinweis: Ab jetzt deployt jeder Merge nach `main` automatisch (Tests → Supabase → Pages). Läuft der Supabase-Token ab, Secret `SUPABASE_ACCESS_TOKEN` erneuern.
 
 ## Ideen (nicht umgesetzt)
+- Suche in Alltagssprache („wie Dune, aber kürzer“) – bräuchte eine kostenpflichtige KI-API.
+- Gemeinsam synchron schauen (Watch-Party) – aufwendig, rechtlich heikel.
 - Passkeys/MFA über Supabase Auth.
 - Eigene Domain statt `mariosch08.github.io`.

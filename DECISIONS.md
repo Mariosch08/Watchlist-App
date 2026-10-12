@@ -44,3 +44,5 @@
 **D20 – Edge Functions schreiben mit Service-Role**, filtern aber jede Abfrage explizit auf die verifizierte `user.id` (`requireUser`). `import_jobs` kann der Client nur lesen/löschen.
 
 **D21 – Design „Quiet Ink“ ersetzt „Projektionsraum“** (Vorgabe von Mario, `docs/DESIGN.md`). Konflikte mit den früheren Regeln (Filmkorn, Verläufe, Einblend-Animationen, Versalien) entschieden zugunsten von Quiet Ink. Abweichung: Schriften selbst gehostet statt Google Fonts (Datenschutz, gleiche Optik).
+
+**D22 – Phasen neu nummeriert (12.10.2026)**, weil Mario alle Zusatz-Ideen übernommen hat. Alt → neu: 7 Musik → 8, 8 Freunde → 9, 9 Statistiken → 11, 10 E-Mail → 12, 11 Abschluss → 13. Neu: 3b Frontend-Logik, 7 Streaming-Tools, 10 Tagebuch & Sammlungen. Verweise auf alte Phasennummern in früheren Einträgen (z. B. D8 „Phase 8“, D14 „Phase 7“) meinen die alte Zählung.
