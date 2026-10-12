@@ -33,3 +33,23 @@ export function unwrap({ data, error }) {
   if (error) throw error;
   return data;
 }
+
+const FUNCTION_STATUS = {
+  401: 'Nicht angemeldet – bitte ab- und wieder anmelden.',
+  404: 'Server-Funktion nicht gefunden (Deploy prüfen).',
+  502: 'TMDb lehnt den Schlüssel ab – Secret TMDB_API_KEY in Supabase prüfen.',
+};
+
+// Turns a failed supabase.functions.invoke() into a readable error (status + server message).
+export async function functionError(error) {
+  const res = error?.context;
+  if (!res || typeof res.status !== 'number') return error;
+  let detail = '';
+  try {
+    detail = (await res.clone().json()).error ?? '';
+  } catch {
+    detail = await res.text().catch(() => '');
+  }
+  if (/TMDB_API_KEY/.test(detail)) return new Error('TMDb-Schlüssel fehlt – Secret TMDB_API_KEY in Supabase anlegen.');
+  return new Error(`${FUNCTION_STATUS[res.status] ?? 'Server-Fehler'} (Status ${res.status}${detail ? `: ${detail}` : ''})`);
+}

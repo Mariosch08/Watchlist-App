@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Messages, useSubmit } from '../components/Form.jsx';
 import { unwrap } from '../lib/errors.js';
-import { supabase } from '../lib/supabase.js';
+import { invokeFunction, supabase } from '../lib/supabase.js';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w154';
 const TYPE_LABEL = { movie: 'Film', tv: 'Serie' };
@@ -36,7 +36,7 @@ export default function WatchlistPage() {
 
   const search = (e) => {
     e.preventDefault();
-    run(async () => setResults(unwrap(await supabase.functions.invoke('tmdb', { body: { action: 'search', query: query.trim() } })).results));
+    run(async () => setResults((await invokeFunction('tmdb', { action: 'search', query: query.trim() })).results));
   };
   const add = (r) =>
     run(async () => {
