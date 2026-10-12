@@ -1,5 +1,12 @@
 // Progress bar and result counters of an import job.
-export default function ImportProgress({ job }) {
+export function importLabel(job, running, retrying) {
+  if (job.status === 'done') return 'Abgeschlossen';
+  if (job.status === 'failed') return 'Fehlgeschlagen';
+  if (retrying) return 'Verbindung unterbrochen – neuer Versuch …';
+  return running ? 'Import läuft' : 'Pausiert';
+}
+
+export default function ImportProgress({ job, running = false, retrying = false }) {
   const fraction = job.total ? job.processed / job.total : 1;
   const stats = [
     ['Neu', job.imported],
@@ -9,8 +16,8 @@ export default function ImportProgress({ job }) {
   ];
   return (
     <div className="stack">
-      <div className="meta">
-        <span>{job.status === 'done' ? 'Abgeschlossen' : 'Import läuft'}</span>
+      <div className="meta" aria-live="polite">
+        <span>{importLabel(job, running, retrying)}</span>
         <span>
           {job.processed} von {job.total}
         </span>

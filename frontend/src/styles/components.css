@@ -570,3 +570,199 @@ ul.list > li:last-child {
     min-height: 44px;
   }
 }
+
+/* ---- Page head & search -------------------------------------------------------------- */
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-field input {
+  flex: 1;
+  height: var(--row-height);
+  padding-left: calc(var(--space-3) + var(--space-4) + var(--space-2));
+  padding-right: var(--row-height);
+}
+
+.search-field .search-icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--color-text-subtle);
+  pointer-events: none;
+}
+
+.search-field button {
+  position: absolute;
+  right: var(--space-1);
+}
+
+/* ---- Toolbar & segmented control ----------------------------------------------------- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.toolbar-filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+button.segment {
+  height: var(--control-height-compact);
+  padding: 0 var(--space-3);
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+button.segment:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+button.segment[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.segment-count {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* ---- Rows: pending state and long lists --------------------------------------------- */
+.title-row[aria-busy='true'] .row-actions,
+.title-row[aria-busy='true'] .title-main {
+  opacity: 0.6;
+}
+
+ul.list > li.title-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto calc(var(--poster-h) + 2 * var(--space-3));
+}
+
+/* ---- Fields ------------------------------------------------------------------------------- */
+.field-error {
+  font-size: var(--text-body-sm);
+  font-weight: 400;
+  color: var(--color-danger);
+}
+
+.narrow-field {
+  flex: 0 0 auto !important;
+  max-width: calc(var(--space-9) + var(--space-5));
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.nav-chip {
+  margin-right: var(--space-2);
+  text-decoration: none;
+}
+
+/* ---- Toasts (bottom-right, DESIGN.md §4) ---------------------------------------------- */
+.toasts {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(calc(100vw - 2 * var(--space-4)), calc(var(--auth-width) + var(--space-6)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-body-sm);
+  line-height: 1.5;
+  pointer-events: auto;
+  animation: toast-in var(--motion-base) var(--easing);
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+}
+
+.toast--success .toast-icon {
+  color: var(--color-success);
+}
+
+.toast--error .toast-icon {
+  color: var(--color-danger);
+}
+
+.toast--info .toast-icon {
+  color: var(--color-accent);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-1));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .toolbar-filters {
+    width: 100%;
+  }
+
+  .toolbar-filters select {
+    flex: 1;
+  }
+}
+
+/* Our own clear button replaces the browser's. */
+input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}

@@ -72,7 +72,7 @@ describe('mergeImportRow', () => {
   it('inserts rated titles as completed and watchlist titles as planned', () => {
     expect(mergeImportRow(row, null, false)).toEqual({
       action: 'insert',
-      values: { imdb_id: 'tt0133093', status: 'completed', my_rating: 9, rated_at: '2023-05-01', runtime: 136, source: 'imdb' },
+      values: { imdb_id: 'tt0133093', status: 'completed', my_rating: 9, rated_at: '2023-05-01', watched_at: '2023-05-01', runtime: 136, source: 'imdb' },
     });
     expect(mergeImportRow(plain, null, false)).toMatchObject({ action: 'insert', values: { status: 'planned', my_rating: null } });
   });
@@ -91,7 +91,7 @@ describe('mergeImportRow', () => {
   it('marks a planned entry as completed when the import has a rating, fills missing ids', () => {
     expect(mergeImportRow(row, existing(), false)).toEqual({
       action: 'update',
-      values: { imdb_id: 'tt0133093', runtime: 136, my_rating: 9, rated_at: '2023-05-01', status: 'completed' },
+      values: { imdb_id: 'tt0133093', runtime: 136, my_rating: 9, rated_at: '2023-05-01', status: 'completed', watched_at: '2023-05-01' },
     });
   });
 

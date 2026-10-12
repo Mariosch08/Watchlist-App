@@ -2,12 +2,13 @@
 //  start    { csv, filename }                          -> parses CSV, creates import job
 //  continue { job_id }                                 -> processes the next batch
 //  resolve  { job_id, imdb_id, media_type, tmdb_id }   -> manual match for a not-found title
+//  dismiss  { job_id, imdb_id }                        -> drops a not-found title without importing it
 //  export   { }                                        -> IMDb-compatible CSV of the watchlist
 import { adminClient } from '../_shared/admin.ts';
 import { requireUser } from '../_shared/auth.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { buildImdbCsv, ExistingEntry, ImportRow, MediaType, parseImdbExport, pickFindResult } from '../_shared/imdb.ts';
-import { applyRow, BATCH_SIZE, BatchResult, ImportDeps, MatchedTitle, processBatch } from '../_shared/importJob.ts';
+import { applyRow, BATCH_SIZE, BatchResult, ImportDeps, mapLimited, MatchedTitle, processBatch } from '../_shared/importJob.ts';
 import { HttpError, normalizeTitle, tmdbGet, TMDB_LANGUAGE } from '../_shared/tmdb.ts';
 
 const MAX_CSV_CHARS = 5_000_000;
@@ -20,7 +21,7 @@ const json = (status: number, body: unknown) =>
 
 const tmdbToken = () => {
   const token = Deno.env.get('TMDB_API_KEY');
-  if (!token) throw new HttpError(500, 'TMDB_API_KEY is not configured');
+  if (!token) throw new HttpError(500, 'TMDB_API_KEY is not configured', 'TMDB_NOT_CONFIGURED');
   return token;
 };
 
@@ -86,23 +87,23 @@ function deps(db: ReturnType<typeof adminClient>, userId: string): ImportDeps {
 }
 
 async function loadJob(db: ReturnType<typeof adminClient>, userId: string, jobId: unknown) {
-  if (typeof jobId !== 'string' || !/^[0-9a-f-]{36}$/.test(jobId)) throw new HttpError(400, 'Invalid job_id');
+  if (typeof jobId !== 'string' || !/^[0-9a-f-]{36}$/.test(jobId)) throw new HttpError(400, 'Invalid job_id', 'INVALID_INPUT');
   const { data } = await db.from('import_jobs').select(`${JOB_FIELDS}, items`).match({ id: jobId, user_id: userId }).maybeSingle();
-  if (!data) throw new HttpError(404, 'Job not found');
+  if (!data) throw new HttpError(404, 'Job not found', 'JOB_NOT_FOUND');
   return data;
 }
 
 async function start(db: ReturnType<typeof adminClient>, userId: string, body: any) {
-  if (typeof body.csv !== 'string' || !body.csv.trim()) throw new HttpError(400, 'csv is required');
-  if (body.csv.length > MAX_CSV_CHARS) throw new HttpError(413, 'CSV too large');
+  if (typeof body.csv !== 'string' || !body.csv.trim()) throw new HttpError(400, 'csv is required', 'INVALID_INPUT');
+  if (body.csv.length > MAX_CSV_CHARS) throw new HttpError(413, 'CSV too large', 'CSV_TOO_LARGE');
   const filename = typeof body.filename === 'string' ? body.filename.slice(0, 300) : null;
   let parsed;
   try {
     parsed = parseImdbExport(body.csv, filename ?? '');
   } catch {
-    throw new HttpError(400, 'NOT_IMDB_CSV');
+    throw new HttpError(400, 'NOT_IMDB_CSV', 'NOT_IMDB_CSV');
   }
-  if (parsed.rows.length > MAX_ROWS) throw new HttpError(413, 'Too many rows');
+  if (parsed.rows.length > MAX_ROWS) throw new HttpError(413, 'Too many rows', 'TOO_MANY_ROWS');
   const { data, error } = await db
     .from('import_jobs')
     .insert({
@@ -134,7 +135,7 @@ async function advance(db: ReturnType<typeof adminClient>, userId: string, body:
   } catch (err) {
     console.error(err);
     await db.from('import_jobs').update({ error: 'Batch failed, will retry' }).eq('id', job.id);
-    throw new HttpError(502, 'Batch failed, please continue');
+    throw new HttpError(502, 'Batch failed, please continue', 'BATCH_FAILED');
   }
   const processed = job.processed + result.processed;
   const done = processed >= job.total;
@@ -148,7 +149,7 @@ async function advance(db: ReturnType<typeof adminClient>, userId: string, body:
       not_found: [...(job.not_found as ImportRow[]), ...result.not_found],
       status: done ? 'done' : 'processing',
       finished_at: done ? new Date().toISOString() : null,
-      items: done ? [] : job.items,
+      ...(done ? { items: [] } : {}),
       error: null,
     })
     .eq('id', job.id)
@@ -162,12 +163,12 @@ async function resolve(db: ReturnType<typeof adminClient>, userId: string, body:
   const job = await loadJob(db, userId, body.job_id);
   const notFound = job.not_found as ImportRow[];
   const row = notFound.find((r) => r.imdb_id === body.imdb_id);
-  if (!row) throw new HttpError(404, 'Title not in not-found list');
+  if (!row) throw new HttpError(404, 'Title not in not-found list', 'NOT_IN_LIST');
   const mediaType = body.media_type;
   const tmdbId = body.tmdb_id;
-  if (!['movie', 'tv'].includes(mediaType) || !Number.isInteger(tmdbId) || tmdbId < 1) throw new HttpError(400, 'Invalid match');
+  if (!['movie', 'tv'].includes(mediaType) || !Number.isInteger(tmdbId) || tmdbId < 1) throw new HttpError(400, 'Invalid match', 'INVALID_INPUT');
   const raw = await tmdbGet(`/${mediaType}/${tmdbId}`, { language: TMDB_LANGUAGE }, tmdbToken(), fetch);
-  if (!raw) throw new HttpError(404, 'TMDb title not found');
+  if (!raw) throw new HttpError(404, 'TMDb title not found', 'NOT_FOUND');
   const match = normalizeTitle(raw, mediaType) as MatchedTitle;
   await db.from('tmdb_cache').upsert({ cache_key: `imdb:${row.imdb_id}`, kind: 'mapping', data: match, expires_at: null });
   const result: BatchResult = { processed: 0, imported: 0, updated: 0, skipped: 0, not_found: [] };
@@ -187,21 +188,49 @@ async function resolve(db: ReturnType<typeof adminClient>, userId: string, body:
   return data;
 }
 
-async function exportCsv(db: ReturnType<typeof adminClient>, userId: string) {
-  const { data: entries, error } = await db
-    .from('watchlist')
-    .select('media_type, tmdb_id, imdb_id, title, release_date, my_rating, rated_at')
-    .eq('user_id', userId)
-    .order('added_at');
+async function dismiss(db: ReturnType<typeof adminClient>, userId: string, body: any) {
+  const job = await loadJob(db, userId, body.job_id);
+  const notFound = job.not_found as ImportRow[];
+  if (!notFound.some((r) => r.imdb_id === body.imdb_id)) throw new HttpError(404, 'Title not in not-found list', 'NOT_IN_LIST');
+  const { data, error } = await db
+    .from('import_jobs')
+    .update({ not_found: notFound.filter((r) => r.imdb_id !== body.imdb_id), skipped: job.skipped + 1 })
+    .eq('id', job.id)
+    .select(JOB_FIELDS)
+    .single();
   if (error) throw error;
-  // Fill in missing IMDb ids (manually added titles) and remember them.
-  for (const e of entries.filter((x) => !x.imdb_id)) {
-    const ids = await tmdbGet(`/${e.media_type}/${e.tmdb_id}/external_ids`, {}, tmdbToken(), fetch);
-    if (ids?.imdb_id && /^tt\d{5,10}$/.test(ids.imdb_id)) {
-      e.imdb_id = ids.imdb_id;
-      await db.from('watchlist').update({ imdb_id: ids.imdb_id }).match({ user_id: userId, media_type: e.media_type, tmdb_id: e.tmdb_id });
-    }
+  return data;
+}
+
+async function exportCsv(db: ReturnType<typeof adminClient>, userId: string) {
+  // PostgREST returns at most 1000 rows per request: read all pages with a stable order.
+  const entries: any[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db
+      .from('watchlist')
+      .select('media_type, tmdb_id, imdb_id, title, release_date, my_rating, rated_at')
+      .eq('user_id', userId)
+      .order('added_at')
+      .order('media_type')
+      .order('tmdb_id')
+      .range(from, from + 999);
+    if (error) throw error;
+    entries.push(...data);
+    if (data.length < 1000) break;
   }
+  // Fill in missing IMDb ids (manually added titles) and remember them. One failed lookup never fails the export.
+  const missing = entries.filter((x) => !x.imdb_id);
+  await mapLimited(missing, 6, async (e) => {
+    try {
+      const ids = await tmdbGet(`/${e.media_type}/${e.tmdb_id}/external_ids`, {}, tmdbToken(), fetch);
+      if (ids?.imdb_id && /^tt\d{5,10}$/.test(ids.imdb_id)) {
+        e.imdb_id = ids.imdb_id;
+        await db.from('watchlist').update({ imdb_id: ids.imdb_id }).match({ user_id: userId, media_type: e.media_type, tmdb_id: e.tmdb_id });
+      }
+    } catch (err) {
+      console.warn('external_ids lookup failed', e.media_type, e.tmdb_id, err);
+    }
+  });
   return {
     csv: buildImdbCsv(entries),
     filename: `watchlist-imdb-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -214,10 +243,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
   const user = await requireUser(req);
-  if (!user) return json(401, { error: 'Unauthorized' });
+  if (!user) return json(401, { error: 'Unauthorized', code: 'UNAUTHORIZED' });
   try {
     const body = await req.json().catch(() => null);
-    if (!body || typeof body !== 'object') throw new HttpError(400, 'Invalid body');
+    if (!body || typeof body !== 'object') throw new HttpError(400, 'Invalid body', 'INVALID_INPUT');
     const db = adminClient();
     switch (body.action) {
       case 'start':
@@ -226,14 +255,16 @@ Deno.serve(async (req) => {
         return json(200, { job: await advance(db, user.id, body) });
       case 'resolve':
         return json(200, { job: await resolve(db, user.id, body) });
+      case 'dismiss':
+        return json(200, { job: await dismiss(db, user.id, body) });
       case 'export':
         return json(200, await exportCsv(db, user.id));
       default:
-        throw new HttpError(400, 'Unknown action');
+        throw new HttpError(400, 'Unknown action', 'INVALID_INPUT');
     }
   } catch (err) {
-    if (err instanceof HttpError) return json(err.status, { error: err.message });
+    if (err instanceof HttpError) return json(err.status, { error: err.message, code: err.code });
     console.error(err);
-    return json(500, { error: 'Internal error' });
+    return json(500, { error: 'Internal error', code: 'INTERNAL' });
   }
 });

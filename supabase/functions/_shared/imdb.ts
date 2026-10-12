@@ -120,6 +120,8 @@ export function mergeImportRow(row: ImportRow, existing: ExistingEntry | null, t
         status: row.rating ? 'completed' : 'planned',
         my_rating: row.rating,
         rated_at: row.rating ? (row.rated_at ?? null) : null,
+        // The rating date is the best known viewing date; without it the trigger uses today.
+        watched_at: row.rating ? (row.rated_at ?? null) : null,
         runtime: row.runtime,
         source: 'imdb',
       },
@@ -135,7 +137,10 @@ export function mergeImportRow(row: ImportRow, existing: ExistingEntry | null, t
       values.my_rating = row.rating;
       values.rated_at = row.rated_at;
     }
-    if (existing.status !== 'completed' && (isNewer || !existing.my_rating)) values.status = 'completed';
+    if (existing.status !== 'completed' && (isNewer || !existing.my_rating)) {
+      values.status = 'completed';
+      if (row.rated_at) values.watched_at = row.rated_at;
+    }
   }
   return Object.keys(values).length ? { action: 'update', values } : { action: 'skip', reason: 'unchanged' };
 }

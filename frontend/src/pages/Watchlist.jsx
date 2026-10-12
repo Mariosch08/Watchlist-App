@@ -1,99 +1,96 @@
-import { Check, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Messages, useSubmit } from '../components/Form.jsx';
+import { Search, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Messages } from '../components/Form.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
-import TitleRow from '../components/TitleRow.jsx';
-import WatchlistActions from '../components/WatchlistActions.jsx';
+import SearchResults from '../components/watchlist/SearchResults.jsx';
+import WatchlistList from '../components/watchlist/WatchlistList.jsx';
+import WatchlistToolbar from '../components/watchlist/WatchlistToolbar.jsx';
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
+import { useTitleSearch } from '../hooks/useTitleSearch.js';
+import { useUrlView } from '../hooks/useUrlView.js';
+import { useWatchlist } from '../hooks/useWatchlist.js';
+import { MIN_QUERY_LENGTH } from '../lib/api/tmdb.js';
+import { errorMessage } from '../lib/errors.js';
 import { titleKey } from '../lib/labels.js';
-import { addToWatchlist, loadWatchlist, removeFromWatchlist, searchTitles, updateWatchlistItem } from '../lib/watchlist.js';
+import { applyView } from '../lib/watchlistView.js';
 
 export default function WatchlistPage() {
-  const [items, setItems] = useState(null);
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState(null);
-  const { busy, error, run } = useSubmit();
+  useDocumentTitle('Meine Watchlist');
+  const [view, setView] = useUrlView();
+  const [expanded, setExpanded] = useState(false);
+  const headingRef = useRef(null);
+  const watchlist = useWatchlist();
+  const search = useTitleSearch(view.q);
 
-  useEffect(() => {
-    run(async () => setItems(await loadWatchlist()));
-  }, []);
+  const items = watchlist.data;
+  const { visible, counts, total } = useMemo(() => applyView(items, view), [items, view]);
+  const byKey = useMemo(() => new Map((items ?? []).map((i) => [titleKey(i), i])), [items]);
+  const searching = view.q.trim().length >= MIN_QUERY_LENGTH;
 
-  const inList = new Set((items ?? []).map(titleKey));
-  const replace = (saved) => setItems((list) => list.map((x) => (titleKey(x) === titleKey(saved) ? saved : x)));
-
-  const search = (e) => {
-    e.preventDefault();
-    run(async () => setResults(await searchTitles(query)));
+  const setQuery = (q) => {
+    setExpanded(false);
+    setView({ q });
   };
-  const add = (r) =>
-    run(async () => {
-      const item = await addToWatchlist(r);
-      setItems((list) => [item, ...list.filter((i) => titleKey(i) !== titleKey(item))]);
-    });
-  const update = (i, changes) => run(async () => replace(await updateWatchlistItem(i, changes)));
-  const remove = (i) =>
-    run(async () => {
-      await removeFromWatchlist(i);
-      setItems((list) => list.filter((x) => titleKey(x) !== titleKey(i)));
-    });
 
   return (
     <>
-      <section className="card" aria-labelledby="search-title">
-        <h2 id="search-title">Titel suchen</h2>
-        <form className="inline-form" onSubmit={search} role="search">
-          <input
-            type="search"
-            aria-label="Film oder Serie"
-            placeholder="z. B. Dune oder Severance"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            required
-            maxLength={100}
-          />
-          <button className="btn-primary" disabled={busy}>
-            Suchen
+      <div className="page-head">
+        <h1 id="watchlist-title" ref={headingRef} tabIndex={-1}>
+          Meine Watchlist
+        </h1>
+        {items && <span className="caption">{total === 1 ? '1 Titel' : `${total} Titel`}</span>}
+      </div>
+
+      <div className="search-field" role="search">
+        <Search size={16} aria-hidden="true" className="search-icon" />
+        <input
+          type="search"
+          aria-label="In der Watchlist suchen oder neuen Titel finden"
+          placeholder="Titel suchen …"
+          value={view.q}
+          maxLength={100}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && setQuery('')}
+        />
+        {view.q && (
+          <button type="button" className="btn-ghost btn-compact btn-icon" aria-label="Suche leeren" title="Suche leeren" onClick={() => setQuery('')}>
+            <X size={16} aria-hidden="true" />
           </button>
-        </form>
-        {results?.length === 0 && <p className="empty">Keine Treffer für „{query}“. Versuche den Originaltitel.</p>}
-        {results?.length > 0 && (
-          <ul className="list">
-            {results.map((r) => {
-              const added = inList.has(titleKey(r));
-              return (
-                <TitleRow key={titleKey(r)} item={r}>
-                  <button
-                    className="btn-icon"
-                    aria-label={added ? `${r.title} ist in der Watchlist` : `${r.title} zur Watchlist hinzufügen`}
-                    title={added ? 'In der Watchlist' : 'Zur Watchlist hinzufügen'}
-                    disabled={busy || added}
-                    onClick={() => add(r)}
-                  >
-                    {added ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-                  </button>
-                </TitleRow>
-              );
-            })}
-          </ul>
         )}
-      </section>
-      <Messages error={error} />
+      </div>
+
+      {searching && <SearchResults search={search} byKey={byKey} expanded={expanded} onExpand={() => setExpanded(true)} />}
+
       <section className="card" aria-labelledby="watchlist-title">
-        <div className="card-head">
-          <h1 id="watchlist-title">Meine Watchlist</h1>
-          {items?.length > 0 && <span className="caption">{items.length} Titel</span>}
-        </div>
-        {items === null ? (
-          <TitleRowSkeleton />
-        ) : items.length === 0 ? (
-          <p className="empty">Noch keine Titel. Suche oben nach einem Film oder einer Serie, oder importiere deine IMDb-Daten.</p>
+        {watchlist.isError && !items ? (
+          <div className="stack">
+            <Messages error={`Die Watchlist konnte nicht geladen werden. ${errorMessage(watchlist.error)}`} />
+            <div className="actions">
+              <button onClick={() => watchlist.refetch()} disabled={watchlist.isFetching}>
+                {watchlist.isFetching ? 'Lädt …' : 'Erneut laden'}
+              </button>
+            </div>
+          </div>
+        ) : !items ? (
+          <TitleRowSkeleton rows={5} />
         ) : (
-          <ul className="list">
-            {items.map((i) => (
-              <TitleRow key={titleKey(i)} item={i}>
-                <WatchlistActions item={i} busy={busy} onUpdate={(changes) => update(i, changes)} onRemove={() => remove(i)} />
-              </TitleRow>
-            ))}
-          </ul>
+          <>
+            <WatchlistToolbar view={view} counts={counts} onChange={setView} />
+            {searching && visible.length > 0 && (
+              <p className="caption">
+                {visible.length} {visible.length === 1 ? 'Treffer' : 'Treffer'} in deiner Liste
+              </p>
+            )}
+            <WatchlistList
+              items={visible}
+              total={total}
+              view={view}
+              counts={counts}
+              onSegment={(segment) => setView({ segment })}
+              headingRef={headingRef}
+              onResetFilters={() => setView({ q: '', type: 'all' })}
+            />
+          </>
         )}
       </section>
     </>

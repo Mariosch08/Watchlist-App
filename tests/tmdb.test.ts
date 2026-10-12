@@ -44,8 +44,14 @@ describe('tmdb function', () => {
 
   it('maps TMDb errors and missing key', async () => {
     expect((await handleTmdbRequest({ action: 'title', media_type: 'movie', tmdb_id: 9 }, 'k', respond({}, 404))).status).toBe(404);
-    expect((await handleTmdbRequest({ action: 'search', query: 'a' }, 'k', respond({}, 500))).status).toBe(502);
-    expect((await handleTmdbRequest({ action: 'search', query: 'a' }, undefined, respond({}))).status).toBe(500);
+    const outage = await handleTmdbRequest({ action: 'search', query: 'ab' }, 'k', respond({}, 401));
+    expect(outage.status).toBe(502);
+    expect(outage.body).toMatchObject({ code: 'TMDB_UNAVAILABLE' });
+    const missing = await handleTmdbRequest({ action: 'search', query: 'ab' }, undefined, respond({}));
+    expect(missing.status).toBe(500);
+    expect(missing.body).toMatchObject({ code: 'TMDB_NOT_CONFIGURED' });
+    const short = await handleTmdbRequest({ action: 'search', query: 'a' }, 'k', respond({}));
+    expect(short.body).toMatchObject({ code: 'INVALID_QUERY' });
   });
 });
 
