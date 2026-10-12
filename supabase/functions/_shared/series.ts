@@ -41,7 +41,7 @@ export function diffSeries(prev: StoredProgress, raw: Record<string, any>, serie
   // First check after tracking started: remember the state, announce nothing.
   const firstCheck = prev.number_of_seasons == null && prev.last_episode_to_air == null;
   if (!firstCheck && seasons != null && prev.number_of_seasons != null && seasons > prev.number_of_seasons) {
-    const when = next?.season_number === seasons ? formatDate(next.air_date) : null;
+    const when = next && next.season_number === seasons ? formatDate(next.air_date) : null;
     events.push({
       type: 'new_season',
       key: `season:${prev.tmdb_id}:${seasons}`,
