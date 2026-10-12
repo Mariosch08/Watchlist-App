@@ -28,6 +28,7 @@ const FUNCTION_CODES = {
   BATCH_FAILED: 'Ein Teil des Imports ist fehlgeschlagen. Er wird automatisch wiederholt.',
   JOB_NOT_FOUND: 'Dieser Import existiert nicht mehr.',
   NOT_IN_LIST: 'Dieser Titel ist nicht mehr in der Liste der nicht gefundenen Titel.',
+  NOT_FOUND: 'Diesen Titel gibt es auf TMDb nicht (mehr).',
   INVALID_QUERY: 'Bitte gib mindestens 2 Zeichen ein.',
   INVALID_INPUT: 'Ungültige Eingabe.',
   UNAUTHORIZED: 'Deine Sitzung ist abgelaufen. Bitte melde dich neu an.',

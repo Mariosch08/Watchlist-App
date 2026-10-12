@@ -31,6 +31,7 @@ export const routes = [
           { index: true, lazy: page(() => import('./pages/Watchlist.jsx')) },
           { path: 'import', lazy: page(() => import('./pages/ImportExport.jsx')) },
           { path: 'profile', lazy: page(() => import('./pages/Profile.jsx')) },
+          { path: 'title/:mediaType/:tmdbId', lazy: page(() => import('./pages/TitleDetails.jsx')) },
         ],
       },
       { path: '*', element: <NotFoundPage /> },
