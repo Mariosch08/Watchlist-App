@@ -48,3 +48,6 @@ ul.plain { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 .title-row { display: flex; gap: 12px; align-items: center; }
 .title-row img, .poster-placeholder { width: 46px; height: 69px; border-radius: 4px; object-fit: cover; background: var(--border); flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
+.row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.9rem; }
+@media (max-width: 560px) { .title-row { flex-wrap: wrap; } .row-actions { width: 100%; justify-content: flex-start; } }

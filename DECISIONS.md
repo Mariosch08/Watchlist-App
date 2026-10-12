@@ -26,3 +26,11 @@
 **D11 – Supabase CLI im Workflow auf `latest`.** Eine fixe Version wäre reproduzierbarer, aber ich konnte hier keine aktuelle Versionsnummer verifizieren. Bei Problemen in `deploy.yml` eine Version pinnen.
 
 **D12 – Suche:** `/search/movie` und `/search/tv` parallel statt `/search/multi` (mehr Treffer, keine Personen), eigenes Ranking: Textübereinstimmung mit deutschem **oder** Originaltitel + TMDb-Reihenfolge + Bekanntheit (`log10(vote_count)`). Originaltitel wird angezeigt, weil de-CH-Titel abweichen (z. B. „Sieben“ = „Se7en“).
+
+**D13 – Datenmodell als normalisierte Postgres-Tabellen** statt Single-Table: RLS pro Tabelle, Fremdschlüssel mit `on delete cascade` (Konto löschen bleibt eine Zeile). Server-Tabellen (`feed`-Einträge, `notifications`, `tmdb_cache`) werden nur von Edge Functions mit Service-Role geschrieben; der Client darf dort nur reagieren (Status, gelesen).
+
+**D14 – Streaming-Abos, Last.fm-Name und Mail-Einstellungen in `user_settings`** (eine Zeile pro Nutzer, beim Sign-up angelegt). Spotify-Tokens kommen in Phase 7 in eine eigene Tabelle ohne Client-Zugriff.
+
+**D15 – Tombstones per Trigger:** Löschen eines Watchlist-Eintrags erzeugt einen Tombstone; manuelles Hinzufügen hebt ihn auf, ein Import (`source='imdb'`) muss ihn respektieren (Phase 3). Beim Löschen des Kontos werden keine Tombstones erzeugt.
+
+**D16 – Status und Bewertung schon in Phase 2 in der Watchlist-UI**, damit das neue Datenmodell nutzbar ist (zwei Auswahlfelder, kein eigener Screen). Detailseite mit Bewerten folgt in Phase 4.

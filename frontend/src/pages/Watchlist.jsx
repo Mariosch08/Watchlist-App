@@ -5,6 +5,14 @@ import { invokeFunction, supabase } from '../lib/supabase.js';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w154';
 const TYPE_LABEL = { movie: 'Film', tv: 'Serie' };
+const STATUS_LABEL = {
+  planned: 'Geplant',
+  watching: 'Am Schauen',
+  completed: 'Gesehen',
+  paused: 'Pausiert',
+  dropped: 'Abgebrochen',
+};
+const RATINGS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
 function TitleRow({ item, action }) {
   return (
@@ -55,6 +63,13 @@ export default function WatchlistPage() {
       const item = unwrap(await supabase.from('watchlist').upsert(row, { onConflict: 'user_id,media_type,tmdb_id', ignoreDuplicates: true }).select().maybeSingle()) ?? row;
       setItems((list) => [item, ...list.filter((i) => key(i) !== key(item))]);
     });
+  const update = (i, changes) =>
+    run(async () => {
+      const saved = unwrap(
+        await supabase.from('watchlist').update(changes).match({ media_type: i.media_type, tmdb_id: i.tmdb_id }).select().single(),
+      );
+      setItems((list) => list.map((x) => (key(x) === key(saved) ? saved : x)));
+    });
   const remove = (i) =>
     run(async () => {
       unwrap(await supabase.from('watchlist').delete().match({ media_type: i.media_type, tmdb_id: i.tmdb_id }));
@@ -96,9 +111,27 @@ export default function WatchlistPage() {
                 key={key(i)}
                 item={i}
                 action={
-                  <button className="link danger" disabled={busy} onClick={() => remove(i)}>
-                    Entfernen
-                  </button>
+                  <div className="row-actions">
+                    <select aria-label="Status" value={i.status} disabled={busy} onChange={(e) => update(i, { status: e.target.value })}>
+                      {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Meine Bewertung"
+                      value={i.my_rating ?? ''}
+                      disabled={busy}
+                      onChange={(e) => update(i, { my_rating: e.target.value ? Number(e.target.value) : null })}
+                    >
+                      <option value="">Bewerten</option>
+                      {RATINGS.map((r) => (
+                        <option key={r} value={r}>{r} / 10</option>
+                      ))}
+                    </select>
+                    <button className="link danger" disabled={busy} onClick={() => remove(i)}>
+                      Entfernen
+                    </button>
+                  </div>
                 }
               />
             ))}
