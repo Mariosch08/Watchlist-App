@@ -15,11 +15,8 @@ Du brauchst nur **Supabase** (Datenbank + Login + Server-Funktionen, gratis) und
 | **Anon/Publishable key** (öffentlich, darf ins Frontend) | *Project Settings → API Keys* (`anon` bzw. `publishable`) |
 | **Access token** (geheim) | Profilbild oben rechts → *Account preferences → Access Tokens → Generate new token*, Name `github-deploy` |
 
-**Einstellungen für den Access token:**
-- *Expires in*: möglichst lang (z. B. 90 Tage oder 1 Jahr). Läuft er ab, schlägt der Deploy fehl → neuen Token erstellen und das GitHub-Secret ersetzen.
-- *Resource access*: **Project** → deine Organisation → Projekt `watchlist`.
-- *Permissions*: **Project** = Read · **Database** = Read & Write · **Application services** = Read & Write · Rest = No access.
-- Falls die GitHub Action später mit „unauthorized“/„403“ scheitert: stattdessen *Create legacy token* verwenden (voller Zugriff, funktioniert sicher mit der Supabase CLI).
+**Access token – einfachster Weg:** Im Dialog „Generate new token“ auf den Link **„Create legacy token“** klicken → Name `github-deploy`, Ablauf möglichst lang (z. B. 1 Jahr) → erstellen und sofort kopieren (wird nur einmal angezeigt).
+Die neuen fein einstellbaren Tokens haben dutzende Einzelrechte; welche die Supabase CLI genau braucht, ist nicht dokumentiert – der Legacy-Token funktioniert sicher. Er liegt nur als verschlüsseltes GitHub-Secret und kann jederzeit unter *Access Tokens* widerrufen werden. Läuft er ab, schlägt der Deploy fehl → neuen Token erstellen und das GitHub-Secret ersetzen.
 
 ## 3. Werte in GitHub eintragen
 GitHub → Repo **Watchlist-App** → *Settings* → *Secrets and variables* → *Actions*:
