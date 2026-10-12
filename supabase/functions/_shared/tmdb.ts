@@ -53,7 +53,14 @@ export function normalizeTitle(raw: Record<string, any>, mediaType: MediaType) {
     release_date: raw.release_date || raw.first_air_date || null,
     vote_average: raw.vote_average ?? null,
     vote_count: raw.vote_count ?? 0,
+    genre_ids: genreIds(raw),
   };
+}
+
+// Search/list results carry genre_ids, detail responses carry genres [{ id, name }].
+export function genreIds(raw: Record<string, any>): number[] {
+  if (Array.isArray(raw.genre_ids)) return raw.genre_ids.filter((g: unknown) => Number.isInteger(g));
+  return (raw.genres ?? []).map((g: any) => g?.id).filter((g: unknown) => Number.isInteger(g));
 }
 
 type Title = ReturnType<typeof normalizeTitle>;
@@ -221,6 +228,21 @@ export function normalizeSeason(raw: Record<string, any>) {
   };
 }
 
+export const PROVIDERS_CACHE_KEY = `providers:${WATCH_REGION}`;
+export const GENRES_CACHE_KEY = `genres:${TMDB_LANGUAGE}`;
+
+// Streaming services available in Switzerland (movies and series merged), most relevant first.
+export function mergeProviders(movie: any[], tv: any[]) {
+  const byId = new Map<number, any>();
+  for (const p of [...movie, ...tv]) {
+    if (!Number.isInteger(p?.provider_id)) continue;
+    const prio = p.display_priorities?.[WATCH_REGION] ?? p.display_priority ?? 999;
+    const prev = byId.get(p.provider_id);
+    if (!prev || prio < prev.priority) byId.set(p.provider_id, { id: p.provider_id, name: p.provider_name, logo_path: p.logo_path ?? null, priority: prio });
+  }
+  return [...byId.values()].sort((a, b) => a.priority - b.priority).slice(0, 40);
+}
+
 export const seasonCacheKey = (id: number, season: number) => `season:tv:${id}:${season}:${TMDB_LANGUAGE}`;
 
 // One TMDb request for the whole page (append_to_response); a second one only if there is no German overview.
@@ -301,6 +323,29 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         if (!details) throw new HttpError(404, 'Not found', 'NOT_FOUND');
         await cache?.set(key, details, DETAILS_TTL_MS).catch((err) => console.error('cache write', err));
         return { status: 200, body: details };
+      }
+      case 'providers': {
+        const cached = await cache?.get(PROVIDERS_CACHE_KEY).catch(() => null);
+        if (cached) return { status: 200, body: cached };
+        const params = { watch_region: WATCH_REGION, language: TMDB_LANGUAGE };
+        const [movie, tv] = await Promise.all([
+          tmdbGet('/watch/providers/movie', params, token, fetchImpl),
+          tmdbGet('/watch/providers/tv', params, token, fetchImpl),
+        ]);
+        const result = { providers: mergeProviders(movie?.results ?? [], tv?.results ?? []) };
+        await cache?.set(PROVIDERS_CACHE_KEY, result, 7 * 86_400_000).catch(() => {});
+        return { status: 200, body: result };
+      }
+      case 'genres': {
+        const cached = await cache?.get(GENRES_CACHE_KEY).catch(() => null);
+        if (cached) return { status: 200, body: cached };
+        const [movie, tv] = await Promise.all([
+          tmdbGet('/genre/movie/list', { language: TMDB_LANGUAGE }, token, fetchImpl),
+          tmdbGet('/genre/tv/list', { language: TMDB_LANGUAGE }, token, fetchImpl),
+        ]);
+        const result = { movie: movie?.genres ?? [], tv: tv?.genres ?? [] };
+        await cache?.set(GENRES_CACHE_KEY, result, 30 * 86_400_000).catch(() => {});
+        return { status: 200, body: result };
       }
       case 'season': {
         const id = intParam(body.tmdb_id, 'tmdb_id', 1, 1e9);

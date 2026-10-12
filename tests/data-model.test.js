@@ -288,3 +288,37 @@ describe('series tracking (phase 5)', () => {
     expect((await asAdmin(db, 'select count(*)::int as n from public.notifications')).rows[0].n).toBe(2);
   });
 });
+
+describe('feed feedback (phase 6)', () => {
+  let feedId;
+  beforeEach(async () => {
+    const res = await asAdmin(
+      db,
+      "insert into public.feed (user_id, type, external_id, title, source, score, data) values ($1, 'movie', '438631', 'Dune', 'discover', 50, '{\"genre_ids\": [878, 12]}') returning id",
+      [a],
+    );
+    feedId = res.rows[0].id;
+  });
+
+  it('like raises the genre weights of that title (bounded)', async () => {
+    await asUser(db, a, "update public.taste_profile set genre_weights_movie = '{\"878\": 0.95}'");
+    await asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'like']);
+    const [t] = await rows(a, 'select genre_weights_movie from public.taste_profile');
+    expect(t.genre_weights_movie['878']).toBe(1);
+    expect(t.genre_weights_movie['12']).toBeCloseTo(0.1);
+    expect((await rows(a, 'select status from public.feed'))[0].status).toBe('liked');
+  });
+
+  it('dislike lowers weights and rejects the title once', async () => {
+    await asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'dislike']);
+    await asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'dislike']);
+    const [t] = await rows(a, 'select genre_weights_movie, rejected_ids from public.taste_profile');
+    expect(t.rejected_ids).toEqual(['movie:438631']);
+    expect(t.genre_weights_movie['878']).toBeCloseTo(-0.3);
+  });
+
+  it('other users cannot give feedback on my feed; invalid actions are rejected', async () => {
+    await expect(asUser(db, b, 'select public.feed_feedback($1, $2)', [feedId, 'like'])).rejects.toThrow(/FEED_NOT_FOUND/);
+    await expect(asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'love'])).rejects.toThrow(/INVALID_ACTION/);
+  });
+});
