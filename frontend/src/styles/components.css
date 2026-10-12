@@ -104,6 +104,9 @@
 }
 
 .links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   font-size: var(--text-body-sm);
   color: var(--color-text-muted);
 }
@@ -1397,4 +1400,87 @@ button.provider-stat-head {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+}
+
+/* ---- Link buttons: secondary, ghost and compact variants ------------------------------------ */
+a.button-link:not(.btn-primary):not(.btn-ghost) {
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+}
+
+a.button-link:not(.btn-primary):not(.btn-ghost):hover {
+  background: var(--color-surface-sunken);
+}
+
+a.button-link.btn-ghost {
+  color: var(--color-text-muted);
+}
+
+a.button-link.btn-ghost:hover {
+  color: var(--color-text);
+  background: var(--color-surface-sunken);
+}
+
+a.button-link.btn-compact {
+  height: var(--control-height-compact);
+  white-space: nowrap;
+}
+
+/* ---- Music ---------------------------------------------------------------------------------- */
+.poster--square {
+  height: var(--poster-w);
+}
+
+.chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  counter-reset: rank;
+}
+
+.chip {
+  counter-increment: rank;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-sm);
+  background: var(--color-surface);
+}
+
+.chip::before {
+  content: counter(rank) '. ';
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.date-badge {
+  width: var(--poster-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  line-height: 1.1;
+}
+
+.date-badge-day {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-badge-month {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }

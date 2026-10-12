@@ -33,6 +33,15 @@ const FUNCTION_CODES = {
   INVALID_INPUT: 'Ungültige Eingabe.',
   UNAUTHORIZED: 'Deine Sitzung ist abgelaufen. Bitte melde dich neu an.',
   RATE_LIMITED: 'Gerade erst aktualisiert. Versuch es in ein paar Minuten nochmals.',
+  NO_MUSIC_SOURCE: 'Verbinde zuerst Last.fm oder Spotify.',
+  LASTFM_USER_NOT_FOUND: 'Diesen Last.fm-Benutzernamen gibt es nicht. Prüfe die Schreibweise.',
+  LASTFM_NOT_CONFIGURED: 'Last.fm ist noch nicht eingerichtet (API-Schlüssel fehlt).',
+  LASTFM_UNAVAILABLE: 'Last.fm ist gerade nicht erreichbar. Versuche es später nochmals.',
+  MUSICBRAINZ_UNAVAILABLE: 'Die Musikdatenbank ist gerade überlastet. Versuche es später nochmals.',
+  SPOTIFY_NOT_CONFIGURED: 'Spotify ist noch nicht eingerichtet.',
+  SPOTIFY_AUTH_FAILED: 'Die Verbindung mit Spotify hat nicht geklappt. Bitte versuche es nochmals.',
+  SPOTIFY_REVOKED: 'Spotify hat den Zugriff entzogen. Bitte verbinde dich neu.',
+  SPOTIFY_UNAVAILABLE: 'Spotify ist gerade nicht erreichbar. Versuche es später nochmals.',
 };
 
 const NETWORK_PATTERN = /Failed to fetch|NetworkError|Load failed|Failed to send a request|fetch failed|Network request failed/i;

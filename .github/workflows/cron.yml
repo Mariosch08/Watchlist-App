@@ -21,6 +21,14 @@ jobs:
         run: |
           if [ -z "$CRON_SECRET" ]; then echo "::warning::Secret CRON_SECRET fehlt (siehe docs/SETUP.md)"; exit 0; fi
           curl -fsS -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'
+      - name: Build music releases and concerts for all users
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/discovery-music
+          ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then exit 0; fi
+          curl -fsS --max-time 170 -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'
 
   series-tracker:
     if: github.event.schedule != '45 4 * * *'

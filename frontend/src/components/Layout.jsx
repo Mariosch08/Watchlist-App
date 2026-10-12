@@ -79,6 +79,7 @@ export default function Layout() {
                 Watchlist
               </NavLink>
               <NavLink to="/discover">Für dich</NavLink>
+              <NavLink to="/music">Musik</NavLink>
               <NavLink to="/calendar">Kalender</NavLink>
               <NavLink to="/streaming">Streaming</NavLink>
               <NavLink to="/import">Import</NavLink>

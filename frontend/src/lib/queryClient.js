@@ -31,4 +31,5 @@ export const queryKeys = {
   season: (tmdbId, season) => ['season', String(tmdbId), season],
   settings: (userId) => ['settings', userId],
   notifications: (userId) => ['notifications', userId],
+  music: (userId, part) => (part ? ['music', userId, part] : ['music', userId]),
 };

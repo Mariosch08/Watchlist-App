@@ -161,7 +161,7 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(4);
+    expect(data.version).toBe(5);
     expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
@@ -336,5 +336,57 @@ describe('availability alerts (phase 7)', () => {
   it('notifications accept the new type', async () => {
     await asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'available', 'Jetzt im Abo')", [a]);
     await expect(asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'spam', 'x')", [a])).rejects.toThrow(/check constraint/);
+  });
+});
+
+describe('music (phase 8)', () => {
+  beforeEach(async () => {
+    await asAdmin(
+      db,
+      "insert into public.spotify_connections (user_id, spotify_user_id, display_name, refresh_token_enc) values ($1, 'mario', 'Mario', 'v1.secret')",
+      [a],
+    );
+    await asAdmin(db, "insert into public.music_artists (user_id, artist_key, name, sources, rank) values ($1, 'radiohead', 'Radiohead', '{lastfm}', 1)", [a]);
+    await asAdmin(
+      db,
+      "insert into public.concerts (user_id, event_id, artist, name, local_date, url) values ($1, 'tm1', 'Radiohead', 'Radiohead Live', '2027-03-01', 'https://ticketmaster.ch/x')",
+      [a],
+    );
+  });
+
+  it('never exposes the encrypted Spotify token to clients', async () => {
+    expect(await rows(a, 'select display_name from public.spotify_connections')).toEqual([{ display_name: 'Mario' }]);
+    await expect(asUser(db, a, 'select refresh_token_enc from public.spotify_connections')).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, 'select * from public.spotify_connections')).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, "update public.spotify_connections set display_name = 'x'")).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(db, b, "insert into public.spotify_connections (user_id, spotify_user_id, refresh_token_enc) values ($1, 'x', 'y')", [b]),
+    ).rejects.toThrow(/permission denied/);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.version).toBe(5);
+    expect(exported.spotify).toMatchObject({ display_name: 'Mario' });
+    expect(JSON.stringify(exported)).not.toContain('v1.secret');
+    expect(exported.music_artists).toHaveLength(1);
+    expect(exported.concerts).toHaveLength(1);
+  });
+
+  it('lets the owner disconnect, but nobody else', async () => {
+    await asUser(db, b, 'delete from public.spotify_connections');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.spotify_connections')).rows[0].n).toBe(1);
+    await asUser(db, a, 'delete from public.spotify_connections');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.spotify_connections')).rows[0].n).toBe(0);
+  });
+
+  it('keeps artists and concerts private and read-only', async () => {
+    expect(await rows(b, 'select * from public.music_artists')).toEqual([]);
+    expect(await rows(b, 'select * from public.concerts')).toEqual([]);
+    await expect(asUser(db, a, "update public.music_artists set rank = 2")).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, 'delete from public.concerts')).rejects.toThrow(/permission denied/);
+  });
+
+  it('accepts valid Last.fm user names only', async () => {
+    await asUser(db, a, "update public.user_settings set lastfm_username = 'mario_08' where user_id = $1", [a]);
+    await expect(asUser(db, a, "update public.user_settings set lastfm_username = '1; drop' where user_id = $1", [a])).rejects.toThrow(/check constraint/);
+    await expect(asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'concert', 'Konzert')", [a])).resolves.toBeDefined();
   });
 });

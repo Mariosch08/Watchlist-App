@@ -78,3 +78,11 @@
 
 **D38 – Verfügbarkeits-Alarm einmalig:** Ein Alarm meldet sich einmal (`notified_at`), Benachrichtigung mit `dedupe_key`, damit ein doppelter Cron-Lauf nichts doppelt meldet. Ohne gewählte Dienste zählt jeder Flatrate-Anbieter.
 
+**D39 – Musik-Quelle Nr. 1 ist Last.fm, Spotify nur optional** (Phase 8): Last.fm braucht nur den öffentlichen Benutzernamen (kein Login, kein Token) und funktioniert für alle Freunde. Spotify-Apps im Entwicklungsmodus sind auf eingetragene Nutzer beschränkt; genutzt werden nur `/me/top/artists`, `/me/following` und `/artists/{id}/albums` (keine eingeschränkten Endpunkte wie `/recommendations`).
+
+**D40 – Neuerscheinungen über eine MusicBrainz-Suche pro 25 Artists:** Eine Lucene-Abfrage `arid:… OR …` mit Datumsbereich statt einer Anfrage pro Artist – so bleibt das Limit von 1 Anfrage/s (eigener User-Agent) auch mit mehreren Nutzern im Cron einhaltbar. Cover von der Cover Art Archive (direkter Bildlink, kein API-Aufruf); Live-Alben, Compilations und Remixe werden ausgefiltert.
+
+**D41 – Spotify-Token verschlüsselt, Schlüssel per HKDF:** Refresh-Tokens werden in der Function mit AES-GCM (zufälliger IV) verschlüsselt. Der Schlüssel kommt aus `TOKEN_ENCRYPTION_KEY` oder, falls nicht gesetzt, per HKDF aus dem Service-Role-Key – ein Secret weniger für Mario. Lässt sich ein Token nicht mehr entschlüsseln (Schlüssel gewechselt) oder hat Spotify den Zugriff entzogen, wird die Verbindung gelöscht und der Nutzer verbindet sich neu. Die Spalte ist für Clients per Spalten-Grant gesperrt.
+
+**D42 – Konzerte über Ticketmaster Discovery (gratis, 5000 Anfragen/Tag):** Nur Events, bei denen der Artist als Act geführt wird (die Stichwortsuche ist unscharf). Ticketcorner (grösster CH-Anbieter) hat keine offene API – die Abdeckung ist deshalb unvollständig.
+

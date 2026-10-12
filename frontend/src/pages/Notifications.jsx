@@ -9,7 +9,10 @@ import { errorMessage } from '../lib/errors.js';
 import { queryKeys } from '../lib/queryClient.js';
 
 const timeLabel = (iso) => new Date(iso).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-const linkFor = (n) => (n.data?.media_type && n.data?.tmdb_id ? `/title/${n.data.media_type}/${n.data.tmdb_id}` : null);
+const linkFor = (n) => {
+  if (n.data?.media_type && n.data?.tmdb_id) return `/title/${n.data.media_type}/${n.data.tmdb_id}`;
+  return typeof n.data?.path === 'string' && /^\/[a-z]/.test(n.data.path) ? n.data.path : null;
+};
 
 export function useNotifications() {
   const user = useUser();

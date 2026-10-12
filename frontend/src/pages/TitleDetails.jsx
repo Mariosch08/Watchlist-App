@@ -102,13 +102,16 @@ function Details({ details: d }) {
         <DetailActions details={d} entry={entry} loading={watchlist.isPending && !watchlist.isError} />
         {d.tagline && <p className="tagline">{d.tagline}</p>}
         {d.overview ? <p className="overview">{d.overview}</p> : <p className="muted">Keine Beschreibung vorhanden.</p>}
-        {d.imdb_id && (
-          <p className="links">
+        <p className="links">
+          {d.imdb_id && (
             <a href={`https://www.imdb.com/title/${encodeURIComponent(d.imdb_id)}/`} target="_blank" rel="noopener noreferrer">
               Auf IMDb ansehen
             </a>
-          </p>
-        )}
+          )}
+          <a href={`https://open.spotify.com/search/${encodeURIComponent(`${d.original_title || d.title} soundtrack`)}`} target="_blank" rel="noopener noreferrer">
+            Soundtrack auf Spotify
+          </a>
+        </p>
       </section>
       {d.media_type === 'tv' && <SeriesProgress details={d} />}
 

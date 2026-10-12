@@ -1,4 +1,4 @@
-// Subscribable calendar (ICS): upcoming episodes of tracked series and releases of planned movies.
+// Subscribable calendar (ICS): upcoming episodes of tracked series, releases of planned movies and concerts of my artists.
 // Auth: secret token in the URL (user_settings.calendar_token), because calendar apps cannot log in.
 import { adminClient } from '../_shared/admin.ts';
 import { buildIcs, type CalendarEvent } from '../_shared/ics.ts';
@@ -16,9 +16,10 @@ Deno.serve(async (req) => {
   const today = new Date().toISOString().slice(0, 10);
   const horizon = new Date(Date.now() + 180 * 86_400_000).toISOString().slice(0, 10);
 
-  const [{ data: series }, { data: titles }] = await Promise.all([
+  const [{ data: series }, { data: titles }, { data: concerts }] = await Promise.all([
     db.from('series_progress').select('tmdb_id, next_episode_to_air').eq('user_id', userId),
     db.from('watchlist').select('media_type, tmdb_id, title, status, release_date').eq('user_id', userId).neq('status', 'dropped'),
+    db.from('concerts').select('event_id, artist, name, venue, city, local_date, url').eq('user_id', userId).gte('local_date', today),
   ]);
   const nameOf = new Map((titles ?? []).map((t) => [`${t.media_type}:${t.tmdb_id}`, t.title]));
   const events: CalendarEvent[] = [];
@@ -36,6 +37,15 @@ Deno.serve(async (req) => {
   for (const t of titles ?? []) {
     if (t.media_type !== 'movie' || t.status !== 'planned' || !t.release_date || t.release_date < today || t.release_date > horizon) continue;
     events.push({ uid: `movie-${t.tmdb_id}@watchlist-app`, date: t.release_date, summary: `Filmstart: ${t.title}`, description: 'Aus deiner Watchlist' });
+  }
+  for (const c of concerts ?? []) {
+    events.push({
+      uid: `concert-${c.event_id}@watchlist-app`,
+      date: c.local_date,
+      summary: `Konzert: ${c.artist}`,
+      description: [c.name, [c.venue, c.city].filter(Boolean).join(', ')].filter(Boolean).join('\n'),
+      url: c.url ?? undefined,
+    });
   }
   events.sort((a, b) => a.date.localeCompare(b.date));
   return new Response(buildIcs(events, { name: 'Watchlist' }), {

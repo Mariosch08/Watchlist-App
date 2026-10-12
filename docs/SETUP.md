@@ -57,6 +57,13 @@ Jeden Morgen prüft GitHub Actions deine Serien auf neue Staffeln und Folgen (un
 2. GitHub → *Settings → Secrets and variables → Actions → Secrets* → **New repository secret**: Name `CRON_SECRET`, Wert = dieses Passwort.
 3. Beim nächsten Deploy wird es automatisch auch in Supabase hinterlegt. Testen: *Actions → Daily jobs → Run workflow*.
 
+## 8c. Musik (Last.fm, optional Spotify und Konzerte)
+Alle Schlüssel kommen in Supabase → *Edge Functions → Secrets* (nie in den Code oder Chat).
+1. **Last.fm (nötig für „Musik“):** <https://www.last.fm/api/account/create> → Name „Watchlist“, Rest leer lassen → den **API key** als Secret `LASTFM_API_KEY` speichern. Danach in der App unter *Profil → Musik verbinden* deinen Last.fm-Namen eintragen.
+2. **Konzerte in der Schweiz (optional):** <https://developer-acct.ticketmaster.com/user/register> → *My Apps* → **Consumer Key** als Secret `TICKETMASTER_API_KEY`.
+3. **Spotify (optional, Last.fm reicht):** <https://developer.spotify.com/dashboard> → *Create app* → Redirect URI `https://mariosch08.github.io/Watchlist-App/music/callback`, API „Web API“ → die **Client ID** zweimal eintragen: als Supabase-Secret `SPOTIFY_CLIENT_ID` und in GitHub unter *Settings → Secrets and variables → Actions → Variables* als `SPOTIFY_CLIENT_ID` (keine Geheimzahl, nur eine Kennung). Spotify erlaubt im Entwicklungsmodus nur Konten, die du im Dashboard unter *User Management* einträgst – Freunde dort hinzufügen.
+4. Optional `TOKEN_ENCRYPTION_KEY` (zufällig, mind. 32 Zeichen) – sonst wird der Schlüssel für die Spotify-Tokens aus dem Service-Role-Key abgeleitet.
+
 ## 9. Bevor sich Freunde registrieren: E-Mail-Versand
 Der eingebaute Supabase-Mailversand schickt nur an Mitglieder deines Supabase-Teams (also nur an dich) und nur wenige Mails pro Stunde. Für Freunde einen kostenlosen Mail-Dienst anschliessen:
 1. Konto bei <https://www.brevo.com> (Free: 300 Mails/Tag) → *Senders* → deine E-Mail-Adresse als Absender bestätigen.

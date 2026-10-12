@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–7 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** 8 – Musik (Last.fm, Spotify optional, MusicBrainz, Konzerte CH)
-- **Nächster konkreter Schritt:** Last.fm-Benutzername in `user_settings` + Profil-Feld → Edge Function `discovery-music` (Last.fm Top-Artists → ähnliche Artists + MusicBrainz-Releases der letzten 30 Tage, 1 Anfrage/s, User-Agent) → Feed `type = album` mit Grund und Spotify-/Last.fm-Link → Musik-Bereich auf „Für dich“.
+- **Erledigt:** Phase 0–8 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 9 – Freunde & gemeinsame Listen
+- **Nächster konkreter Schritt:** Freundschaften (Tabelle `friendships` existiert: Anfrage per Benutzername, annehmen/ablehnen, RPCs) → Seite „Freunde“ → gemeinsame Listen mit Rollen + Abstimmung → Geschmacks-Match, „Schau das!“, „Wer hat es gesehen?“, Filmabend-Planer. Strenge Rechte-Tests (Nicht-Freunde sehen nichts).
 
 ## Repo-Überblick
 ```
@@ -125,9 +125,12 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Filmstarts geplanter Filme im Kalender-Abo (seit Phase 5); ICS-Escape von `;` korrigiert
   - [ ] „Bald weg“ geht nicht: TMDb/JustWatch liefern kein Enddatum (siehe D37)
   - [x] Tests: Root 123, Frontend 50 grün
-- [ ] Phase 8 – Musik (Last.fm, Spotify optional, MusicBrainz)
-  - **Konzerte in der Schweiz** für Lieblings-Artists (Ticketmaster Discovery API, eigener Key → „Offen für Mario“)
-  - Soundtrack zum Film auf der Detailseite (Spotify-Link)
+- [x] Phase 8 – Musik
+  - [x] Last.fm-Name im Profil (und auf „Musik“), Spotify optional per PKCE; Refresh-Token AES-GCM-verschlüsselt, für den Client nicht lesbar
+  - [x] Edge Function `discovery-music` (Cron 06:45 + „Neu suchen“): Top-Artists (Last.fm 6 Monate, Spotify top/gefolgt) → ähnliche Artists (Last.fm) → Neuerscheinungen der letzten 30 Tage (MusicBrainz, 1 Anfrage/s, Spotify-Alben) → Feed `album` mit Grund, 👍/👎 lernt Tags
+  - [x] Konzerte in der Schweiz (Ticketmaster, optional) inkl. Kalender-Abo; Benachrichtigungen für neue Alben der Top-10-Artists und Konzerte
+  - [x] Seite „Musik“: Neuerscheinungen, Konzerte, Top-Artists; Soundtrack-Link auf der Detailseite
+  - [x] Tests: Root 142, Frontend 55 grün
 - [ ] Phase 9 – Freunde & gemeinsame Listen
   - Freundschaften, Listen mit Rollen, Abstimmung, „Was schauen wir?“ für die Gruppe, Freunde-Bewertungen (abschaltbar)
   - **Geschmacks-Match** in % zwischen Freunden
@@ -159,6 +162,7 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
 - [x] Einrichtung laut `docs/SETUP.md` erledigt, erster Deploy grün (12.10.2026), App: https://mariosch08.github.io/Watchlist-App/
 - [ ] Vor Freundes-Einladungen: Brevo-SMTP in Supabase eintragen (SETUP §9)
 - [ ] GitHub-Secret `CRON_SECRET` anlegen (SETUP §8b), sonst läuft der tägliche Serien-Check nicht
+- [ ] Musik: Supabase-Secret `LASTFM_API_KEY` (SETUP §8c); optional `TICKETMASTER_API_KEY` (Konzerte) und Spotify-App (`SPOTIFY_CLIENT_ID` als Secret + GitHub-Variable)
 - Hinweis: Ab jetzt deployt jeder Merge nach `main` automatisch (Tests → Supabase → Pages). Läuft der Supabase-Token ab, Secret `SUPABASE_ACCESS_TOKEN` erneuern.
 
 ## Ideen (nicht umgesetzt)

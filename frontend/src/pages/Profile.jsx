@@ -3,6 +3,7 @@ import { Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import MusicSources from '../components/music/MusicSources.jsx';
 import StreamingCard from '../components/profile/StreamingCard.jsx';
 import TasteCard from '../components/profile/TasteCard.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
@@ -380,6 +381,10 @@ export default function ProfilePage() {
       )}
       <StreamingCard />
       <TasteCard />
+      <section className="card" aria-labelledby="music-sources-title">
+        <h2 id="music-sources-title">Musik verbinden</h2>
+        <MusicSources />
+      </section>
       <SettingsCard />
       <PasswordCard />
       {profile.data?.is_admin && <InvitesCard />}

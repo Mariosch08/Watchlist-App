@@ -21,3 +21,6 @@ verify_jwt = false
 
 [functions.availability]
 verify_jwt = false
+
+[functions.discovery-music]
+verify_jwt = false
