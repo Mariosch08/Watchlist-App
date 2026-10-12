@@ -1,10 +1,56 @@
 import { LogOut } from 'lucide-react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
-import { supabase } from '../lib/supabase.js';
+import { useImportRunner } from '../hooks/useImportRunner.js';
+import { signOutHere } from '../lib/api/auth.js';
+
+function ImportChip() {
+  const { job, running } = useImportRunner();
+  if (!running || !job) return null;
+  return (
+    <Link to="/import" className="badge badge--accent nav-chip" title="Import läuft">
+      Import {job.processed}/{job.total}
+    </Link>
+  );
+}
 
 export default function Layout() {
   const user = useUser();
+  const location = useLocation();
+  const [signingOut, setSigningOut] = useState(false);
+  const first = useRef(true);
+  const { running } = useImportRunner();
+
+  // After navigating (not on first load), move focus to the page heading for screen readers.
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    document.querySelector('main h1')?.focus({ preventScroll: true });
+  }, [location.pathname]);
+
+  // Warn before closing the tab while an import is running.
+  useEffect(() => {
+    if (!running) return undefined;
+    const warn = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [running]);
+
+  const logout = async () => {
+    setSigningOut(true);
+    try {
+      await signOutHere();
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
   return (
     <>
       <header className="topbar">
@@ -13,14 +59,15 @@ export default function Layout() {
         </Link>
         {user && (
           <nav className="nav" aria-label="Hauptnavigation">
+            <ImportChip />
             <NavLink to="/" end>
               Watchlist
             </NavLink>
             <NavLink to="/import">Import</NavLink>
             <NavLink to="/profile">Profil</NavLink>
-            <button className="btn-ghost btn-compact" onClick={() => supabase.auth.signOut()} aria-label="Abmelden" title="Abmelden">
+            <button className="btn-ghost btn-compact" onClick={logout} disabled={signingOut} aria-label="Abmelden" title="Abmelden">
               <LogOut size={16} aria-hidden="true" />
-              <span className="nav-label">Abmelden</span>
+              <span className="nav-label">{signingOut ? 'Abmelden …' : 'Abmelden'}</span>
             </button>
           </nav>
         )}
@@ -28,6 +75,7 @@ export default function Layout() {
       <main className="page">
         <Outlet />
       </main>
+      <ScrollRestoration getKey={(loc) => loc.pathname} />
     </>
   );
 }
