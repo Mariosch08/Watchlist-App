@@ -36,7 +36,40 @@ export function normalizeTitle(raw: Record<string, any>, mediaType: MediaType) {
     poster_path: raw.poster_path ?? null,
     release_date: raw.release_date || raw.first_air_date || null,
     vote_average: raw.vote_average ?? null,
+    vote_count: raw.vote_count ?? 0,
   };
+}
+
+type Title = ReturnType<typeof normalizeTitle>;
+
+export const normalizeText = (s: string | null | undefined) =>
+  (s ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+// Relevance = text match on (German or original) title + TMDb's own order + how well-known the title is.
+export function relevance(t: Title, query: string, index: number, total: number) {
+  const q = normalizeText(query);
+  const names = [normalizeText(t.title), normalizeText(t.original_title)].filter(Boolean);
+  let text = 0;
+  if (names.some((n) => n === q)) text = 30;
+  else if (names.some((n) => n.startsWith(q))) text = 10;
+  else if (names.some((n) => n.includes(q))) text = 3;
+  const tmdbOrder = total > 0 ? 25 * (1 - index / total) : 0;
+  const known = 10 * Math.log10((t.vote_count ?? 0) + 1);
+  return text + tmdbOrder + known;
+}
+
+// Merges movie and series results and sorts them by relevance.
+export function rankResults(query: string, movies: any[], series: any[]) {
+  const scored = [
+    ...movies.map((r, i) => ({ t: normalizeTitle(r, 'movie'), i, n: movies.length })),
+    ...series.map((r, i) => ({ t: normalizeTitle(r, 'tv'), i, n: series.length })),
+  ].map(({ t, i, n }) => ({ t, score: relevance(t, query, i, n) }));
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((x) => x.t);
 }
 
 function intParam(value: unknown, name: string, min: number, max: number, fallback?: number): number {
@@ -61,11 +94,14 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         const query = typeof body.query === 'string' ? body.query.trim() : '';
         if (!query || query.length > 100) throw new HttpError(400, 'Invalid query');
         const page = intParam(body.page, 'page', 1, 20, 1);
-        const res = await tmdbGet('/search/multi', { query, page, language: TMDB_LANGUAGE, include_adult: false }, token, fetchImpl);
-        const results = (res?.results ?? [])
-          .filter((r: any) => MEDIA_TYPES.includes(r.media_type))
-          .map((r: any) => normalizeTitle(r, r.media_type));
-        return { status: 200, body: { page, total_pages: res?.total_pages ?? 0, results } };
+        const params = { query, page, language: TMDB_LANGUAGE, include_adult: false };
+        const [movies, series] = await Promise.all([
+          tmdbGet('/search/movie', params, token, fetchImpl),
+          tmdbGet('/search/tv', params, token, fetchImpl),
+        ]);
+        const results = rankResults(query, movies?.results ?? [], series?.results ?? []);
+        const totalPages = Math.max(movies?.total_pages ?? 0, series?.total_pages ?? 0);
+        return { status: 200, body: { page, total_pages: totalPages, results } };
       }
       case 'title': {
         const mediaType = mediaTypeParam(body.media_type);

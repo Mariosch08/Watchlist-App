@@ -24,3 +24,5 @@
 **D10 – Benutzername** (optional, `[a-z0-9_]{3,20}`, UNIQUE) schon in Phase 1, weil Phase 8 Freunde per Benutzername einlädt.
 
 **D11 – Supabase CLI im Workflow auf `latest`.** Eine fixe Version wäre reproduzierbarer, aber ich konnte hier keine aktuelle Versionsnummer verifizieren. Bei Problemen in `deploy.yml` eine Version pinnen.
+
+**D12 – Suche:** `/search/movie` und `/search/tv` parallel statt `/search/multi` (mehr Treffer, keine Personen), eigenes Ranking: Textübereinstimmung mit deutschem **oder** Originaltitel + TMDb-Reihenfolge + Bekanntheit (`log10(vote_count)`). Originaltitel wird angezeigt, weil de-CH-Titel abweichen (z. B. „Sieben“ = „Se7en“).

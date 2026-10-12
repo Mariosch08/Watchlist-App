@@ -13,7 +13,10 @@ function TitleRow({ item, action }) {
       <div className="grow">
         <strong>{item.title}</strong>
         <div className="muted">
-          {TYPE_LABEL[item.media_type]} {item.release_date ? `· ${item.release_date.slice(0, 4)}` : ''}
+          {TYPE_LABEL[item.media_type]}
+          {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ''}
+          {item.original_title && item.original_title !== item.title ? ` · Originaltitel: ${item.original_title}` : ''}
+          {item.vote_average ? ` · ★ ${item.vote_average.toFixed(1)}` : ''}
         </div>
       </div>
       {action}
