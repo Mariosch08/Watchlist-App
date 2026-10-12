@@ -7,7 +7,7 @@ import WatchlistRow from './WatchlistRow.jsx';
 
 const STEP = 60;
 
-function EmptyState({ total, view, onReset }) {
+function EmptyState({ total, view, counts, onReset, onSegment }) {
   if (total === 0) {
     return (
       <div className="empty">
@@ -20,20 +20,29 @@ function EmptyState({ total, view, onReset }) {
   }
   const segment = SEGMENTS.find((s) => s.id === view.segment)?.label;
   const filtered = view.q.trim() || view.type !== 'all';
+  // Matches in other tabs: offer to jump there instead of a dead end.
+  const elsewhere = SEGMENTS.filter((s) => s.id !== view.segment && s.id !== 'all' && counts?.[s.id] > 0);
   return (
-    <div className="empty">
+    <div className="empty stack">
       <p>{filtered ? `Keine Titel in „${segment}“ passen zu deinen Filtern.` : `In „${segment}“ ist noch nichts.`}</p>
-      {filtered && (
-        <button type="button" className="btn-compact" onClick={onReset}>
-          Filter zurücksetzen
-        </button>
-      )}
+      <div className="actions">
+        {elsewhere.map((s) => (
+          <button key={s.id} type="button" className="btn-compact" onClick={() => onSegment(s.id)}>
+            {counts[s.id]} in „{s.label}“ anzeigen
+          </button>
+        ))}
+        {filtered && (
+          <button type="button" className="btn-ghost btn-compact" onClick={onReset}>
+            Filter zurücksetzen
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 // Renders the filtered list in steps so hundreds of titles stay fast.
-export default function WatchlistList({ items, total, view, onResetFilters, headingRef }) {
+export default function WatchlistList({ items, total, view, counts, onResetFilters, onSegment, headingRef }) {
   const [limit, setLimit] = useState(STEP);
   const remove = useRemoveItem();
   const viewKey = `${view.segment}|${view.type}|${view.sort}|${view.q}`;
@@ -48,7 +57,7 @@ export default function WatchlistList({ items, total, view, onResetFilters, head
     [remove.mutate, headingRef],
   );
 
-  if (items.length === 0) return <EmptyState total={total} view={view} onReset={onResetFilters} />;
+  if (items.length === 0) return <EmptyState total={total} view={view} counts={counts} onReset={onResetFilters} onSegment={onSegment} />;
   const shown = items.slice(0, limit);
   return (
     <>

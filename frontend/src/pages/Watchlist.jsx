@@ -46,7 +46,7 @@ export default function WatchlistPage() {
         <input
           type="search"
           aria-label="In der Watchlist suchen oder neuen Titel finden"
-          placeholder="Titel suchen – in deiner Liste und auf TMDb"
+          placeholder="Titel suchen …"
           value={view.q}
           maxLength={100}
           onChange={(e) => setQuery(e.target.value)}
@@ -85,6 +85,8 @@ export default function WatchlistPage() {
               items={visible}
               total={total}
               view={view}
+              counts={counts}
+              onSegment={(segment) => setView({ segment })}
               headingRef={headingRef}
               onResetFilters={() => setView({ q: '', type: 'all' })}
             />

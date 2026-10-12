@@ -4,11 +4,8 @@
 
 ## Status
 - **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System „Quiet Ink“
-- **Aktuelle Phase:** 3b – Frontend-Logik überarbeiten, danach Gesamt-Überarbeitung (Sicherheit, DB, Functions, CI, Produkt), dann Phase 4 – Details & Trailer
-- **Phase 3b in Arbeit (WIP-Commit, Build evtl. rot):** neue Datenschicht (TanStack Query, `src/lib/api/*`, `src/hooks/*`), Toasts, Router (`src/router.jsx`), Watchlist/Login/Profil neu. Offen: Import-Seite auf neue API umstellen, CSS (toasts, segmented, page-head, search-field, field-error), Tests (jsdom/RTL), Edge-Function-Codes + `dismiss`-Aktion, Migration (Bewertung → gesehen), ESLint, CI auf PRs.
-- **Backend-Review:** wegen Limit gestoppt; Teilbefunde (Sicherheit, Datenmodell) in `docs/reviews/backend-findings-partial.md`.
-- **Zwischenstand bei Abbruch:** Befunde der Frontend-Analyse in `docs/reviews/frontend-findings.md` (35 Befunde F01–F35). Gesamt-Review (Backend/Produkt) lief parallel; falls dessen Ergebnis fehlt: neu starten (Lenses: security, data-model, edge-functions, ops, product, docs-dx).
-- **Nächster konkreter Schritt:** Edge Function `tmdb` um Aktion `details` erweitern (Details + `/credits` + `/videos` + `/watch/providers` CH + `/similar` in einem Aufruf via `append_to_response`, de-CH mit en-US-Fallback für Overview/Trailer), Cache in `tmdb_cache` (`details:<type>:<id>:de-CH`, TTL 24 h); Route `/title/:type/:id` mit Poster/Backdrop, Trailer via `youtube-nocookie.com`, Anbieter-Logos (Flatrate/Leihen/Kaufen), Ähnliche Titel, Zur Watchlist, Bewerten; Titel in Watchlist/Suche verlinken. Vorher `docs/DESIGN.md` lesen.
+- **Aktuelle Phase:** 3b erledigt (PR offen). Als Nächstes: Rest der Gesamt-Überarbeitung (siehe „Offene Befunde“), dann Phase 4 – Details & Trailer
+- **Nächster konkreter Schritt:** Befunde in `docs/reviews/backend-findings-partial.md` prüfen und die High-Punkte umsetzen (Erst-Admin-Bootstrap absichern, gemeinsamer Titel-Katalog prüfen), restliche Review-Bereiche (Edge Functions, CI, Produkt, Doku) günstig selbst durchgehen; danach Phase 4.
 
 ## Repo-Überblick
 ```
@@ -26,7 +23,11 @@ frontend/                        React 18 + Vite 5 + react-router 6 + supabase-j
   src/lib/supabase.js            Client (VITE_SUPABASE_URL/ANON_KEY), appUrl() für Mail-Links (Pages-Basispfad)
   src/lib/errors.js              errorMessage() DE, unwrap()
   src/auth/AuthContext.jsx       useAuth()/useUser(), Recovery-Erkennung
-  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist, ImportExport
+  src/router.jsx                 createBrowserRouter, Lazy-Routen, Guards (src/auth/guards.jsx)
+  src/hooks/                     useWatchlist (Query + Mutationen), useTitleSearch, useUrlView, useImportRunner, useDocumentTitle
+  src/lib/api/                   watchlist, tmdb, imports, profile, invites, account, auth (einziger Ort für Supabase-Aufrufe)
+  src/lib/                       watchlistView (Filter/Sortierung, rein), watchlistRules (Spiegel des DB-Triggers), importRunner, queryClient, errors
+  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist, ImportExport, NotFound
   src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions, ImportProgress, NotFoundResolver, Skeleton
   src/lib/                       supabase, errors, labels, watchlist, imdb, download
   src/styles/                    tokens.css, base.css, components.css, motion.css (index.css importiert alles + Fonts)
@@ -38,7 +39,7 @@ docs/DESIGN.md                   **Design-System „Quiet Ink“ – vor jeder U
 ### Befehle
 - Deno-Typcheck: `cd supabase/functions && DENO_CERT=/root/.ccr/ca-bundle.crt DENO_NO_PACKAGE_JSON=1 deno check --no-lock --node-modules-dir=none */index.ts` (Deno-Binary von GitHub-Releases nach `~/bin`)
 - Root-Tests: `npm test -- --silent` (PGlite braucht ~1 s pro DB-Test)
-- Frontend: `cd frontend && npm test -- --silent && npm run build`
+- Frontend: `cd frontend && npm run lint && npm test -- --silent && npm run build` (Komponenten-Tests mit `// @vitest-environment jsdom`)
 - Neue DB-Funktion testen: Migration schreiben → `tests/*.test.js` mit `asUser()`.
 
 ### Datenmodell (aktuell)
@@ -84,7 +85,15 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Batch-Verarbeitung (Client ruft `continue`, Fortsetzen nach Abbruch), manuelle Zuordnung nicht gefundener Titel
   - [x] Export IMDb-CSV (fehlende IMDb-IDs via `/external_ids` ergänzt) + JSON
   - [x] Tests (Root 84 grün), Deno-Typcheck der Functions ok
-- [ ] **Phase 3b – Frontend-Logik überarbeiten** (Wunsch Mario, hat Vorrang): Datenschicht mit Cache und optimistischen Updates, Aktionen blockieren sich nicht gegenseitig, Filter/Sortierung/Gruppierung der Watchlist, Suche mit Debounce, Entfernen mit Rückgängig, Toasts, URL-Zustand, Code-Splitting, Tests
+- [x] **Phase 3b – Frontend-Logik überarbeitet** (35 Befunde in `docs/reviews/frontend-findings.md`)
+  - [x] TanStack Query als Datenschicht (`src/hooks/useWatchlist.js`, Keys mit User-ID, Cache wird beim Abmelden geleert), API-Module `src/lib/api/*`
+  - [x] Optimistische Updates pro Zeile (Rollback nur dieser Zeile), nichts blockiert die ganze Seite; Status-Toast mit Rückgängig; Entfernen mit Rückgängig (stellt Bewertung/Daten wieder her)
+  - [x] Ein Suchfeld: filtert die eigene Liste sofort + TMDb-Suche mit Debounce, „Merken“/„Schon gesehen“, Status bei vorhandenen Titeln
+  - [x] Tabs mit Zählern (Als Nächstes/Gesehen/Pausiert/Alle), Typ-Filter, Sortierung, alles in der URL; schrittweises Rendern (60er-Schritte); Watchlist >1000 Titel (Paging)
+  - [x] Import-Runner ausserhalb von React (überlebt Seitenwechsel, Auto-Fortsetzen, Retry nur bei vorübergehenden Fehlern, Chip in der Navigation), „Noch zuzuordnen“ über alle Jobs, „Ignorieren“
+  - [x] Router mit Lazy-Loading, Fehlerseite, 404-Seite, Scroll-Wiederherstellung, Seitentitel, Fokus auf h1; Login: Rücksprung inkl. Query, abgelaufene Mail-Links, Bestätigungsmail erneut senden, Passwort festlegen für Dashboard-Einladungen
+  - [x] Edge Functions liefern `code` statt Admin-Texte; Export über 1000 Titel, IMDb-ID-Nachschlag parallel; Import: Gesehen-Datum = IMDb-Bewertungsdatum; DB: Bewertung von „Geplant“ → „Gesehen“
+  - [x] ESLint (react-hooks), Komponenten-Tests (jsdom + Testing Library), CI prüft Pull Requests (Lint, Tests, Build, Deno-Typcheck) – Root 86, Frontend 33 Tests grün
 - [ ] Phase 4 – Details & Trailer
   - Detailseite (Poster, Backdrop, Beschreibung, Genres, Laufzeit, TMDb-Bewertung, Cast & Crew, Trailer via youtube-nocookie, Streaming CH Flatrate/Leihen/Kaufen, Ähnliche Titel, Watchlist/Bewerten), Cache 24 h
   - Soundtrack-Album verlinken, sobald Phase 8 (Musik) steht
@@ -122,6 +131,10 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - E-Mail (Brevo): Wochen-Digest So 18:00, Sofort-Mails, Abmeldelink
   - **PWA:** installierbar, Share-Target („Teilen → Watchlist“ aus IMDb/Netflix-App), Web-Push als Alternative zu E-Mail
 - [ ] Phase 13 – Abschluss (README mit Architektur, Setup, alles grün)
+
+## Offene Befunde (aus den Reviews)
+- `docs/reviews/backend-findings-partial.md`: 23 ungeprüfte Befunde (Sicherheit, Datenmodell), u. a. Erst-Admin-Bootstrap absichern, gemeinsamer Titel-Katalog, Bewertungs-Datum beim Import (erledigt).
+- Review-Bereiche Edge Functions, CI/Betrieb, Produkt, Doku noch nicht durchgeführt (wegen Nutzungslimit gestoppt).
 
 ## Offene Probleme
 - Migrationen + Function laufen auf dem echten Supabase-Projekt (Deploy grün). Claude-Umgebung erreicht github.io/supabase.co nicht direkt → App-Verhalten nur über Marios Rückmeldung prüfbar.

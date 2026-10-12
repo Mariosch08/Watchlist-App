@@ -46,3 +46,11 @@
 **D21 – Design „Quiet Ink“ ersetzt „Projektionsraum“** (Vorgabe von Mario, `docs/DESIGN.md`). Konflikte mit den früheren Regeln (Filmkorn, Verläufe, Einblend-Animationen, Versalien) entschieden zugunsten von Quiet Ink. Abweichung: Schriften selbst gehostet statt Google Fonts (Datenschutz, gleiche Optik).
 
 **D22 – Phasen neu nummeriert (12.10.2026)**, weil Mario alle Zusatz-Ideen übernommen hat. Alt → neu: 7 Musik → 8, 8 Freunde → 9, 9 Statistiken → 11, 10 E-Mail → 12, 11 Abschluss → 13. Neu: 3b Frontend-Logik, 7 Streaming-Tools, 10 Tagebuch & Sammlungen. Verweise auf alte Phasennummern in früheren Einträgen (z. B. D8 „Phase 8“, D14 „Phase 7“) meinen die alte Zählung.
+
+**D23 – TanStack Query als Datenschicht** (Phase 3b): ein Cache für alle Seiten, Keys enthalten die User-ID, beim Konto-Wechsel `queryClient.clear()`. Watchlist wird ganz geladen (Paging à 1000) und clientseitig gefiltert/sortiert – bei einigen tausend Titeln schneller und einfacher als Server-Filter. Mutationen pro Zeile, optimistisch, Rollback nur der betroffenen Felder.
+
+**D24 – Ein Suchfeld für beides:** filtert die eigene Liste sofort und sucht parallel (Debounce 350 ms, ab 2 Zeichen) auf TMDb. Spart eine zweite Suche und zeigt, ob ein Titel schon in der Liste ist.
+
+**D25 – Regel „Bewertung heisst gesehen“** lebt im DB-Trigger und wird im Frontend (`watchlistRules.js`) nur für die optimistische Anzeige gespiegelt. Gilt nur für „Geplant“; laufende Serien bleiben offen.
+
+**D26 – Edge Functions senden `{ error, code }`**; das Frontend übersetzt Codes in deutsche Texte. Freunde sehen keine Admin-Hinweise mehr.

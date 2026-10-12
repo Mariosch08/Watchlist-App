@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { addTitle, fetchWatchlist, removeItem, restoreItem, updateItem } from '../lib/api/watchlist.js';
 import { errorMessage } from '../lib/errors.js';
-import { titleKey } from '../lib/labels.js';
+import { STATUS_LABEL, titleKey } from '../lib/labels.js';
 import { queryKeys } from '../lib/queryClient.js';
 import { applyChange, DERIVED_FIELDS } from '../lib/watchlistRules.js';
 import { useToast } from '../components/toast/ToastProvider.jsx';
@@ -67,7 +67,7 @@ export function useUpdateItem(item) {
         action: { label: 'Erneut versuchen', onClick: () => self.current?.mutate(variables) },
       });
     },
-    onSuccess: (saved) => {
+    onSuccess: (saved, variables, context) => {
       if (!saved) {
         cache.drop(k);
         toast.info(`„${item.title}“ ist nicht mehr in deiner Watchlist.`);
@@ -75,6 +75,17 @@ export function useUpdateItem(item) {
       }
       // A later edit of the same row is still pending: keep its optimistic value until it lands.
       if (cache.queryClient.isMutating({ mutationKey }) <= 1) cache.patch(k, () => saved);
+      // Status changes can move the row to another tab: say where it went and offer undo.
+      const before = context?.previous;
+      if (before && saved.status !== before.status && !variables.undo) {
+        toast.success(`„${saved.title}“: ${STATUS_LABEL[saved.status]}`, {
+          replace: `status-${k}`,
+          action: {
+            label: 'Rückgängig',
+            onClick: () => self.current?.mutate({ changes: { status: before.status, my_rating: before.my_rating, watched_at: before.watched_at }, undo: true }),
+          },
+        });
+      }
     },
   });
   self.current = mutation;

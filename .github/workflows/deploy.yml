@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,7 +12,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy
+  group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -23,11 +24,18 @@ jobs:
         with:
           node-version: 22
       - run: npm ci && npm test
-      - run: npm ci && npm test
+      - run: npm ci && npm run lint && npm test && npm run build
         working-directory: frontend
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: Type-check edge functions
+        working-directory: supabase/functions
+        run: DENO_NO_PACKAGE_JSON=1 deno check --no-lock --node-modules-dir=none */index.ts
 
   supabase:
     needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

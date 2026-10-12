@@ -8,8 +8,9 @@ export type MediaType = (typeof MEDIA_TYPES)[number];
 
 type Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
+// `code` is machine-readable; the frontend translates it into a German message.
 export class HttpError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public code: string = 'ERROR') {
     super(message);
   }
 }
@@ -36,7 +37,7 @@ export async function tmdbGet(
     if (res.status === 404) return null;
     if (res.ok) return res.json();
     const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt >= MAX_ATTEMPTS) throw new HttpError(502, `TMDb request failed (${res.status})`);
+    if (!retryable || attempt >= MAX_ATTEMPTS) throw new HttpError(502, `TMDb request failed (${res.status})`, 'TMDB_UNAVAILABLE');
     const retryAfter = Number(res.headers?.get?.('retry-after'));
     await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 250 * 2 ** attempt);
   }
@@ -90,24 +91,24 @@ export function rankResults(query: string, movies: any[], series: any[]) {
 function intParam(value: unknown, name: string, min: number, max: number, fallback?: number): number {
   if (value === undefined && fallback !== undefined) return fallback;
   const n = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
-  if (!Number.isInteger(n) || (n as number) < min || (n as number) > max) throw new HttpError(400, `Invalid ${name}`);
+  if (!Number.isInteger(n) || (n as number) < min || (n as number) > max) throw new HttpError(400, `Invalid ${name}`, 'INVALID_INPUT');
   return n as number;
 }
 
 function mediaTypeParam(value: unknown): MediaType {
-  if (!MEDIA_TYPES.includes(value as MediaType)) throw new HttpError(400, 'Invalid media_type');
+  if (!MEDIA_TYPES.includes(value as MediaType)) throw new HttpError(400, 'Invalid media_type', 'INVALID_INPUT');
   return value as MediaType;
 }
 
 // Request body: { action: 'search', query, page? } | { action: 'title', media_type, tmdb_id }
 export async function handleTmdbRequest(body: any, token: string | undefined, fetchImpl: Fetch) {
   try {
-    if (!token) throw new HttpError(500, 'TMDB_API_KEY is not configured');
-    if (!body || typeof body !== 'object') throw new HttpError(400, 'Invalid body');
+    if (!token) throw new HttpError(500, 'TMDB_API_KEY is not configured', 'TMDB_NOT_CONFIGURED');
+    if (!body || typeof body !== 'object') throw new HttpError(400, 'Invalid body', 'INVALID_INPUT');
     switch (body.action) {
       case 'search': {
         const query = typeof body.query === 'string' ? body.query.trim() : '';
-        if (!query || query.length > 100) throw new HttpError(400, 'Invalid query');
+        if (query.length < 2 || query.length > 100) throw new HttpError(400, 'Invalid query', 'INVALID_QUERY');
         const page = intParam(body.page, 'page', 1, 20, 1);
         const params = { query, page, language: TMDB_LANGUAGE, include_adult: false };
         const [movies, series] = await Promise.all([
@@ -122,15 +123,15 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         const mediaType = mediaTypeParam(body.media_type);
         const id = intParam(body.tmdb_id, 'tmdb_id', 1, 1e9);
         const raw = await tmdbGet(`/${mediaType}/${id}`, { language: TMDB_LANGUAGE }, token, fetchImpl);
-        if (!raw) throw new HttpError(404, 'Not found');
+        if (!raw) throw new HttpError(404, 'Not found', 'NOT_FOUND');
         return { status: 200, body: normalizeTitle(raw, mediaType) };
       }
       default:
-        throw new HttpError(400, 'Unknown action');
+        throw new HttpError(400, 'Unknown action', 'INVALID_INPUT');
     }
   } catch (err) {
-    if (err instanceof HttpError) return { status: err.status, body: { error: err.message } };
+    if (err instanceof HttpError) return { status: err.status, body: { error: err.message, code: err.code } };
     console.error(err);
-    return { status: 500, body: { error: 'Internal error' } };
+    return { status: 500, body: { error: 'Internal error', code: 'INTERNAL' } };
   }
 }

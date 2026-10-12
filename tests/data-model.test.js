@@ -59,6 +59,24 @@ describe('watchlist ratings and status', () => {
     expect(w.d).toBe('2020-01-02');
   });
 
+  it('rating a planned title marks it as watched, a watching series stays open', async () => {
+    await asUser(db, a, 'update public.watchlist set my_rating = 8 where tmdb_id = 603');
+    let [w] = await rows(a, 'select status, watched_at from public.watchlist where tmdb_id = 603');
+    expect(w.status).toBe('completed');
+    expect(w.watched_at).toBeInstanceOf(Date);
+    await asUser(db, a, "insert into public.watchlist (media_type, tmdb_id, status) values ('tv', 1399, 'watching')");
+    await asUser(db, a, 'update public.watchlist set my_rating = 7 where tmdb_id = 1399');
+    [w] = await rows(a, 'select status from public.watchlist where tmdb_id = 1399');
+    expect(w.status).toBe('watching');
+  });
+
+  it('moving back to planned clears the watch date', async () => {
+    await asUser(db, a, "update public.watchlist set status = 'completed' where tmdb_id = 603");
+    await asUser(db, a, "update public.watchlist set status = 'planned' where tmdb_id = 603");
+    const [w] = await rows(a, 'select watched_at from public.watchlist where tmdb_id = 603');
+    expect(w.watched_at).toBeNull();
+  });
+
   it('completed sets watched_at; status values are validated', async () => {
     await asUser(db, a, "update public.watchlist set status = 'completed' where tmdb_id = 603");
     const [w] = await rows(a, 'select watched_at from public.watchlist');
