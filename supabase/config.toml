@@ -18,3 +18,6 @@ verify_jwt = false
 # Cron (x-cron-secret) or a logged-in user (checked in code).
 [functions.discovery-media]
 verify_jwt = false
+
+[functions.availability]
+verify_jwt = false

@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–6 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** 7 – Streaming-Tools (Abo-Optimierer, Verfügbarkeits-Alarm, Kinostarts)
-- **Nächster konkreter Schritt:** Edge Function `availability` (pro Watchlist-Titel `/watch/providers` CH, Cache 24 h, Batch) → Abo-Optimierer-Seite (Anbieter × verfügbare Titel, Empfehlung) + Tabelle `availability_alerts` (Titel, gewünschte Anbieter) + täglicher Abgleich im Cron → Benachrichtigung.
+- **Erledigt:** Phase 0–7 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 8 – Musik (Last.fm, Spotify optional, MusicBrainz, Konzerte CH)
+- **Nächster konkreter Schritt:** Last.fm-Benutzername in `user_settings` + Profil-Feld → Edge Function `discovery-music` (Last.fm Top-Artists → ähnliche Artists + MusicBrainz-Releases der letzten 30 Tage, 1 Anfrage/s, User-Agent) → Feed `type = album` mit Grund und Spotify-/Last.fm-Link → Musik-Bereich auf „Für dich“.
 
 ## Repo-Überblick
 ```
@@ -118,10 +118,13 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Seite „Für dich“: Vorschläge mit Begründung, 👍/👎/Merken, Filter Typ/Genre/Neuerscheinungen; „Was schauen wir heute?“ (Typ, Stimmung, Dauer, „Nochmal“)
   - [x] Profil: Streaming-Dienste CH (Liste live von TMDb), Genre-Regler Filme/Serien
   - [x] Tests: Root 117, Frontend 46 grün
-- [ ] Phase 7 – Streaming-Tools (neu)
-  - **Abo-Optimierer:** pro Anbieter zählen, wie viele Watchlist-Titel in CH verfügbar sind (inkl. „bald weg“), Empfehlung welches Abo diesen Monat
-  - **Verfügbarkeits-Alarm:** „Sag mir, wenn X auf einem meiner Abos kommt“ (täglicher Abgleich `/watch/providers`)
-  - **Kinostarts CH** im Kalender-Abo
+- [x] Phase 7 – Streaming-Tools
+  - [x] Edge Function `availability`: `scan` prüft bis 300 offene Watchlist-Titel (`/watch/providers` CH, Cache 24 h, 8 parallel); `check` (Cron 07:15) meldet Alarme
+  - [x] Seite „Streaming“: Abdeckung mit eigenen Abos, „Lohnt sich diesen Monat“, „Kaum genutzt“, beste Zweier-Kombination, Titel pro Dienst
+  - [x] Verfügbarkeits-Alarm: Knopf auf der Detailseite, Tabelle `availability_alerts`, Benachrichtigung Typ `available`, Liste auf „Streaming“
+  - [x] Filmstarts geplanter Filme im Kalender-Abo (seit Phase 5); ICS-Escape von `;` korrigiert
+  - [ ] „Bald weg“ geht nicht: TMDb/JustWatch liefern kein Enddatum (siehe D37)
+  - [x] Tests: Root 123, Frontend 50 grün
 - [ ] Phase 8 – Musik (Last.fm, Spotify optional, MusicBrainz)
   - **Konzerte in der Schweiz** für Lieblings-Artists (Ticketmaster Discovery API, eigener Key → „Offen für Mario“)
   - Soundtrack zum Film auf der Detailseite (Spotify-Link)

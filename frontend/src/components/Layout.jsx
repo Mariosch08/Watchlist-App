@@ -74,19 +74,24 @@ export default function Layout() {
         </Link>
         {user && (
           <nav className="nav" aria-label="Hauptnavigation">
-            <ImportChip />
-            <NavLink to="/" end>
-              Watchlist
-            </NavLink>
-            <NavLink to="/discover">Für dich</NavLink>
-            <NavLink to="/calendar">Kalender</NavLink>
-            <NavLink to="/import">Import</NavLink>
-            <NavLink to="/profile">Profil</NavLink>
-            <NotificationBell userId={user.id} />
-            <button className="btn-ghost btn-compact" onClick={logout} disabled={signingOut} aria-label="Abmelden" title="Abmelden">
-              <LogOut size={16} aria-hidden="true" />
-              <span className="nav-label">{signingOut ? 'Abmelden …' : 'Abmelden'}</span>
-            </button>
+            <div className="nav-links">
+              <NavLink to="/" end>
+                Watchlist
+              </NavLink>
+              <NavLink to="/discover">Für dich</NavLink>
+              <NavLink to="/calendar">Kalender</NavLink>
+              <NavLink to="/streaming">Streaming</NavLink>
+              <NavLink to="/import">Import</NavLink>
+              <NavLink to="/profile">Profil</NavLink>
+            </div>
+            <div className="nav-tools">
+              <ImportChip />
+              <NotificationBell userId={user.id} />
+              <button className="btn-ghost btn-compact" onClick={logout} disabled={signingOut} aria-label="Abmelden" title="Abmelden">
+                <LogOut size={16} aria-hidden="true" />
+                <span className="nav-label">{signingOut ? 'Abmelden …' : 'Abmelden'}</span>
+              </button>
+            </div>
           </nav>
         )}
       </header>

@@ -161,7 +161,7 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(3);
+    expect(data.version).toBe(4);
     expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
@@ -320,5 +320,21 @@ describe('feed feedback (phase 6)', () => {
   it('other users cannot give feedback on my feed; invalid actions are rejected', async () => {
     await expect(asUser(db, b, 'select public.feed_feedback($1, $2)', [feedId, 'like'])).rejects.toThrow(/FEED_NOT_FOUND/);
     await expect(asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'love'])).rejects.toThrow(/INVALID_ACTION/);
+  });
+});
+
+describe('availability alerts (phase 7)', () => {
+  it('are private and cannot be marked as notified by the client', async () => {
+    await asUser(db, a, "insert into public.availability_alerts (media_type, tmdb_id, title) values ('movie', 693134, 'Dune 2')");
+    expect(await rows(b, 'select * from public.availability_alerts')).toEqual([]);
+    await expect(asUser(db, a, 'update public.availability_alerts set notified_at = now()')).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(db, a, "insert into public.availability_alerts (user_id, media_type, tmdb_id, title) values ($1, 'movie', 1, 'x')", [b]),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it('notifications accept the new type', async () => {
+    await asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'available', 'Jetzt im Abo')", [a]);
+    await expect(asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'spam', 'x')", [a])).rejects.toThrow(/check constraint/);
   });
 });

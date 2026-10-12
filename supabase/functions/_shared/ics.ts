@@ -7,7 +7,7 @@ export interface CalendarEvent {
   url?: string;
 }
 
-const escapeText = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const escapeText = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 
 // Lines longer than 75 octets are folded (continuation lines start with a space).
 export function foldLine(line: string): string {

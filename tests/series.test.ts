@@ -52,7 +52,7 @@ describe('ics', () => {
   it('builds valid all-day events with escaping and CRLF', () => {
     const ics = buildIcs([{ uid: 'ep-1@x', date: '2026-12-31', summary: 'Dune, Teil 2; Premiere' }], { name: 'Watchlist', now: new Date('2026-10-13T08:00:00Z') });
     expect(ics).toContain('DTSTART;VALUE=DATE:20261231\r\nDTEND;VALUE=DATE:20270101');
-    expect(ics).toContain('SUMMARY:Dune\\, Teil 2\; Premiere');
+    expect(ics).toContain('SUMMARY:Dune\\, Teil 2\\; Premiere');
     expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
     expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
   });

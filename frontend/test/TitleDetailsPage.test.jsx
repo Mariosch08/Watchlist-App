@@ -15,9 +15,13 @@ vi.mock('../src/lib/api/watchlist.js', () => ({
   restoreItem: vi.fn(),
 }));
 vi.mock('../src/lib/api/tmdb.js', () => ({ MIN_QUERY_LENGTH: 2, searchTitles: vi.fn(), fetchTitleDetails: vi.fn() }));
+vi.mock('../src/lib/api/settings.js', () => ({ fetchSettings: vi.fn() }));
+vi.mock('../src/lib/api/streaming.js', () => ({ fetchAlerts: vi.fn(), createAlert: vi.fn(), deleteAlert: vi.fn() }));
 
 const api = await import('../src/lib/api/watchlist.js');
 const tmdb = await import('../src/lib/api/tmdb.js');
+const settingsApi = await import('../src/lib/api/settings.js');
+const streamingApi = await import('../src/lib/api/streaming.js');
 const { ToastProvider } = await import('../src/components/toast/ToastProvider.jsx');
 const { default: TitleDetailsPage } = await import('../src/pages/TitleDetails.jsx');
 
@@ -63,7 +67,11 @@ function renderPage(path = '/title/movie/438631') {
   );
 }
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [] });
+  streamingApi.fetchAlerts.mockResolvedValue([]);
+});
 
 describe('TitleDetailsPage', () => {
   it('shows details, streaming, cast and similar titles', async () => {
@@ -117,5 +125,24 @@ describe('TitleDetailsPage', () => {
     renderPage('/title/book/abc');
     expect(await screen.findByRole('heading', { name: 'Titel nicht gefunden' })).toBeInTheDocument();
     expect(tmdb.fetchTitleDetails).not.toHaveBeenCalled();
+  });
+
+  it('confirms availability on my services or offers an alert', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    api.fetchWatchlist.mockResolvedValue([]);
+    settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [8] });
+    renderPage();
+    expect(await screen.findByText('Mit deinen Abos verfügbar: Netflix.')).toBeInTheDocument();
+  });
+
+  it('creates an availability alert when the title is not on my services', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    api.fetchWatchlist.mockResolvedValue([]);
+    settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [337] });
+    streamingApi.createAlert.mockResolvedValue(undefined);
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Benachrichtigen, wenn auf meinen Diensten' }));
+    expect(streamingApi.createAlert.mock.calls[0][0]).toEqual({ media_type: 'movie', tmdb_id: 438631, title: 'Dune' });
+    expect(await screen.findByText(/sobald „Dune“ auf deinen Streaming-Diensten ist/)).toBeInTheDocument();
   });
 });

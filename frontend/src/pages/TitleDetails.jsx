@@ -119,7 +119,7 @@ function Details({ details: d }) {
         </section>
       )}
 
-      <StreamingProviders providers={d.providers} />
+      <StreamingProviders providers={d.providers} details={d} />
       <CastList cast={d.cast} crew={d.crew} />
       <SimilarTitles titles={d.similar} byKey={byKey} />
     </>

@@ -1292,3 +1292,109 @@ button.btn-ghost[aria-pressed='true'] {
 .toolbar .check-row {
   font-size: var(--text-body-sm);
 }
+
+/* ---- Navigation: links + tools; on phones the links get their own scrollable row ------------- */
+.nav-links,
+.nav-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 767px) {
+  .topbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-1);
+  }
+
+  .nav {
+    display: contents;
+  }
+
+  .nav-tools {
+    margin-left: auto;
+  }
+
+  .nav-links {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 calc(-1 * var(--space-2));
+    padding: 0 var(--space-2) var(--space-1);
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-links a {
+    flex-shrink: 0;
+  }
+}
+
+/* ---- Streaming optimizer -------------------------------------------------------------------- */
+.advice {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 68ch;
+}
+
+.provider-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.provider-stat {
+  border-bottom: 1px solid var(--color-border);
+}
+
+button.provider-stat-head {
+  width: 100%;
+  height: auto;
+  min-height: var(--row-height);
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1.4fr) minmax(0, 1fr) var(--space-6);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  font-weight: 400;
+  font-size: var(--text-body-sm);
+}
+
+.provider-stat-head img,
+.provider-stat-head .provider-logo {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-sm);
+}
+
+.provider-stat-bar {
+  height: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+.provider-stat-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  transform: scaleX(var(--progress));
+}
+
+.provider-stat-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

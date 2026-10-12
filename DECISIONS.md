@@ -71,3 +71,10 @@
 **D34 – Streaming-Bonus über TMDb-Discover statt pro Titel abzufragen:** Für „auf meinen Abos“ wird `/discover` mit `with_watch_providers` (CH, Flatrate/Gratis/Werbung) als eigene Quelle abgefragt. Das kostet zwei Aufrufe pro Nutzer statt einen pro Kandidat.
 
 **D35 – Scoring-Code einmal für Server und Browser:** `supabase/functions/_shared/scoring.ts` hat keine Deno-Abhängigkeiten und wird vom Frontend direkt importiert (Genre-Regler, Abend-Picker).
+
+**D36 – Abo-Optimierer rechnet im Browser** (Phase 7): Die Function `availability` liefert nur die Flatrate-Anbieter pro Titel (24 h im `tmdb_cache`, höchstens 300 offene Titel, die zuletzt hinzugefügten zuerst). Zählen, „Lohnt sich“, „Kaum genutzt“ (< 3 Titel) und die beste Zweier-Kombination (greedy) macht `_shared/availability.ts` – derselbe Code wie im Cron, im Browser direkt importiert.
+
+**D37 – Kein „bald weg“:** TMDb (Daten von JustWatch) liefert, wo ein Titel läuft, aber nicht, bis wann. Eine andere Quelle wäre kostenpflichtig oder Scraping. Deshalb nur Verfügbarkeits-Alarme in die andere Richtung („jetzt auf deinen Diensten“).
+
+**D38 – Verfügbarkeits-Alarm einmalig:** Ein Alarm meldet sich einmal (`notified_at`), Benachrichtigung mit `dedupe_key`, damit ein doppelter Cron-Lauf nichts doppelt meldet. Ohne gewählte Dienste zählt jeder Flatrate-Anbieter.
+
