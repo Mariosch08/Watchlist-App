@@ -48,8 +48,8 @@ Supabase → *Authentication* → *URL Configuration*:
 
 Optional unter *Authentication → Sign In / Providers → Email*: „Minimum password length“ auf **10** setzen.
 
-## 8. Dein Konto
-Öffne die App → *Registrieren*. **Der allererste Nutzer braucht keinen Code und wird automatisch Admin** – also gleich nach dem Deploy selbst registrieren. Bestätigungslink in der Mail anklicken, anmelden. Auf der Profil-Seite erstellst du dann Einladungscodes für Freunde („Link kopieren“ und verschicken).
+## 8. Dein Konto (erster Admin)
+Supabase → *Authentication* → *Users* → **Invite user** → deine E-Mail-Adresse. Den Link in der Mail öffnen, Passwort festlegen – fertig. **Nur ein über das Dashboard eingeladener Nutzer kann erster Admin werden**; über die öffentliche Registrierung geht das nicht (Schutz vor Fremden). Danach erstellst du auf der Profil-Seite Einladungscodes für Freunde.
 
 ## 9. Bevor sich Freunde registrieren: E-Mail-Versand
 Der eingebaute Supabase-Mailversand schickt nur an Mitglieder deines Supabase-Teams (also nur an dich) und nur wenige Mails pro Stunde. Für Freunde einen kostenlosen Mail-Dienst anschliessen:

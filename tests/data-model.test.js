@@ -10,7 +10,7 @@ const rows = async (userId, sql, params) => (await asUser(db, userId, sql, param
 
 beforeEach(async () => {
   db = await createDb();
-  a = await signUp(db, 'a@example.com');
+  a = await signUp(db, 'a@example.com', {}, new Date().toISOString());
   await asAdmin(db, "insert into public.invites (code, max_uses) values ('INVITE123456', 5)");
   b = await signUp(db, 'b@example.com', { invite_code: 'INVITE123456' });
   c = await signUp(db, 'c@example.com', { invite_code: 'INVITE123456' });

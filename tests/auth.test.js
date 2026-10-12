@@ -11,11 +11,11 @@ async function createInvite(code = 'ABCDEF123456', maxUses = 1, expires = "now()
 
 beforeEach(async () => {
   db = await createDb();
-  mario = await signUp(db, 'Mario@Example.com');
+  mario = await signUp(db, 'Mario@Example.com', {}, new Date().toISOString());
 });
 
 describe('sign-up rules', () => {
-  it('first user needs no invite, gets a profile and becomes admin', async () => {
+  it('the first dashboard-invited user gets a profile and becomes admin', async () => {
     const { rows } = await asAdmin(db, 'select email, display_name, is_admin from public.profiles where id = $1', [mario]);
     expect(rows[0]).toEqual({ email: 'mario@example.com', display_name: 'Mario', is_admin: true });
   });
@@ -42,8 +42,24 @@ describe('sign-up rules', () => {
     await expect(signUp(db, 'x@example.com', { invite_code: 'EXPIRED12345' })).rejects.toThrow(/INVITE_INVALID/);
   });
 
-  it('dashboard invites (admin approval) need no code', async () => {
-    await expect(signUp(db, 'invited@example.com', {}, new Date().toISOString())).resolves.toBeTruthy();
+  it('dashboard invites (admin approval) need no code but do not make further admins', async () => {
+    const id = await signUp(db, 'invited@example.com', {}, new Date().toISOString());
+    const { rows } = await asAdmin(db, 'select is_admin from public.profiles where id = $1', [id]);
+    expect(rows[0].is_admin).toBe(false);
+  });
+
+  it('public sign-up never bypasses the invite, not even when the app is empty again', async () => {
+    await asUser(db, mario, 'select public.delete_my_account()');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.profiles')).rows[0].n).toBe(0);
+    await expect(signUp(db, 'stranger@example.com')).rejects.toThrow(/INVITE_REQUIRED/);
+  });
+
+  it('an invite-code user is never admin, even without any admin', async () => {
+    await asAdmin(db, "update public.profiles set is_admin = false");
+    await createInvite('CODE12345678');
+    const id = await signUp(db, 'friend@example.com', { invite_code: 'CODE12345678' });
+    const { rows } = await asAdmin(db, 'select is_admin from public.profiles where id = $1', [id]);
+    expect(rows[0].is_admin).toBe(false);
   });
 
   it('check_invite is callable anonymously', async () => {
