@@ -56,6 +56,16 @@ describe('ics', () => {
     expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
     expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
   });
+  it('builds timed events in UTC with a duration', () => {
+    const ics = buildIcs([{ uid: 'night-1@x', date: '2026-10-18', start: '2026-10-18T18:00:00Z', minutes: 150, summary: 'Filmabend' }], {
+      name: 'Filmabend',
+      now: new Date('2026-10-13T08:00:00Z'),
+    });
+    expect(ics).toContain('DTSTART:20261018T180000Z\r\nDTEND:20261018T203000Z');
+    expect(ics).toContain('TRANSP:OPAQUE');
+    expect(ics).not.toContain('VALUE=DATE');
+  });
+
   it('folds long lines at 75 octets', () => {
     const folded = foldLine('SUMMARY:' + 'ä'.repeat(60));
     for (const line of folded.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);

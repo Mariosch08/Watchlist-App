@@ -1,10 +1,12 @@
-// Minimal iCalendar (RFC 5545) writer for all-day events.
+// Minimal iCalendar (RFC 5545) writer for all-day events and timed events (UTC).
 export interface CalendarEvent {
   uid: string;
   date: string; // YYYY-MM-DD
   summary: string;
   description?: string;
   url?: string;
+  start?: string; // ISO date-time: a timed event instead of an all-day one
+  minutes?: number; // duration of a timed event (default 180)
 }
 
 const escapeText = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
@@ -38,8 +40,10 @@ function nextDay(date: string) {
   return d.toISOString().slice(0, 10);
 }
 
+const utcStamp = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
 export function buildIcs(events: CalendarEvent[], { name, now = new Date() }: { name: string; now?: Date }) {
-  const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const stamp = utcStamp(now);
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -55,12 +59,13 @@ export function buildIcs(events: CalendarEvent[], { name, now = new Date() }: { 
       'BEGIN:VEVENT',
       `UID:${e.uid}`,
       `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${compactDate(e.date)}`,
-      `DTEND;VALUE=DATE:${compactDate(nextDay(e.date))}`,
+      ...(e.start
+        ? [`DTSTART:${utcStamp(new Date(e.start))}`, `DTEND:${utcStamp(new Date(Date.parse(e.start) + (e.minutes ?? 180) * 60_000))}`]
+        : [`DTSTART;VALUE=DATE:${compactDate(e.date)}`, `DTEND;VALUE=DATE:${compactDate(nextDay(e.date))}`]),
       `SUMMARY:${escapeText(e.summary)}`,
       ...(e.description ? [`DESCRIPTION:${escapeText(e.description)}`] : []),
       ...(e.url ? [`URL:${e.url}`] : []),
-      'TRANSP:TRANSPARENT',
+      e.start ? 'TRANSP:OPAQUE' : 'TRANSP:TRANSPARENT',
       'END:VEVENT',
     );
   }

@@ -161,7 +161,7 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(5);
+    expect(data.version).toBe(6);
     expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
@@ -204,6 +204,14 @@ describe('shared lists', () => {
   let list;
   beforeEach(async () => {
     [{ id: list }] = await rows(a, "insert into public.shared_lists (name) values ('Filmabend') returning id");
+    await asAdmin(db, "insert into public.friendships (requester_id, addressee_id, status) values ($1, $2, 'accepted'), ($1, $3, 'accepted')", [a, b, c]);
+  });
+
+  it('only friends can be added as members', async () => {
+    const d = await signUp(db, 'd@example.com', { invite_code: 'INVITE123456' });
+    await expect(asUser(db, a, "insert into public.list_members (list_id, user_id, role) values ($1, $2, 'viewer')", [list, d])).rejects.toThrow(
+      /row-level security/,
+    );
   });
 
   it('creator becomes owner; non-members see nothing', async () => {
@@ -363,7 +371,7 @@ describe('music (phase 8)', () => {
       asUser(db, b, "insert into public.spotify_connections (user_id, spotify_user_id, refresh_token_enc) values ($1, 'x', 'y')", [b]),
     ).rejects.toThrow(/permission denied/);
     const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
-    expect(exported.version).toBe(5);
+    expect(exported.version).toBe(6);
     expect(exported.spotify).toMatchObject({ display_name: 'Mario' });
     expect(JSON.stringify(exported)).not.toContain('v1.secret');
     expect(exported.music_artists).toHaveLength(1);

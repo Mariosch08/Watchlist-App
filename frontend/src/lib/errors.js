@@ -18,6 +18,15 @@ const PG_CODES = {
   PGRST116: 'Dieser Eintrag existiert nicht mehr. Lade die Seite neu.',
 };
 
+// Raised by our own SQL functions (raise exception '<CODE>').
+const DB_RAISES = {
+  USER_NOT_FOUND: 'Niemand mit diesem Benutzernamen oder dieser E-Mail gefunden.',
+  TOO_MANY_REQUESTS: 'Zu viele Anfragen in kurzer Zeit. Bitte versuche es später nochmals.',
+  NOT_FRIENDS: 'Ihr seid noch nicht befreundet.',
+  REQUEST_NOT_FOUND: 'Diese Anfrage gibt es nicht mehr.',
+  FEED_NOT_FOUND: 'Dieser Vorschlag existiert nicht mehr.',
+};
+
 // Machine-readable codes returned by our Edge Functions ({ error, code }).
 const FUNCTION_CODES = {
   NOT_IMDB_CSV: 'Das ist keine IMDb-CSV-Datei (die Spalte „Const“ fehlt).',
@@ -72,6 +81,7 @@ export function errorMessage(err) {
   if (err instanceof AppError) return err.message;
   if (isNetworkError(err)) return NETWORK_MESSAGE;
   if (err.code && AUTH_CODES[err.code]) return AUTH_CODES[err.code];
+  if (DB_RAISES[err.message]) return DB_RAISES[err.message];
   if (err.code && PG_CODES[err.code]) return PG_CODES[err.code];
   // A failing sign-up trigger surfaces as a generic database error.
   if (/Database error saving new user/i.test(err.message ?? '')) {
