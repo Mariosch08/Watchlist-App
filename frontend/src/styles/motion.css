@@ -1,0 +1,32 @@
+/* One orchestrated entrance per page: panels and list rows rise in sequence. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.reveal {
+  animation: rise var(--dur-reveal) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 12) * var(--stagger));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+
+  * {
+    transition: none !important;
+  }
+}
+
+/* Panels on a page enter one after another without inline indices. */
+.page > .reveal:nth-child(2) { --i: 1; }
+.page > .reveal:nth-child(3) { --i: 2; }
+.page > .reveal:nth-child(4) { --i: 3; }
+.page > .reveal:nth-child(5) { --i: 4; }

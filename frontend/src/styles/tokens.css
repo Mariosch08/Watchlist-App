@@ -1,0 +1,77 @@
+/*
+ * Design tokens – "Projektionsraum": warm darkroom black, marquee amber as the
+ * dominant accent, vermilion as the sharp print accent, paper-cream text.
+ * Light theme = cream poster paper with ink. All components use these tokens only.
+ */
+:root {
+  /* Palette – dark (default) */
+  --color-ink: #120e0b;
+  --color-surface: #1d1712;
+  --color-surface-raised: #271f18;
+  --color-line: #3b3027;
+  --color-line-strong: #5a4838;
+  --color-text: #f2e7d4;
+  --color-text-muted: #a99780;
+  --color-accent: #f5a524;          /* marquee amber */
+  --color-accent-ink: #1a1208;      /* text on amber */
+  --color-accent-soft: rgb(245 165 36 / 0.14);
+  --color-print: #ec4b2c;           /* vermilion */
+  --color-print-soft: rgb(236 75 44 / 0.14);
+  --color-success: #8fbf6a;
+  --beam: rgb(245 165 36 / 0.16);
+  --grain-opacity: 0.07;
+  --shadow-panel: 0 1px 0 rgb(255 235 205 / 0.04) inset, 0 18px 40px -24px rgb(0 0 0 / 0.8);
+  --shadow-poster: 0 10px 22px -12px rgb(0 0 0 / 0.9);
+
+  /* Typography */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', serif;
+  --font-body: 'Instrument Sans', 'Avenir Next', 'Segoe UI Variable', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+  --text-xs: 0.72rem;
+  --text-s: 0.86rem;
+  --text-m: 1rem;
+  --text-l: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: clamp(2.1rem, 6vw, 3.2rem);
+  --tracking-mono: 0.08em;
+
+  /* Spacing, shape, motion */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --radius-s: 4px;
+  --radius-m: 10px;
+  --page-width: 820px;
+  --poster-w: 54px;
+  --poster-h: 81px;
+  --dur-fast: 140ms;
+  --dur-reveal: 520ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --stagger: 45ms;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --color-ink: #efe4d0;
+    --color-surface: #f8f1e3;
+    --color-surface-raised: #fffaf0;
+    --color-line: #dccdb3;
+    --color-line-strong: #b9a483;
+    --color-text: #1c1510;
+    --color-text-muted: #6d5c48;
+    --color-accent: #c26a06;
+    --color-accent-ink: #fff8ec;
+    --color-accent-soft: rgb(194 106 6 / 0.12);
+    --color-print: #c4381c;
+    --color-print-soft: rgb(196 56 28 / 0.1);
+    --color-success: #4d7a2a;
+    --beam: rgb(236 75 44 / 0.08);
+    --grain-opacity: 0.09;
+    --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 16px 34px -26px rgb(60 35 10 / 0.55);
+    --shadow-poster: 0 8px 18px -10px rgb(60 35 10 / 0.6);
+  }
+}
