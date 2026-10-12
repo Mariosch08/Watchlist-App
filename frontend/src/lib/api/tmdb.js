@@ -10,3 +10,7 @@ export async function fetchTitleDetails(mediaType, tmdbId) {
 export async function searchTitles(query, page = 1) {
   return invokeFunction('tmdb', { action: 'search', query: query.trim(), page });
 }
+
+export async function fetchTopRated() {
+  return (await invokeFunction('tmdb', { action: 'top_rated' })).titles;
+}

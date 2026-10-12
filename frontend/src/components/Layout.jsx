@@ -80,6 +80,7 @@ export default function Layout() {
               </NavLink>
               <NavLink to="/discover">Für dich</NavLink>
               <NavLink to="/diary">Tagebuch</NavLink>
+              <NavLink to="/stats">Statistik</NavLink>
               <NavLink to="/lists">Listen</NavLink>
               <NavLink to="/friends">Freunde</NavLink>
               <NavLink to="/music">Musik</NavLink>

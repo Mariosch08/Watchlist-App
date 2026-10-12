@@ -41,6 +41,9 @@ export default function DiaryPage() {
         <h1 id="diary-page-title" tabIndex={-1}>
           Tagebuch
         </h1>
+        <Link className="button-link btn-ghost btn-compact" to="/stats">
+          Statistik & Jahresrückblick
+        </Link>
       </div>
       {diary.isError ? (
         <Messages error={errorMessage(diary.error)} />

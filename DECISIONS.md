@@ -102,3 +102,9 @@
 
 **D50 – Tagebuch getrennt von der Watchlist:** Ein Titel steht einmal in der Watchlist, kann aber beliebig oft im Tagebuch stehen. Ein Eintrag „Gesehen am …“ setzt Filme auf „Gesehen“ (mit diesem Datum); Serien behalten ihren Fortschritt. Letterboxd-Einträge tragen `import_ref`, damit ein erneuter Import nichts doppelt anlegt – von Hand erfasste Einträge werden nie dedupliziert.
 
+**D51 – Diagramme selbst gebaut** (Phase 11): Drei kleine SVG-Komponenten (Monate, Bewertungen, Balkenliste) statt einer Chart-Bibliothek – weniger als 3 kB statt 50–200 kB, passen zu den Design-Tokens und haben je eine Tabelle/Liste als Textalternative.
+
+**D52 – „TMDb Top 100“ statt IMDb Top 250, keine Oscar-Liste:** Für die IMDb-Top-250 und Oscar-Gewinner gibt es keine freie, offizielle Quelle (Scraping von IMDb ist ausgeschlossen, eine eingebaute Liste würde veralten). Die TMDb-Bestenliste kommt über die API (7 Tage gecacht). Weitere Herausforderungen nutzen nur eigene Daten.
+
+**D53 – Statistik rechnet im Browser:** Watchlist und Tagebuch sind ohnehin geladen; jede Tagebuch-Sichtung zählt, gesehene Titel ohne Tagebuch-Eintrag zählen einmal am Datum „gesehen“. Kein zusätzlicher Server-Code, keine weiteren Daten verlassen das Konto. Der Jahresrückblick entsteht als SVG im Browser und wird erst beim Teilen zum PNG.
+

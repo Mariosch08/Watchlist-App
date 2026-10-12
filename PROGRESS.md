@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–10 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** 11 – Statistiken & Herausforderungen
-- **Nächster konkreter Schritt:** Seite „Statistik“ (Watchlist + Tagebuch: pro Monat/Jahr, Genres, Jahrzehnte, Bewertungsverteilung, Stunden; Musik-Top-Artists) mit leichtgewichtigen eigenen SVG-Diagrammen → Jahresrückblick (teilbare Seite/Bild) → Herausforderungen („52 Filme im Jahr“, „jedes Jahrzehnt“, IMDb Top 250, Oscar-Gewinner).
+- **Erledigt:** Phase 0–11 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 12 – Benachrichtigungen & App
+- **Nächster konkreter Schritt:** PWA (Manifest, Icons, Service Worker mit App-Shell-Cache, installierbar) → Share-Target („Teilen → Watchlist“ aus IMDb/Letterboxd/Netflix: Link parsen → Titel finden) → E-Mail über Brevo (Edge Function `notify-email`: Wochen-Digest So 18:00, Sofort-Mails für Freundschaft/Empfehlung/Filmabend, Abmeldelink per `unsubscribe_token`) → Einstellungen im Profil.
 
 ## Repo-Überblick
 ```
@@ -145,9 +145,11 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Letterboxd-Import (diary/ratings/watched/watchlist.csv; Abgleich per Titel + Jahr über die TMDb-Suche; Tagebuch wird mit übernommen, Re-Import ohne Duplikate)
   - [x] Trakt-Import (ratings/watchlist/watched JSON, direkte TMDb-IDs)
   - [x] Tests: Root 163, Frontend 69 grün
-- [ ] Phase 11 – Statistiken & Herausforderungen
-  - Statistiken, Jahresrückblick (teilbar), Musik-Stats
-  - **Herausforderungen:** „52 Filme im Jahr“, IMDb Top 250, Oscar-Gewinner, „jedes Jahrzehnt“
+- [x] Phase 11 – Statistik, Jahresrückblick & Herausforderungen
+  - [x] Seite „Statistik“ (Jahr wählbar): Titel, Stunden (Filme ohne Laufzeit mit 110 Min. geschätzt), Filme/Serien, Ø-Bewertung, Kino; Titel pro Monat, Genres mit Ø, Bewertungsverteilung, Jahrzehnte, Lieblinge; Musik-Top-Artists
+  - [x] Jahresrückblick als Bild (SVG → PNG, Teilen-Dialog auf dem Handy, sonst Download)
+  - [x] Herausforderungen: 52 Filme im Jahr, jedes Jahrzehnt seit 1920, TMDb Top 100 (statt IMDb Top 250, siehe D52), 10 Genres, 12 Kinobesuche
+  - [x] Eigene kleine SVG-Diagramme statt Chart-Bibliothek (D51); Tests: Root 164, Frontend 75 grün
 - [ ] Phase 12 – Benachrichtigungen & App
   - E-Mail (Brevo): Wochen-Digest So 18:00, Sofort-Mails, Abmeldelink
   - **PWA:** installierbar, Share-Target („Teilen → Watchlist“ aus IMDb/Netflix-App), Web-Push als Alternative zu E-Mail

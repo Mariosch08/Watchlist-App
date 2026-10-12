@@ -230,6 +230,8 @@ export function normalizeSeason(raw: Record<string, any>) {
 
 export const PROVIDERS_CACHE_KEY = `providers:${WATCH_REGION}`;
 export const GENRES_CACHE_KEY = `genres:${TMDB_LANGUAGE}`;
+export const TOP_RATED_CACHE_KEY = `top_rated:movie:${TMDB_LANGUAGE}`;
+export const TOP_RATED_PAGES = 5; // 100 titles
 
 // Streaming services available in Switzerland (movies and series merged), most relevant first.
 export function mergeProviders(movie: any[], tv: any[]) {
@@ -345,6 +347,18 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         ]);
         const result = { movie: movie?.genres ?? [], tv: tv?.genres ?? [] };
         await cache?.set(GENRES_CACHE_KEY, result, 30 * 86_400_000).catch(() => {});
+        return { status: 200, body: result };
+      }
+      case 'top_rated': {
+        // Best-rated movies on TMDb (vote-weighted) for the "Top 100" challenge.
+        const cached = await cache?.get(TOP_RATED_CACHE_KEY).catch(() => null);
+        if (cached) return { status: 200, body: cached };
+        const pages = await Promise.all(
+          Array.from({ length: TOP_RATED_PAGES }, (_, i) => tmdbGet('/movie/top_rated', { language: TMDB_LANGUAGE, page: i + 1 }, token, fetchImpl)),
+        );
+        const titles = pages.flatMap((p) => (p?.results ?? []).map((r: any) => normalizeTitle(r, 'movie')));
+        const result = { titles };
+        if (titles.length) await cache?.set(TOP_RATED_CACHE_KEY, result, 7 * 86_400_000).catch(() => {});
         return { status: 200, body: result };
       }
       case 'season': {

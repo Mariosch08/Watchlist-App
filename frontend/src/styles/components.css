@@ -1688,3 +1688,154 @@ textarea {
   gap: var(--space-1);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Navigation on wide screens: the link row scrolls instead of wrapping ------------------- */
+@media (min-width: 768px) {
+  .nav {
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  .nav-links {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-links a {
+    flex-shrink: 0;
+  }
+}
+
+/* ---- Statistics ----------------------------------------------------------------------------- */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-5);
+}
+
+.grid-2 > .card {
+  margin: 0;
+}
+
+.stats--large .stat dd {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart {
+  margin: var(--space-4) 0 0;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+}
+
+.chart .bar {
+  fill: var(--color-border-strong);
+}
+
+.chart .bar--accent {
+  fill: var(--color-accent);
+}
+
+.chart-label,
+.chart-value {
+  font-size: 9px;
+  fill: var(--color-text-muted);
+  font-family: var(--font-body);
+}
+
+.bar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bar-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-body-sm);
+}
+
+.bar-list-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-list-bar {
+  height: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+.bar-list-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  transform: scaleX(var(--progress));
+}
+
+.bar-list-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.favourites {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.challenges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.challenge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.challenge-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.challenge-head svg {
+  color: var(--color-accent);
+  vertical-align: -2px;
+}
+
+.challenge-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+span.progress {
+  display: block;
+}

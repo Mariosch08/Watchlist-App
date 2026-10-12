@@ -258,3 +258,20 @@ describe('details action', () => {
     },
   );
 });
+
+describe('top_rated action', () => {
+  it('loads five pages once and caches the list for a week', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      const page = Number(new URL(url).searchParams.get('page'));
+      return new Response(JSON.stringify({ results: [{ id: page, title: `Film ${page}`, release_date: '1994-01-01' }] }));
+    });
+    const store = new Map<string, { data: unknown; ttl: number }>();
+    const cache = { get: async (k: string) => store.get(k)?.data ?? null, set: async (k: string, data: unknown, ttl: number) => void store.set(k, { data, ttl }) };
+    const res = await handleTmdbRequest({ action: 'top_rated' }, 'k', fetchImpl, cache);
+    expect(res.status).toBe(200);
+    expect((res.body as any).titles.map((t: any) => t.tmdb_id)).toEqual([1, 2, 3, 4, 5]);
+    expect([...store.values()][0].ttl).toBe(7 * 86_400_000);
+    await handleTmdbRequest({ action: 'top_rated' }, 'k', fetchImpl, cache);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
+  });
+});
