@@ -32,6 +32,7 @@ const FUNCTION_CODES = {
   INVALID_QUERY: 'Bitte gib mindestens 2 Zeichen ein.',
   INVALID_INPUT: 'Ungültige Eingabe.',
   UNAUTHORIZED: 'Deine Sitzung ist abgelaufen. Bitte melde dich neu an.',
+  RATE_LIMITED: 'Gerade erst aktualisiert. Versuch es in ein paar Minuten nochmals.',
 };
 
 const NETWORK_PATTERN = /Failed to fetch|NetworkError|Load failed|Failed to send a request|fetch failed|Network request failed/i;

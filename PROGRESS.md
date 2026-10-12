@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–5 (inkl. 3b Frontend-Logik, 4 Detailseite, 5 Serien-Tracking), Design „Quiet Ink“, Sicherheits-Fix Erst-Admin
-- **Aktuelle Phase:** 6 – Empfehlungen & „Was schauen wir heute?“
-- **Nächster konkreter Schritt:** `_shared/scoring.ts` (Genre-Gewichte aus Bewertungen, Score = Genre-Match × Gewicht + TMDb-Rating + Aktualität + Lieblingspersonen + Streaming-Bonus − Gesehenes/Abgelehntes) mit Tests; Edge Function `discovery-media` (Cron in `.github/workflows/cron.yml`), Feed-Tab „Für dich“ mit 👍/👎/＋ (RPC `feed_feedback`), Streaming-Abos in den Einstellungen, Picker „Was schauen wir heute?“.
+- **Erledigt:** Phase 0–6 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 7 – Streaming-Tools (Abo-Optimierer, Verfügbarkeits-Alarm, Kinostarts)
+- **Nächster konkreter Schritt:** Edge Function `availability` (pro Watchlist-Titel `/watch/providers` CH, Cache 24 h, Batch) → Abo-Optimierer-Seite (Anbieter × verfügbare Titel, Empfehlung) + Tabelle `availability_alerts` (Titel, gewünschte Anbieter) + täglicher Abgleich im Cron → Benachrichtigung.
 
 ## Repo-Überblick
 ```
@@ -18,6 +18,7 @@ supabase/migrations/*.sql        Schema, RLS, Trigger, RPCs – nur additive Mig
 supabase/functions/_shared/      tmdb.ts (testbare Logik), auth.ts (requireUser), cors.ts
 supabase/functions/tmdb/         Edge Function: {action:'search'|'title'|'details'} → TMDb (de-CH), Key = Secret TMDB_API_KEY; details 24 h in tmdb_cache
 supabase/functions/series-tracker/ täglich per Cron (x-cron-secret): series_progress aktualisieren, Benachrichtigungen
+supabase/functions/discovery-media/ Feed „Für dich“ (Cron + refresh), Logik in _shared/scoring.ts (auch vom Frontend importiert)
 supabase/functions/calendar/     ICS-Feed per Token-Link (Folgen + Filmstarts)
 .github/workflows/cron.yml       Tägliche Jobs (hält Supabase wach)
 supabase/functions/imdb/         Edge Function: start (CSV parsen, Job anlegen) / continue (Batch à 40) / resolve (manuelle Zuordnung) / export (IMDb-CSV)
@@ -110,9 +111,13 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Kalender-Seite (30 Tage, Folgen + Filmstarts) + ICS-Abo (Edge Function `calendar`, geheimer Token, neu erzeugbar)
   - [x] Täglicher Check (Edge Function `series-tracker`, GitHub Actions `cron.yml` 05:15 UTC, Secret `CRON_SECRET`) → Benachrichtigungen (dedupliziert) → Glocke + Seite `/notifications`
   - [x] Tests: Root 104, Frontend 44 grün
-- [ ] Phase 6 – Empfehlungen Filme/Serien (pg_cron 06:45)
-  - Profil aus Bewertungen, Quellen, Scoring, Feed mit Begründung, 👍/👎/＋, Streaming-Abos in Einstellungen, Genre-Slider
-  - **„Was schauen wir heute?“:** Zeit/Stimmung/nur meine Abos → ein Vorschlag aus der Watchlist; „Überrasch mich“
+- [x] Phase 6 – Empfehlungen & „Was schauen wir heute?“
+  - [x] `_shared/scoring.ts`: Genre-Gewichte aus Bewertungen (8–10 ↑, 1–4 ↓, gedämpft bei < 3 Titeln) + Anpassungen; Score = Genre × 40 + TMDb-Rating + Aktualität + „Weil du X bewertet hast“ + eigene Abos − Gesehenes/Abgelehntes; Genre-Vielfalt im Top 20
+  - [x] Edge Function `discovery-media` (Cron 06:45 + „Neu berechnen“ mit 10-Min.-Sperre), Quellen: upcoming/now_playing CH, on_the_air, discover nach Lieblingsgenres, discover auf eigenen Abos, recommendations der Top-Titel; Genres alter Einträge werden nachgetragen
+  - [x] RPC `feed_feedback` (like/dislike/add, Gewichte begrenzt auf [-1, 1], 👎 → abgelehnt)
+  - [x] Seite „Für dich“: Vorschläge mit Begründung, 👍/👎/Merken, Filter Typ/Genre/Neuerscheinungen; „Was schauen wir heute?“ (Typ, Stimmung, Dauer, „Nochmal“)
+  - [x] Profil: Streaming-Dienste CH (Liste live von TMDb), Genre-Regler Filme/Serien
+  - [x] Tests: Root 117, Frontend 46 grün
 - [ ] Phase 7 – Streaming-Tools (neu)
   - **Abo-Optimierer:** pro Anbieter zählen, wie viele Watchlist-Titel in CH verfügbar sind (inkl. „bald weg“), Empfehlung welches Abo diesen Monat
   - **Verfügbarkeits-Alarm:** „Sag mir, wenn X auf einem meiner Abos kommt“ (täglicher Abgleich `/watch/providers`)

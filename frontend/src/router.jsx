@@ -30,6 +30,7 @@ export const routes = [
         children: [
           { index: true, lazy: page(() => import('./pages/Watchlist.jsx')) },
           { path: 'import', lazy: page(() => import('./pages/ImportExport.jsx')) },
+          { path: 'discover', lazy: page(() => import('./pages/Discover.jsx')) },
           { path: 'calendar', lazy: page(() => import('./pages/Calendar.jsx')) },
           { path: 'notifications', lazy: page(() => import('./pages/Notifications.jsx')) },
           { path: 'profile', lazy: page(() => import('./pages/Profile.jsx')) },

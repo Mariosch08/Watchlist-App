@@ -65,3 +65,9 @@
 **D31 – Zeitgesteuerte Jobs über GitHub Actions statt pg_cron** (Phase 5): Kein Vault-Setup in Supabase nötig, ein Secret (`CRON_SECRET`) genügt, und der tägliche Aufruf verhindert das Pausieren des Gratis-Projekts. GitHub-Cron läuft in UTC (05:15 = 07:15 Sommerzeit). Achtung: GitHub deaktiviert geplante Workflows nach 60 Tagen ohne Repo-Aktivität – dann in Actions wieder einschalten.
 
 **D32 – Serienfortschritt aus Episodenzahlen statt Episodenlisten:** „Ausgestrahlt“, „bis hier“ und „Als Nächstes“ werden aus `seasons[].episode_count` + `last_episode_to_air` berechnet; Episodenlisten (Titel, Beschreibung) lädt nur eine geöffnete Staffel. Spart viele TMDb-Aufrufe.
+
+**D33 – Geschmacksprofil = abgeleitet + Anpassungen** (Phase 6): Die Genre-Gewichte werden bei jedem Lauf frisch aus den Bewertungen berechnet; `taste_profile.genre_weights_*` speichert nur die Verschiebungen durch 👍/👎 und die Regler. So bleiben neue Bewertungen immer wirksam, und Feedback geht nicht verloren.
+
+**D34 – Streaming-Bonus über TMDb-Discover statt pro Titel abzufragen:** Für „auf meinen Abos“ wird `/discover` mit `with_watch_providers` (CH, Flatrate/Gratis/Werbung) als eigene Quelle abgefragt. Das kostet zwei Aufrufe pro Nutzer statt einen pro Kandidat.
+
+**D35 – Scoring-Code einmal für Server und Browser:** `supabase/functions/_shared/scoring.ts` hat keine Deno-Abhängigkeiten und wird vom Frontend direkt importiert (Genre-Regler, Abend-Picker).

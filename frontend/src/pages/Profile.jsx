@@ -3,6 +3,8 @@ import { Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import StreamingCard from '../components/profile/StreamingCard.jsx';
+import TasteCard from '../components/profile/TasteCard.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -376,6 +378,8 @@ export default function ProfilePage() {
       ) : (
         <CardSkeleton />
       )}
+      <StreamingCard />
+      <TasteCard />
       <SettingsCard />
       <PasswordCard />
       {profile.data?.is_admin && <InvitesCard />}

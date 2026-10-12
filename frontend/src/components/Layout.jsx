@@ -78,6 +78,7 @@ export default function Layout() {
             <NavLink to="/" end>
               Watchlist
             </NavLink>
+            <NavLink to="/discover">Für dich</NavLink>
             <NavLink to="/calendar">Kalender</NavLink>
             <NavLink to="/import">Import</NavLink>
             <NavLink to="/profile">Profil</NavLink>
