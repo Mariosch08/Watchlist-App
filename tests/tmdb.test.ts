@@ -77,3 +77,28 @@ describe('search ranking', () => {
     expect(rankResults('seven', movies, [])[0].tmdb_id).toBe(807);
   });
 });
+
+describe('tmdbGet retries', async () => {
+  const { tmdbGet } = await import('../supabase/functions/_shared/tmdb.ts');
+  const res = (status: number, retryAfter?: string) =>
+    ({ ok: status < 400, status, headers: new Headers(retryAfter ? { 'retry-after': retryAfter } : {}), json: async () => ({ ok: true }) }) as Response;
+
+  it('retries 429 using Retry-After and then succeeds', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(res(429, '2')).mockResolvedValueOnce(res(200));
+    const sleep = vi.fn(async () => {});
+    expect(await tmdbGet('/x', {}, 'k', fetchImpl, sleep)).toEqual({ ok: true });
+    expect(sleep).toHaveBeenCalledWith(2000);
+  });
+
+  it('gives up after repeated server errors', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(res(503));
+    await expect(tmdbGet('/x', {}, 'k', fetchImpl, async () => {})).rejects.toThrow('TMDb request failed (503)');
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not retry client errors', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(res(401));
+    await expect(tmdbGet('/x', {}, 'k', fetchImpl, async () => {})).rejects.toThrow('(401)');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});

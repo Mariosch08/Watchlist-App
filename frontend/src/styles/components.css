@@ -349,3 +349,96 @@ ul.plain > li + li {
 .search-form {
   align-items: stretch;
 }
+
+/* ---- Import ------------------------------------------------------------ */
+.steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-s);
+}
+
+.steps li::marker {
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+}
+
+input[type='file'] {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-s);
+}
+
+input[type='file']::file-selector-button {
+  font: inherit;
+  margin-right: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.import-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.progress {
+  height: var(--space-2);
+  border-radius: var(--space-1);
+  background: var(--color-ink);
+  border: 1px solid var(--color-line);
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: var(--progress);
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-print), var(--color-accent));
+  transition: width var(--dur-reveal) var(--ease-out);
+}
+
+.stats {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+.stat dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-text-muted);
+}
+
+.stat dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.resolver {
+  padding: var(--space-3) 0;
+}
+
+.resolver-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.resolver > ul.plain {
+  margin-top: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--color-accent-soft);
+}

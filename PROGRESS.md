@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0, Phase 1 (Benutzer & Login, Supabase), Phase 2 (Datenmodell)
-- **Nächste Phase:** Phase 3 – IMDb-Import & -Export
-- **Nächster konkreter Schritt:** privaten Storage-Bucket `imports` (Pfad `<user_id>/…`, Policy nur eigener Ordner) per Migration anlegen; CSV-Parser (tolerant, Spalten `Const`, `Your Rating`, `Date Rated`, `Title`, `Title Type`, `Year`) in `supabase/functions/_shared/imdb.ts` mit Tests; Edge Function `import-imdb` (Mapping via `/find/{imdb_id}` + `tmdb_cache`, Merge-Regeln + Tombstones), Export-RPC/Function im IMDb-CSV-Format; Frontend: Upload + Ergebnis + manuelle Zuordnung.
+- **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System
+- **Nächste Phase:** Phase 4 – Details & Trailer
+- **Nächster konkreter Schritt:** Edge Function `tmdb` um Aktion `details` erweitern (Details + `/credits` + `/videos` + `/watch/providers` CH + `/similar` in einem Aufruf via `append_to_response`, de-CH mit en-US-Fallback für Overview/Trailer), Cache in `tmdb_cache` (`details:<type>:<id>:de-CH`, TTL 24 h); Route `/title/:type/:id` mit Poster/Backdrop, Trailer via `youtube-nocookie.com`, Anbieter-Logos (Flatrate/Leihen/Kaufen), Ähnliche Titel, Zur Watchlist, Bewerten; Titel in Watchlist/Suche verlinken. Vorher `docs/DESIGN.md` lesen.
 
 ## Repo-Überblick
 ```
@@ -17,13 +17,15 @@ supabase/config.toml             CLI-Config; Functions mit verify_jwt=false (Log
 supabase/migrations/*.sql        Schema, RLS, Trigger, RPCs – nur additive Migrationen!
 supabase/functions/_shared/      tmdb.ts (testbare Logik), auth.ts (requireUser), cors.ts
 supabase/functions/tmdb/         Edge Function: {action:'search'|'title'} → TMDb (de-CH), Key = Secret TMDB_API_KEY
+supabase/functions/imdb/         Edge Function: start (CSV parsen, Job anlegen) / continue (Batch à 40) / resolve (manuelle Zuordnung) / export (IMDb-CSV)
+supabase/functions/_shared/      csv.ts, imdb.ts (Parser, Merge-Regeln, Export), importJob.ts (Batch mit injizierten Deps), admin.ts (Service-Role-Client)
 frontend/                        React 18 + Vite 5 + react-router 6 + supabase-js 2.45.4
   src/lib/supabase.js            Client (VITE_SUPABASE_URL/ANON_KEY), appUrl() für Mail-Links (Pages-Basispfad)
   src/lib/errors.js              errorMessage() DE, unwrap()
   src/auth/AuthContext.jsx       useAuth()/useUser(), Recovery-Erkennung
-  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist
-  src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions
-  src/lib/                       supabase, errors, labels, watchlist (Datenzugriff)
+  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist, ImportExport
+  src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions, ImportProgress, NotFoundResolver
+  src/lib/                       supabase, errors, labels, watchlist, imdb, download
   src/styles/                    tokens.css, base.css, components.css, motion.css (index.css importiert alles + Fonts)
 .github/workflows/deploy.yml     push main / manuell: Tests → supabase db push + functions deploy → GitHub Pages
 docs/SETUP.md                    Einrichtung für Mario (nur Browser)
@@ -31,6 +33,7 @@ docs/DESIGN.md                   **Design-Regeln – vor jeder UI-Arbeit lesen**
 ```
 
 ### Befehle
+- Deno-Typcheck: `cd supabase/functions && DENO_CERT=/root/.ccr/ca-bundle.crt DENO_NO_PACKAGE_JSON=1 deno check --no-lock --node-modules-dir=none */index.ts` (Deno-Binary von GitHub-Releases nach `~/bin`)
 - Root-Tests: `npm test -- --silent` (PGlite braucht ~1 s pro DB-Test)
 - Frontend: `cd frontend && npm test -- --silent && npm run build`
 - Neue DB-Funktion testen: Migration schreiben → `tests/*.test.js` mit `asUser()`.
@@ -50,7 +53,7 @@ Migrationen: `20261012000000_init.sql` (Phase 1), `20261012120000_watchlist_rati
 | `feed` | id, unique(user_id,type,external_id) | type movie/tv/album, source, score, reason, data, status, expires_at. Client: nur lesen/status/löschen; schreiben nur Server |
 | `friendships` | (requester, addressee), Paar eindeutig | pending/accepted/declined; nur Empfänger antwortet |
 | `shared_lists` / `list_members` / `list_items` / `list_votes` | | Rollen owner/editor/viewer über `list_role(list_id)`; Ersteller wird automatisch owner; Viewer lesen+voten, Editor fügt Titel hinzu, nur Owner verwaltet Mitglieder |
-| `import_jobs` | id | kind, file_path, status, Zähler, not_found |
+| `import_jobs` | id | kind, file_path, status, total/processed, imported/updated/skipped, not_found (ImportRow[]), items (geparste Zeilen, nach Abschluss geleert). Nur die imdb-Function legt Jobs an |
 | `notifications` | id | type, title, body, data, read_at, emailed_at; Client darf nur read_at setzen |
 | `tmdb_cache` | cache_key | kind details/mapping, expires_at (null = nie); **kein** Client-Zugriff (nur service role) |
 | RPCs | | `check_invite`, `export_my_data` (v2, alle Tabellen), `delete_my_account`, `is_admin`, `list_role`, `purge_expired` (nur Server; Cron in Phase 5/6) |
@@ -71,7 +74,13 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] series_progress, watched_episodes, taste_profile, user_settings, feed, friendships, shared_lists/list_members/list_items/list_votes, import_jobs, notifications, tmdb_cache
   - [x] RLS + Spalten-Rechte, Export v2, Tests (Root 59 grün)
   - [x] Watchlist-UI: Status und eigene Bewertung 1–10 direkt in der Liste
-- [ ] Phase 3 – IMDb-Import & -Export (Upload in Supabase Storage, privater Bucket pro Nutzer)
+- [x] Phase 3 – IMDb-Import & -Export
+  - [x] Toleranter CSV-Parser (BOM, Quotes, `;`), Erkennung Ratings/Watchlist/Liste, Episoden übersprungen, Duplikate → neueste Bewertung
+  - [x] Mapping via TMDb `/find` mit permanentem Cache (negativ 7 Tage), Retry bei 429/5xx
+  - [x] Merge: keine Duplikate, Tombstones respektiert, Bewertung nur wenn neuer, bewertet → completed, Watchlist → planned, idempotent
+  - [x] Batch-Verarbeitung (Client ruft `continue`, Fortsetzen nach Abbruch), manuelle Zuordnung nicht gefundener Titel
+  - [x] Export IMDb-CSV (fehlende IMDb-IDs via `/external_ids` ergänzt) + JSON
+  - [x] Tests (Root 84 grün), Deno-Typcheck der Functions ok
 - [ ] Phase 4 – Details & Trailer
 - [ ] Phase 5 – Serien-Tracking (pg_cron 07:15 Europe/Zurich → Edge Function)
 - [ ] Phase 6 – Empfehlungen Filme/Serien (pg_cron 06:45)

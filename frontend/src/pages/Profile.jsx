@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
 import { unwrap } from '../lib/errors.js';
+import { exportJson } from '../lib/imdb.js';
 import { appUrl, supabase } from '../lib/supabase.js';
 
 const DELETE_CONFIRMATION = 'LÖSCHEN';
@@ -124,14 +125,7 @@ function Invites() {
 function DataSection() {
   const [confirm, setConfirm] = useState('');
   const { busy, error, run } = useSubmit();
-  const exportData = () =>
-    run(async () => {
-      const data = unwrap(await supabase.rpc('export_my_data'));
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-      const a = Object.assign(document.createElement('a'), { href: url, download: 'watchlist-export.json' });
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+  const exportData = () => run(exportJson);
   const deleteAccount = () =>
     run(async () => {
       unwrap(await supabase.rpc('delete_my_account'));

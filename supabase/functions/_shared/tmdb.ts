@@ -14,17 +14,32 @@ export class HttpError extends Error {
   }
 }
 
+const defaultSleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const MAX_ATTEMPTS = 4;
+
 // Accepts a v3 API key or a v4 read access token (JWT, starts with "eyJ").
-export async function tmdbGet(path: string, params: Record<string, unknown>, token: string, fetchImpl: Fetch) {
+// Retries on 429 (honours Retry-After) and 5xx with exponential backoff.
+export async function tmdbGet(
+  path: string,
+  params: Record<string, unknown>,
+  token: string,
+  fetchImpl: Fetch,
+  sleep: (ms: number) => Promise<unknown> = defaultSleep,
+) {
   const url = new URL(TMDB_BASE_URL + path);
   for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, String(v));
   const headers: Record<string, string> = { accept: 'application/json' };
   if (token.startsWith('eyJ')) headers.authorization = `Bearer ${token}`;
   else url.searchParams.set('api_key', token);
-  const res = await fetchImpl(url, { headers });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new HttpError(502, `TMDb request failed (${res.status})`);
-  return res.json();
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetchImpl(url, { headers });
+    if (res.status === 404) return null;
+    if (res.ok) return res.json();
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt >= MAX_ATTEMPTS) throw new HttpError(502, `TMDb request failed (${res.status})`);
+    const retryAfter = Number(res.headers?.get?.('retry-after'));
+    await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 250 * 2 ** attempt);
+  }
 }
 
 export function normalizeTitle(raw: Record<string, any>, mediaType: MediaType) {
