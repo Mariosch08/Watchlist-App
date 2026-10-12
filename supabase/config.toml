@@ -7,3 +7,10 @@ verify_jwt = false
 
 [functions.imdb]
 verify_jwt = false
+
+# Called by GitHub Actions (x-cron-secret) and by calendar apps (token in URL): no Supabase JWT.
+[functions.series-tracker]
+verify_jwt = false
+
+[functions.calendar]
+verify_jwt = false

@@ -2,6 +2,7 @@ import { Search, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Messages } from '../components/Form.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
+import ContinueWatching from '../components/watchlist/ContinueWatching.jsx';
 import SearchResults from '../components/watchlist/SearchResults.jsx';
 import WatchlistList from '../components/watchlist/WatchlistList.jsx';
 import WatchlistToolbar from '../components/watchlist/WatchlistToolbar.jsx';
@@ -58,6 +59,8 @@ export default function WatchlistPage() {
           </button>
         )}
       </div>
+
+      {!searching && view.segment === 'next' && <ContinueWatching />}
 
       {searching && <SearchResults search={search} byKey={byKey} expanded={expanded} onExpand={() => setExpanded(true)} />}
 

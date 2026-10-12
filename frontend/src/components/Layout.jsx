@@ -1,9 +1,12 @@
-import { LogOut } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Bell, LogOut } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { useImportRunner } from '../hooks/useImportRunner.js';
 import { signOutHere } from '../lib/api/auth.js';
+import { fetchNotifications } from '../lib/api/notifications.js';
+import { queryKeys } from '../lib/queryClient.js';
 
 function ImportChip() {
   const { job, running } = useImportRunner();
@@ -12,6 +15,18 @@ function ImportChip() {
     <Link to="/import" className="badge badge--accent nav-chip" title="Import läuft">
       Import {job.processed}/{job.total}
     </Link>
+  );
+}
+
+function NotificationBell({ userId }) {
+  const list = useQuery({ queryKey: queryKeys.notifications(userId), queryFn: fetchNotifications, refetchInterval: 5 * 60_000 });
+  const unread = (list.data ?? []).filter((n) => !n.read_at).length;
+  const label = unread ? `Benachrichtigungen (${unread} neu)` : 'Benachrichtigungen';
+  return (
+    <NavLink to="/notifications" className="nav-icon" aria-label={label} title={label}>
+      <Bell size={16} aria-hidden="true" />
+      {unread > 0 && <span className="nav-dot">{unread > 9 ? '9+' : unread}</span>}
+    </NavLink>
   );
 }
 
@@ -63,8 +78,10 @@ export default function Layout() {
             <NavLink to="/" end>
               Watchlist
             </NavLink>
+            <NavLink to="/calendar">Kalender</NavLink>
             <NavLink to="/import">Import</NavLink>
             <NavLink to="/profile">Profil</NavLink>
+            <NotificationBell userId={user.id} />
             <button className="btn-ghost btn-compact" onClick={logout} disabled={signingOut} aria-label="Abmelden" title="Abmelden">
               <LogOut size={16} aria-hidden="true" />
               <span className="nav-label">{signingOut ? 'Abmelden …' : 'Abmelden'}</span>

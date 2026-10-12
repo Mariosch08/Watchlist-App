@@ -6,6 +6,7 @@ import DetailActions from '../components/details/DetailActions.jsx';
 import SimilarTitles from '../components/details/SimilarTitles.jsx';
 import StreamingProviders from '../components/details/StreamingProviders.jsx';
 import Trailer from '../components/details/Trailer.jsx';
+import SeriesProgress from '../components/series/SeriesProgress.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { useTitleDetails } from '../hooks/useTitleDetails.js';
@@ -109,6 +110,7 @@ function Details({ details: d }) {
           </p>
         )}
       </section>
+      {d.media_type === 'tv' && <SeriesProgress details={d} />}
 
       {d.trailer && (
         <section className="card" aria-labelledby="trailer-title">

@@ -51,6 +51,12 @@ Optional unter *Authentication → Sign In / Providers → Email*: „Minimum pa
 ## 8. Dein Konto (erster Admin)
 Supabase → *Authentication* → *Users* → **Invite user** → deine E-Mail-Adresse. Den Link in der Mail öffnen, Passwort festlegen – fertig. **Nur ein über das Dashboard eingeladener Nutzer kann erster Admin werden**; über die öffentliche Registrierung geht das nicht (Schutz vor Fremden). Danach erstellst du auf der Profil-Seite Einladungscodes für Freunde.
 
+## 8b. Tägliche Jobs aktivieren (Serien-Check)
+Jeden Morgen prüft GitHub Actions deine Serien auf neue Staffeln und Folgen (und hält Supabase wach, damit das Gratis-Projekt nicht pausiert).
+1. Ein zufälliges Passwort erzeugen (mind. 16 Zeichen, z. B. mit einem Passwort-Manager).
+2. GitHub → *Settings → Secrets and variables → Actions → Secrets* → **New repository secret**: Name `CRON_SECRET`, Wert = dieses Passwort.
+3. Beim nächsten Deploy wird es automatisch auch in Supabase hinterlegt. Testen: *Actions → Daily jobs → Run workflow*.
+
 ## 9. Bevor sich Freunde registrieren: E-Mail-Versand
 Der eingebaute Supabase-Mailversand schickt nur an Mitglieder deines Supabase-Teams (also nur an dich) und nur wenige Mails pro Stunde. Für Freunde einen kostenlosen Mail-Dienst anschliessen:
 1. Konto bei <https://www.brevo.com> (Free: 300 Mails/Tag) → *Senders* → deine E-Mail-Adresse als Absender bestätigen.

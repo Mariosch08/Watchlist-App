@@ -161,7 +161,8 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(2);
+    expect(data.version).toBe(3);
+    expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
     expect(data.feed).toHaveLength(1);
@@ -256,5 +257,34 @@ describe('import jobs (phase 3)', () => {
     await asAdmin(db, "insert into public.import_jobs (user_id, total, items) values ($1, 2, '[{\"imdb_id\":\"tt0133093\"}]')", [a]);
     expect(await rows(a, 'select total, processed from public.import_jobs')).toEqual([{ total: 2, processed: 0 }]);
     expect(await rows(b, 'select * from public.import_jobs')).toEqual([]);
+  });
+});
+
+describe('series tracking (phase 5)', () => {
+  it('series_overview returns own series with title and progress only', async () => {
+    await asUser(db, a, "insert into public.watchlist (media_type, tmdb_id, title, status) values ('tv', 1399, 'GoT', 'watching')");
+    await asUser(db, a, 'insert into public.series_progress (tmdb_id) values (1399)');
+    await asUser(db, a, 'insert into public.watched_episodes (tmdb_id, season_number, episode_number) values (1399, 1, 1), (1399, 1, 2)');
+    await asUser(db, b, 'insert into public.series_progress (tmdb_id) values (1399)');
+    const mine = await rows(a, 'select tmdb_id, title, watch_status, watched_count from public.series_overview()');
+    expect(mine).toEqual([{ tmdb_id: 1399, title: 'GoT', watch_status: 'watching', watched_count: 2 }]);
+    expect((await rows(b, 'select watched_count from public.series_overview()'))[0].watched_count).toBe(0);
+  });
+
+  it('calendar token is private, can be regenerated, and is unique per user', async () => {
+    const [before] = await rows(a, 'select calendar_token from public.user_settings');
+    const [{ regenerate_calendar_token: next }] = await rows(a, 'select public.regenerate_calendar_token()');
+    expect(next).not.toBe(before.calendar_token);
+    expect(await rows(b, 'select * from public.user_settings where calendar_token = $1', [next])).toEqual([]);
+    await expect(asUser(db, a, 'update public.user_settings set calendar_token = gen_random_uuid()')).rejects.toThrow(/permission denied/);
+    await asUser(db, a, 'update public.user_settings set hide_spoilers = false');
+  });
+
+  it('notifications are deduplicated per user and key', async () => {
+    const insert = "insert into public.notifications (user_id, type, title, dedupe_key) values ($1, 'new_episode', 'x', 'episode:1:S01E01') on conflict (user_id, dedupe_key) do nothing";
+    await asAdmin(db, insert, [a]);
+    await asAdmin(db, insert, [a]);
+    await asAdmin(db, insert, [b]);
+    expect((await asAdmin(db, 'select count(*)::int as n from public.notifications')).rows[0].n).toBe(2);
   });
 });

@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System „Quiet Ink“
-- **Aktuelle Phase:** 4 (Detailseite) umgesetzt, PR offen. 3b ist gemergt. Als Nächstes: Rest der Gesamt-Überarbeitung (siehe „Offene Befunde“), dann Phase 4 – Details & Trailer
-- **Nächster konkreter Schritt:** Befunde in `docs/reviews/backend-findings-partial.md` prüfen und die High-Punkte umsetzen (Erst-Admin-Bootstrap absichern, gemeinsamer Titel-Katalog prüfen), restliche Review-Bereiche (Edge Functions, CI, Produkt, Doku) günstig selbst durchgehen; danach Phase 4.
+- **Erledigt:** Phase 0–5 (inkl. 3b Frontend-Logik, 4 Detailseite, 5 Serien-Tracking), Design „Quiet Ink“, Sicherheits-Fix Erst-Admin
+- **Aktuelle Phase:** 6 – Empfehlungen & „Was schauen wir heute?“
+- **Nächster konkreter Schritt:** `_shared/scoring.ts` (Genre-Gewichte aus Bewertungen, Score = Genre-Match × Gewicht + TMDb-Rating + Aktualität + Lieblingspersonen + Streaming-Bonus − Gesehenes/Abgelehntes) mit Tests; Edge Function `discovery-media` (Cron in `.github/workflows/cron.yml`), Feed-Tab „Für dich“ mit 👍/👎/＋ (RPC `feed_feedback`), Streaming-Abos in den Einstellungen, Picker „Was schauen wir heute?“.
 
 ## Repo-Überblick
 ```
@@ -17,6 +17,9 @@ supabase/config.toml             CLI-Config; Functions mit verify_jwt=false (Log
 supabase/migrations/*.sql        Schema, RLS, Trigger, RPCs – nur additive Migrationen!
 supabase/functions/_shared/      tmdb.ts (testbare Logik), auth.ts (requireUser), cors.ts
 supabase/functions/tmdb/         Edge Function: {action:'search'|'title'|'details'} → TMDb (de-CH), Key = Secret TMDB_API_KEY; details 24 h in tmdb_cache
+supabase/functions/series-tracker/ täglich per Cron (x-cron-secret): series_progress aktualisieren, Benachrichtigungen
+supabase/functions/calendar/     ICS-Feed per Token-Link (Folgen + Filmstarts)
+.github/workflows/cron.yml       Tägliche Jobs (hält Supabase wach)
 supabase/functions/imdb/         Edge Function: start (CSV parsen, Job anlegen) / continue (Batch à 40) / resolve (manuelle Zuordnung) / export (IMDb-CSV)
 supabase/functions/_shared/      csv.ts, imdb.ts (Parser, Merge-Regeln, Export), importJob.ts (Batch mit injizierten Deps), admin.ts (Service-Role-Client)
 frontend/                        React 18 + Vite 5 + react-router 6 + supabase-js 2.45.4
@@ -101,12 +104,12 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Trailer (youtube-nocookie, lädt erst beim Klick), Streaming CH (Im Abo inkl. gratis/Werbung, Leihen, Kaufen, Quelle JustWatch), Ähnliche Titel (TMDb-Empfehlungen, Fallback „similar“, max. 12) mit Markierung „in deiner Liste“
   - [x] Titel in Watchlist und Suche verlinken auf die Detailseite; Tests Root 92, Frontend 38 grün
   - [ ] Soundtrack-Album verlinken, sobald Phase 8 (Musik) steht
-- [ ] Phase 5 – Serien-Tracking (pg_cron 07:15 Europe/Zurich → Edge Function)
-  - Episoden abhaken, „bis hier gesehen“, Up next, Kalender 30 Tage, neue Staffeln → Benachrichtigung
-  - **Binge-Rechner:** „Bei 2 Folgen/Tag bist du am 3.11. durch“
-  - **Vergessene Serien:** nach 30 Tagen ohne Fortschritt „pausieren oder abbrechen?“
-  - **Spoiler-Schutz:** Titel/Beschreibung ungesehener Folgen verborgen
-  - **Kalender-Abo (ICS):** kommende Episoden als abonnierbarer Kalender (geheimer Token-Link)
+- [x] Phase 5 – Serien-Tracking
+  - [x] Detailseite Serie: Fortschritt, „Als Nächstes“, Staffeln aufklappbar, Episoden einzeln / „bis hier“ / ganze Staffel; Serie wird automatisch „Am Schauen“ bzw. bei Ende „Gesehen“
+  - [x] Binge-Rechner, Spoiler-Schutz (Einstellung im Profil), „Weiterschauen“ auf der Watchlist inkl. vergessene Serien (30 Tage → Pausieren/Abbrechen)
+  - [x] Kalender-Seite (30 Tage, Folgen + Filmstarts) + ICS-Abo (Edge Function `calendar`, geheimer Token, neu erzeugbar)
+  - [x] Täglicher Check (Edge Function `series-tracker`, GitHub Actions `cron.yml` 05:15 UTC, Secret `CRON_SECRET`) → Benachrichtigungen (dedupliziert) → Glocke + Seite `/notifications`
+  - [x] Tests: Root 104, Frontend 44 grün
 - [ ] Phase 6 – Empfehlungen Filme/Serien (pg_cron 06:45)
   - Profil aus Bewertungen, Quellen, Scoring, Feed mit Begründung, 👍/👎/＋, Streaming-Abos in Einstellungen, Genre-Slider
   - **„Was schauen wir heute?“:** Zeit/Stimmung/nur meine Abos → ein Vorschlag aus der Watchlist; „Überrasch mich“
@@ -147,6 +150,7 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
 ## Offen für Mario
 - [x] Einrichtung laut `docs/SETUP.md` erledigt, erster Deploy grün (12.10.2026), App: https://mariosch08.github.io/Watchlist-App/
 - [ ] Vor Freundes-Einladungen: Brevo-SMTP in Supabase eintragen (SETUP §9)
+- [ ] GitHub-Secret `CRON_SECRET` anlegen (SETUP §8b), sonst läuft der tägliche Serien-Check nicht
 - Hinweis: Ab jetzt deployt jeder Merge nach `main` automatisch (Tests → Supabase → Pages). Läuft der Supabase-Token ab, Secret `SUPABASE_ACCESS_TOKEN` erneuern.
 
 ## Ideen (nicht umgesetzt)

@@ -49,6 +49,11 @@ jobs:
       - run: supabase link --project-ref "$PROJECT_REF"
       - run: supabase db push
       - run: supabase functions deploy --project-ref "$PROJECT_REF"
+      - name: Pass the cron secret to the Edge Functions
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then supabase secrets set CRON_SECRET="$CRON_SECRET" --project-ref "$PROJECT_REF"; fi
 
   pages:
     needs: supabase

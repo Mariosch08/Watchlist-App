@@ -61,3 +61,7 @@
 
 **D29 – „Ähnliche Titel“ = TMDb-Empfehlungen** (was andere auch geschaut haben), Fallback auf das genrebasierte `similar`, wenn es keine Empfehlungen gibt. Streaming CH: Gratis- und Werbe-Angebote zählen zu „Im Abo“; TMDb verlangt die Quellenangabe JustWatch.
 **D30 – Erst-Admin nur per Dashboard-Einladung (Sicherheit, 13.10.2026).** Die frühere Regel „erster Nutzer wird Admin“ war über die öffentliche Sign-up-API ausnutzbar (auch wieder, wenn alle Konten gelöscht sind) und hatte eine Race-Condition. Jetzt: Registrierung immer mit Code oder Dashboard-Einladung; Admin wird nur ein dashboard-eingeladener Nutzer, solange es keinen Admin gibt; Advisory-Lock serialisiert Sign-ups. Ersetzt D6 (Teil „erster Nutzer“).
+
+**D31 – Zeitgesteuerte Jobs über GitHub Actions statt pg_cron** (Phase 5): Kein Vault-Setup in Supabase nötig, ein Secret (`CRON_SECRET`) genügt, und der tägliche Aufruf verhindert das Pausieren des Gratis-Projekts. GitHub-Cron läuft in UTC (05:15 = 07:15 Sommerzeit). Achtung: GitHub deaktiviert geplante Workflows nach 60 Tagen ohne Repo-Aktivität – dann in Actions wieder einschalten.
+
+**D32 – Serienfortschritt aus Episodenzahlen statt Episodenlisten:** „Ausgestrahlt“, „bis hier“ und „Als Nächstes“ werden aus `seasons[].episode_count` + `last_episode_to_air` berechnet; Episodenlisten (Titel, Beschreibung) lädt nur eine geöffnete Staffel. Spart viele TMDb-Aufrufe.

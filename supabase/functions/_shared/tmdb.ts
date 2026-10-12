@@ -182,8 +182,46 @@ export function normalizeDetails(raw: Record<string, any>, mediaType: MediaType,
     trailer: pickTrailer(raw.videos?.results),
     providers: normalizeProviders(raw['watch/providers']),
     similar: normalizeSimilar(raw, mediaType),
+    ...(mediaType === 'tv' ? normalizeSeriesInfo(raw) : {}),
   };
 }
+
+export function pickEpisode(ep: any) {
+  if (!ep || !Number.isInteger(ep.season_number) || !Number.isInteger(ep.episode_number)) return null;
+  return { season_number: ep.season_number, episode_number: ep.episode_number, name: ep.name || null, air_date: ep.air_date || null };
+}
+
+// Series-only fields: seasons (without specials), airing status, last/next episode.
+export function normalizeSeriesInfo(raw: Record<string, any>) {
+  return {
+    tmdb_status: raw.status || null,
+    seasons: (raw.seasons ?? [])
+      .filter((s: any) => Number.isInteger(s.season_number) && s.season_number >= 1)
+      .map((s: any) => ({ season_number: s.season_number, name: s.name || `Staffel ${s.season_number}`, episode_count: s.episode_count ?? 0, air_date: s.air_date || null }))
+      .sort((a: any, b: any) => a.season_number - b.season_number),
+    last_episode_to_air: pickEpisode(raw.last_episode_to_air),
+    next_episode_to_air: pickEpisode(raw.next_episode_to_air),
+  };
+}
+
+export function normalizeSeason(raw: Record<string, any>) {
+  return {
+    season_number: raw.season_number,
+    name: raw.name || `Staffel ${raw.season_number}`,
+    episodes: (raw.episodes ?? [])
+      .filter((e: any) => Number.isInteger(e.episode_number))
+      .map((e: any) => ({
+        episode_number: e.episode_number,
+        name: e.name || null,
+        overview: e.overview || null,
+        air_date: e.air_date || null,
+        runtime: e.runtime ?? null,
+        still_path: e.still_path ?? null,
+      })),
+  };
+}
+
+export const seasonCacheKey = (id: number, season: number) => `season:tv:${id}:${season}:${TMDB_LANGUAGE}`;
 
 // One TMDb request for the whole page (append_to_response); a second one only if there is no German overview.
 export async function fetchDetails(mediaType: MediaType, id: number, token: string, fetchImpl: Fetch) {
@@ -263,6 +301,18 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         if (!details) throw new HttpError(404, 'Not found', 'NOT_FOUND');
         await cache?.set(key, details, DETAILS_TTL_MS).catch((err) => console.error('cache write', err));
         return { status: 200, body: details };
+      }
+      case 'season': {
+        const id = intParam(body.tmdb_id, 'tmdb_id', 1, 1e9);
+        const season = intParam(body.season_number, 'season_number', 1, 500);
+        const key = seasonCacheKey(id, season);
+        const cached = await cache?.get(key).catch((err) => (console.error('cache read', err), null));
+        if (cached) return { status: 200, body: cached };
+        const raw = await tmdbGet(`/tv/${id}/season/${season}`, { language: TMDB_LANGUAGE }, token, fetchImpl);
+        if (!raw) throw new HttpError(404, 'Not found', 'NOT_FOUND');
+        const result = normalizeSeason(raw);
+        await cache?.set(key, result, DETAILS_TTL_MS).catch((err) => console.error('cache write', err));
+        return { status: 200, body: result };
       }
       default:
         throw new HttpError(400, 'Unknown action', 'INVALID_INPUT');

@@ -10,6 +10,7 @@ import { deleteAccount, exportJson } from '../lib/api/account.js';
 import { PASSWORD_MIN_LENGTH, setPassword, signOutOtherDevices } from '../lib/api/auth.js';
 import { createInvite, fetchInvites, inviteLink, inviteState, revokeInvite } from '../lib/api/invites.js';
 import { fetchProfile, updateProfile, USERNAME_PATTERN } from '../lib/api/profile.js';
+import { fetchSettings, updateSettings } from '../lib/api/settings.js';
 import { errorMessage } from '../lib/errors.js';
 import { formatDate } from '../lib/labels.js';
 import { queryKeys } from '../lib/queryClient.js';
@@ -296,6 +297,40 @@ function InvitesCard() {
   );
 }
 
+function SettingsCard() {
+  const user = useUser();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const key = queryKeys.settings(user.id);
+  const settings = useQuery({ queryKey: key, queryFn: fetchSettings });
+  const save = useMutation({
+    mutationFn: (changes) => updateSettings(changes),
+    onMutate: (changes) => queryClient.setQueryData(key, (s) => (s ? { ...s, ...changes } : s)),
+    onError: (err) => {
+      queryClient.invalidateQueries({ queryKey: key });
+      toast.error(`Einstellung nicht gespeichert. ${errorMessage(err)}`);
+    },
+  });
+  return (
+    <section className="card" aria-labelledby="settings-title">
+      <h2 id="settings-title">Einstellungen</h2>
+      {settings.isError ? (
+        <LoadError error={settings.error} onRetry={() => settings.refetch()} />
+      ) : (
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={settings.data?.hide_spoilers ?? true}
+            disabled={!settings.data}
+            onChange={(e) => save.mutate({ hide_spoilers: e.target.checked })}
+          />
+          Spoiler-Schutz: Beschreibungen ungesehener Folgen verbergen
+        </label>
+      )}
+    </section>
+  );
+}
+
 function DataCard() {
   const [confirm, setConfirm] = useState('');
   const exporting = useSubmit();
@@ -341,6 +376,7 @@ export default function ProfilePage() {
       ) : (
         <CardSkeleton />
       )}
+      <SettingsCard />
       <PasswordCard />
       {profile.data?.is_admin && <InvitesCard />}
       <DataCard />
