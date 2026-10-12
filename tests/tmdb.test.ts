@@ -275,3 +275,14 @@ describe('top_rated action', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(5);
   });
 });
+
+describe('find action', () => {
+  it('maps an IMDb id to a TMDb title and validates the id', async () => {
+    const fetchImpl = respond({ movie_results: [{ id: 603, title: 'Matrix', release_date: '1999-03-31' }], tv_results: [] });
+    const res = await handleTmdbRequest({ action: 'find', imdb_id: 'tt0133093' }, 'k', fetchImpl);
+    expect(res).toMatchObject({ status: 200, body: { media_type: 'movie', tmdb_id: 603, title: 'Matrix' } });
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('/find/tt0133093');
+    expect((await handleTmdbRequest({ action: 'find', imdb_id: 'tt1; drop' }, 'k', fetchImpl)).status).toBe(400);
+    expect((await handleTmdbRequest({ action: 'find', imdb_id: 'tt0000001' }, 'k', respond({ movie_results: [], tv_results: [] }))).status).toBe(404);
+  });
+});

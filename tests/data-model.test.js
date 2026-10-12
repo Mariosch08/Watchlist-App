@@ -422,3 +422,11 @@ describe('diary (phase 10)', () => {
     expect(exported.diary).toHaveLength(3);
   });
 });
+
+describe('e-mail settings (phase 12)', () => {
+  it('lets users switch mails but not fake the digest time', async () => {
+    await asUser(db, a, 'update public.user_settings set email_digest = false, email_instant = false where user_id = $1', [a]);
+    await expect(asUser(db, a, 'update public.user_settings set digest_sent_at = now() where user_id = $1', [a])).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, 'update public.user_settings set unsubscribe_token = gen_random_uuid() where user_id = $1', [a])).rejects.toThrow(/permission denied/);
+  });
+});

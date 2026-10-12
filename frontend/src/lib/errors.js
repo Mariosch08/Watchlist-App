@@ -43,6 +43,7 @@ const FUNCTION_CODES = {
   INVALID_INPUT: 'Ungültige Eingabe.',
   UNAUTHORIZED: 'Deine Sitzung ist abgelaufen. Bitte melde dich neu an.',
   RATE_LIMITED: 'Gerade erst aktualisiert. Versuch es in ein paar Minuten nochmals.',
+  MAIL_NOT_CONFIGURED: 'Der E-Mail-Versand ist noch nicht eingerichtet (Brevo-Schlüssel fehlt).',
   NO_MUSIC_SOURCE: 'Verbinde zuerst Last.fm oder Spotify.',
   LASTFM_USER_NOT_FOUND: 'Diesen Last.fm-Benutzernamen gibt es nicht. Prüfe die Schreibweise.',
   LASTFM_NOT_CONFIGURED: 'Last.fm ist noch nicht eingerichtet (API-Schlüssel fehlt).',

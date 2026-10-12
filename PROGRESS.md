@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–11 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** 12 – Benachrichtigungen & App
-- **Nächster konkreter Schritt:** PWA (Manifest, Icons, Service Worker mit App-Shell-Cache, installierbar) → Share-Target („Teilen → Watchlist“ aus IMDb/Letterboxd/Netflix: Link parsen → Titel finden) → E-Mail über Brevo (Edge Function `notify-email`: Wochen-Digest So 18:00, Sofort-Mails für Freundschaft/Empfehlung/Filmabend, Abmeldelink per `unsubscribe_token`) → Einstellungen im Profil.
+- **Erledigt:** Phase 0–12 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik, 12 Mails & App), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 13 – Abschluss
+- **Nächster konkreter Schritt:** README (Funktionen, Architektur-Diagramm in Mermaid, Setup-Kurzfassung, Datenschutz), Doku-Durchsicht, PR-Beschreibung aktualisieren, alles grün.
 
 ## Repo-Überblick
 ```
@@ -150,9 +150,12 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Jahresrückblick als Bild (SVG → PNG, Teilen-Dialog auf dem Handy, sonst Download)
   - [x] Herausforderungen: 52 Filme im Jahr, jedes Jahrzehnt seit 1920, TMDb Top 100 (statt IMDb Top 250, siehe D52), 10 Genres, 12 Kinobesuche
   - [x] Eigene kleine SVG-Diagramme statt Chart-Bibliothek (D51); Tests: Root 164, Frontend 75 grün
-- [ ] Phase 12 – Benachrichtigungen & App
-  - E-Mail (Brevo): Wochen-Digest So 18:00, Sofort-Mails, Abmeldelink
-  - **PWA:** installierbar, Share-Target („Teilen → Watchlist“ aus IMDb/Netflix-App), Web-Push als Alternative zu E-Mail
+- [x] Phase 12 – Benachrichtigungen & App
+  - [x] PWA: Manifest, Icons (Lesezeichen im Quiet-Ink-Blau), Service Worker (App-Shell offline, Assets cache-first), Shortcuts
+  - [x] Share-Target `/share`: IMDb-/TMDb-Links → Detailseite, Letterboxd-Links und Texte („Schau dir „Dark“ auf Netflix an“) → Suche mit „Merken“; neue TMDb-Aktion `find`
+  - [x] E-Mails über Brevo (`notify-email`): Sofort-Mails (alle 30 Min., mehrere Neuigkeiten in einer Mail), Wochenrückblick So 18:00 Zürich, Abmeldelink ohne Login (auch One-Click), Sandbox-Schalter, Test-Mail im Profil
+  - [ ] Web-Push: bewusst weggelassen (siehe D55)
+  - [x] Tests: Root 171, Frontend 77 grün
 - [ ] Phase 13 – Abschluss (README mit Architektur, Setup, alles grün)
 
 ## Offene Befunde (aus den Reviews)
@@ -166,6 +169,7 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
 ## Offen für Mario
 - [x] Einrichtung laut `docs/SETUP.md` erledigt, erster Deploy grün (12.10.2026), App: https://mariosch08.github.io/Watchlist-App/
 - [ ] Vor Freundes-Einladungen: Brevo-SMTP in Supabase eintragen (SETUP §9)
+- [ ] Benachrichtigungs-Mails: Supabase-Secrets `BREVO_API_KEY` und `MAIL_FROM` (SETUP §9b), dann Test-Mail im Profil
 - [ ] GitHub-Secret `CRON_SECRET` anlegen (SETUP §8b), sonst läuft der tägliche Serien-Check nicht
 - [ ] Musik: Supabase-Secret `LASTFM_API_KEY` (SETUP §8c); optional `TICKETMASTER_API_KEY` (Konzerte) und Spotify-App (`SPOTIFY_CLIENT_ID` als Secret + GitHub-Variable)
 - Hinweis: Ab jetzt deployt jeder Merge nach `main` automatisch (Tests → Supabase → Pages). Läuft der Supabase-Token ab, Secret `SUPABASE_ACCESS_TOKEN` erneuern.
@@ -174,4 +178,5 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
 - Suche in Alltagssprache („wie Dune, aber kürzer“) – bräuchte eine kostenpflichtige KI-API.
 - Gemeinsam synchron schauen (Watch-Party) – aufwendig, rechtlich heikel.
 - Passkeys/MFA über Supabase Auth.
+- Web-Push als Alternative zu E-Mail (D55).
 - Eigene Domain statt `mariosch08.github.io`.

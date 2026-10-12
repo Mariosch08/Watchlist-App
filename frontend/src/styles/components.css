@@ -1839,3 +1839,8 @@ textarea {
 span.progress {
   display: block;
 }
+
+.subheading {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-body);
+}

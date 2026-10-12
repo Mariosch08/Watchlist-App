@@ -108,3 +108,9 @@
 
 **D53 – Statistik rechnet im Browser:** Watchlist und Tagebuch sind ohnehin geladen; jede Tagebuch-Sichtung zählt, gesehene Titel ohne Tagebuch-Eintrag zählen einmal am Datum „gesehen“. Kein zusätzlicher Server-Code, keine weiteren Daten verlassen das Konto. Der Jahresrückblick entsteht als SVG im Browser und wird erst beim Teilen zum PNG.
 
+**D54 – Mails über die Brevo-API, angestossen von GitHub Actions** (Phase 12): Alle 30 Minuten sammelt `notify-email` neue Benachrichtigungen (`emailed_at` ist leer) und schickt pro Person eine Mail, höchstens 100 pro Lauf (Brevo-Gratis: 300/Tag). Der Wochenrückblick geht So 18:00 Zürcher Zeit raus (`digest_sent_at` verhindert Doppelte). Abmelden per Token im Link, ohne Login, auch als One-Click (`List-Unsubscribe-Post`). Sandbox über `X-Sib-Sandbox: drop`. Der Cron-Job hält Supabase nebenbei wach.
+
+**D55 – Kein Web-Push:** Web-Push bräuchte VAPID-Schlüssel und die Verschlüsselung der Nachrichten (RFC 8291) in der Edge Function, und auf dem iPhone geht es nur für installierte Apps. Ohne echtes Gerät nicht verlässlich testbar. Die Mails decken denselben Zweck ab; Web-Push bleibt unter „Ideen“.
+
+**D56 – Service Worker nur für die App-Shell:** Gecacht werden nur die eigene index.html (Netzwerk zuerst, offline aus dem Cache) und die gehashten Build-Dateien (Cache zuerst). Anfragen an Supabase und TMDb gehen nie über den Cache – keine veralteten oder fremden Daten auf geteilten Geräten.
+

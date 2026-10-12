@@ -14,7 +14,7 @@ import { deleteAccount, exportJson } from '../lib/api/account.js';
 import { PASSWORD_MIN_LENGTH, setPassword, signOutOtherDevices } from '../lib/api/auth.js';
 import { createInvite, fetchInvites, inviteLink, inviteState, revokeInvite } from '../lib/api/invites.js';
 import { fetchProfile, updateProfile, USERNAME_PATTERN } from '../lib/api/profile.js';
-import { fetchSettings, updateSettings } from '../lib/api/settings.js';
+import { fetchSettings, sendTestMail, updateSettings } from '../lib/api/settings.js';
 import { errorMessage } from '../lib/errors.js';
 import { formatDate } from '../lib/labels.js';
 import { queryKeys } from '../lib/queryClient.js';
@@ -305,6 +305,11 @@ function SettingsCard() {
   const user = useUser();
   const queryClient = useQueryClient();
   const toast = useToast();
+  const testMail = useMutation({
+    mutationFn: sendTestMail,
+    onSuccess: (res) => toast.success(res.sandbox ? 'Test-Mail angenommen (Sandbox: Brevo stellt sie nicht zu).' : `Test-Mail an ${res.to} verschickt.`),
+    onError: (err) => (err?.code === 'RATE_LIMITED' ? toast.info('Pro Stunde geht eine Test-Mail raus.') : toast.error(errorMessage(err))),
+  });
   const key = queryKeys.settings(user.id);
   const settings = useQuery({ queryKey: key, queryFn: fetchSettings });
   const save = useMutation({
@@ -349,6 +354,30 @@ function SettingsCard() {
             />
             Freunde sehen, was ich hinzufüge, schaue und bewerte (Aktivität)
           </label>
+          <h3 className="subheading">E-Mails</h3>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.email_instant ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ email_instant: e.target.checked })}
+            />
+            Sofort-Mails bei Freundschaftsanfragen, Empfehlungen, Filmabenden, neuen Staffeln und Verfügbarkeits-Alarmen
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.email_digest ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ email_digest: e.target.checked })}
+            />
+            Wochenrückblick am Sonntagabend (neue Folgen, Vorschläge, was passiert ist)
+          </label>
+          <div className="actions">
+            <button type="button" className="btn-ghost btn-compact" disabled={testMail.isPending} onClick={() => testMail.mutate()}>
+              {testMail.isPending ? 'Wird gesendet …' : 'Test-Mail an mich senden'}
+            </button>
+          </div>
         </div>
       )}
     </section>

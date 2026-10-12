@@ -73,6 +73,18 @@ Der eingebaute Supabase-Mailversand schickt nur an Mitglieder deines Supabase-Te
 
 Alternative ohne Mail-Setup: Freunde in Supabase unter *Authentication → Users → Invite user* einladen (das ist die „Admin-Freigabe“, braucht keinen Code).
 
+## 9b. Benachrichtigungs-Mails (Sofort-Mails und Wochenrückblick)
+Die App verschickt Mails selbst über die Brevo-API (gleiches Brevo-Konto wie oben, zählt zu den 300 Mails/Tag).
+1. Brevo → *SMTP & API* → *API Keys* → **Generate a new API key** (Name „Watchlist“).
+2. Supabase → *Edge Functions → Secrets*: `BREVO_API_KEY` = dieser Schlüssel, `MAIL_FROM` = deine in Brevo bestätigte Absender-Adresse.
+3. Zum Ausprobieren ohne echte Zustellung zusätzlich `MAIL_SANDBOX` = `true` (Brevo prüft die Mail, stellt sie aber nicht zu). Für den echten Betrieb wieder löschen.
+4. In der App: *Profil → Einstellungen → Test-Mail an mich senden*.
+
+Versand: alle 30 Minuten für neue Benachrichtigungen (über GitHub Actions, braucht `CRON_SECRET` aus §8b), der Wochenrückblick am Sonntag um 18 Uhr. Jede Mail hat einen Abmeldelink, der ohne Login funktioniert.
+
+## 10. App installieren (Handy)
+Die Seite im Browser öffnen → *Teilen → Zum Home-Bildschirm* (iPhone) bzw. *Menü → App installieren* (Android/Chrome). Danach erscheint „Watchlist“ auf Android auch im Teilen-Menü: Einen Film aus der IMDb-, Letterboxd- oder Netflix-App teilen, und er landet direkt auf der passenden Detailseite oder in der Suche.
+
 ## Lokal entwickeln (optional, z. B. im Codespace)
 ```bash
 npm install && npm test                    # Datenbank- und Funktions-Tests

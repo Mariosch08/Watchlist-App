@@ -1,3 +1,5 @@
+import { pickFindResult } from './imdb.ts';
+
 // Pure TMDb logic (no Deno APIs) so it can be unit-tested with vitest.
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 export const TMDB_LANGUAGE = 'de-CH';
@@ -348,6 +350,15 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         const result = { movie: movie?.genres ?? [], tv: tv?.genres ?? [] };
         await cache?.set(GENRES_CACHE_KEY, result, 30 * 86_400_000).catch(() => {});
         return { status: 200, body: result };
+      }
+      case 'find': {
+        // IMDb id → TMDb title (e.g. a link shared from the IMDb app).
+        const imdbId = typeof body.imdb_id === 'string' ? body.imdb_id : '';
+        if (!/^tt\d{5,10}$/.test(imdbId)) throw new HttpError(400, 'Invalid imdb_id', 'INVALID_INPUT');
+        const find = await tmdbGet(`/find/${imdbId}`, { external_source: 'imdb_id', language: TMDB_LANGUAGE }, token, fetchImpl);
+        const picked = pickFindResult(find, '');
+        if (!picked) throw new HttpError(404, 'Not found', 'NOT_FOUND');
+        return { status: 200, body: normalizeTitle(picked.raw, picked.media_type) };
       }
       case 'top_rated': {
         // Best-rated movies on TMDb (vote-weighted) for the "Top 100" challenge.

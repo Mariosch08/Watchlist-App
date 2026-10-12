@@ -138,16 +138,18 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 export function reviewSvg(stats, { name } = {}) {
   const W = 1080;
   const H = 1350;
-  const ink = '#1c1b19';
-  const muted = '#6b665d';
-  const accent = '#9a3412';
-  const paper = '#f7f4ee';
+  // Quiet Ink tokens (light theme): text, text-muted, accent, canvas, border-strong.
+  const ink = '#1f1e1c';
+  const muted = '#5f5b55';
+  const accent = '#2f5d8a';
+  const paper = '#fbfaf7';
+  const line = '#d3cec6';
   const max = Math.max(1, ...stats.months);
   const bars = stats.months
     .map((m, i) => {
       const h = Math.round((m / max) * 220);
       const x = 90 + i * 76;
-      return `<rect x="${x}" y="${1080 - h}" width="52" height="${h}" rx="6" fill="${i === stats.bestMonth ? accent : '#d6cfc2'}"/><text x="${x + 26}" y="1120" font-size="22" text-anchor="middle" fill="${muted}">${MONTH_SHORT[i]}</text>`;
+      return `<rect x="${x}" y="${1080 - h}" width="52" height="${h}" rx="6" fill="${i === stats.bestMonth ? accent : line}"/><text x="${x + 26}" y="1120" font-size="22" text-anchor="middle" fill="${muted}">${MONTH_SHORT[i]}</text>`;
     })
     .join('');
   const numbers = [
@@ -168,7 +170,7 @@ export function reviewSvg(stats, { name } = {}) {
 <rect width="${W}" height="${H}" fill="${paper}"/>
 <text x="90" y="170" font-size="34" fill="${muted}" letter-spacing="4">${esc(name ? `${name.toUpperCase()} · ` : '')}JAHRESRÜCKBLICK</text>
 <text x="90" y="290" font-size="110" font-weight="600" fill="${ink}">Mein Filmjahr ${esc(stats.year)}</text>
-<line x1="90" y1="340" x2="${W - 90}" y2="340" stroke="#d6cfc2" stroke-width="2"/>
+<line x1="90" y1="340" x2="${W - 90}" y2="340" stroke="${line}" stroke-width="2"/>
 ${numbers}
 ${lines.map((l, i) => `<text x="90" y="${640 + i * 60}" font-size="38" fill="${ink}">${esc(l.length > 52 ? `${l.slice(0, 51)}…` : l)}</text>`).join('')}
 ${bars}

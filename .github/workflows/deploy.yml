@@ -54,6 +54,11 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -n "$CRON_SECRET" ]; then supabase secrets set CRON_SECRET="$CRON_SECRET" --project-ref "$PROJECT_REF"; fi
+      - name: Tell the Edge Functions where the app lives (links in e-mails)
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: supabase secrets set APP_URL="https://${OWNER,,}.github.io/${REPO}/" --project-ref "$PROJECT_REF"
 
   pages:
     needs: supabase
