@@ -1,0 +1,3 @@
+region       = "eu-central-1"
+environment  = "dev"
+cors_origins = ["http://localhost:5173"]
