@@ -16,7 +16,7 @@ function TitleRow({ item, action }) {
           {TYPE_LABEL[item.media_type]}
           {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ''}
           {item.original_title && item.original_title !== item.title ? ` · Originaltitel: ${item.original_title}` : ''}
-          {item.vote_average ? ` · ★ ${item.vote_average.toFixed(1)}` : ''}
+          {Number(item.vote_average) > 0 ? ` · ★ ${Number(item.vote_average).toFixed(1)}` : ''}
         </div>
       </div>
       {action}
@@ -43,7 +43,15 @@ export default function WatchlistPage() {
   };
   const add = (r) =>
     run(async () => {
-      const row = { tmdb_id: r.tmdb_id, media_type: r.media_type, title: r.title, poster_path: r.poster_path, release_date: r.release_date };
+      const row = {
+        tmdb_id: r.tmdb_id,
+        media_type: r.media_type,
+        title: r.title,
+        original_title: r.original_title,
+        poster_path: r.poster_path,
+        release_date: r.release_date,
+        vote_average: r.vote_average ? Math.round(r.vote_average * 10) / 10 : null,
+      };
       const item = unwrap(await supabase.from('watchlist').upsert(row, { onConflict: 'user_id,media_type,tmdb_id', ignoreDuplicates: true }).select().maybeSingle()) ?? row;
       setItems((list) => [item, ...list.filter((i) => key(i) !== key(item))]);
     });

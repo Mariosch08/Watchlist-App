@@ -30,6 +30,13 @@ describe('user A never sees or changes user B data', () => {
     expect(rows).toEqual([{ status: 'planned' }]);
   });
 
+  it('watchlist: stores TMDb rating and original title', async () => {
+    await asUser(db, a, "insert into public.watchlist (media_type, tmdb_id, title, original_title, vote_average) values ('movie', 807, 'Sieben', 'Se7en', 8.4)");
+    const { rows } = await asUser(db, a, 'select original_title, vote_average::float as v from public.watchlist where tmdb_id = 807');
+    expect(rows[0]).toEqual({ original_title: 'Se7en', v: 8.4 });
+    await expect(asUser(db, a, "insert into public.watchlist (media_type, tmdb_id, vote_average) values ('movie', 2, 11)")).rejects.toThrow(/check constraint/);
+  });
+
   it('watchlist: invalid values are rejected', async () => {
     await expect(asUser(db, a, "insert into public.watchlist (media_type, tmdb_id) values ('book', 1)")).rejects.toThrow(/check constraint/);
     await expect(asUser(db, a, "insert into public.watchlist (media_type, tmdb_id) values ('movie', -1)")).rejects.toThrow(/check constraint/);
