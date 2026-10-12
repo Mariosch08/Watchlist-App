@@ -1,5 +1,6 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Messages } from '../components/Form.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import ContinueWatching from '../components/watchlist/ContinueWatching.jsx';
@@ -40,6 +41,9 @@ export default function WatchlistPage() {
           Meine Watchlist
         </h1>
         {items && <span className="caption">{total === 1 ? '1 Titel' : `${total} Titel`}</span>}
+        <Link className="button-link btn-ghost btn-compact page-head-end" to="/import">
+          Import / Export
+        </Link>
       </div>
 
       <div className="search-field" role="search">

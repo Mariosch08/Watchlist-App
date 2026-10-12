@@ -1484,3 +1484,179 @@ a.button-link.btn-compact {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ---- Friends & shared lists ----------------------------------------------------------------- */
+.page-head:has(.page-head-end) {
+  justify-content: flex-start;
+}
+
+.page-head-end {
+  margin-left: auto;
+}
+
+.meta-inline {
+  font-weight: 400;
+  font-size: var(--text-body-sm);
+  color: var(--color-text-muted);
+}
+
+.chip-list--plain .chip::before {
+  content: none;
+}
+
+.chip button.link {
+  margin-left: var(--space-1);
+}
+
+.match {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-body-sm);
+  color: var(--color-text-muted);
+}
+
+.match-bar {
+  width: 80px;
+  height: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.match-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  transform: scaleX(var(--progress));
+}
+
+.friend-ratings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+.disclosure > summary {
+  cursor: pointer;
+  font-weight: 500;
+  padding: var(--space-2) 0;
+}
+
+.disclosure[open] > summary {
+  margin-bottom: var(--space-3);
+}
+
+.nights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.night h3 {
+  margin: 0;
+}
+
+.night-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.night-date {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 767px) {
+  .night-option {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* Swipe deck: one poster card, dragged sideways; colour hint plus text labels on the buttons. */
+.swipe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.swipe-card {
+  width: min(280px, 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+  transform: translateX(var(--dx, 0)) rotate(calc(var(--dx, 0px) / 40 * 1deg));
+  transition: border-color var(--motion-fast) var(--easing);
+}
+
+.swipe-card[data-direction='yes'] {
+  border-color: var(--color-accent);
+}
+
+.swipe-card[data-direction='no'] {
+  border-color: var(--color-danger);
+}
+
+.swipe-card img,
+.swipe-poster {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--color-surface-sunken);
+  pointer-events: none;
+}
+
+.swipe-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.swipe-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.swipe-actions button.btn-icon {
+  width: calc(var(--control-height) * 1.4);
+  height: calc(var(--control-height) * 1.4);
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-card {
+    transform: none;
+  }
+}

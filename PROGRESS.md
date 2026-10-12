@@ -3,9 +3,9 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0–8 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** 9 – Freunde & gemeinsame Listen
-- **Nächster konkreter Schritt:** Freundschaften (Tabelle `friendships` existiert: Anfrage per Benutzername, annehmen/ablehnen, RPCs) → Seite „Freunde“ → gemeinsame Listen mit Rollen + Abstimmung → Geschmacks-Match, „Schau das!“, „Wer hat es gesehen?“, Filmabend-Planer. Strenge Rechte-Tests (Nicht-Freunde sehen nichts).
+- **Erledigt:** Phase 0–9 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen), Design „Quiet Ink“, Sicherheits-Fix
+- **Aktuelle Phase:** 10 – Tagebuch & Sammlungen
+- **Nächster konkreter Schritt:** Tabelle `diary_entries` (Titel, Datum, Ort Kino/zuhause, mit wem, Notiz, Rewatch) + Eintrag „Gesehen am …“ auf der Detailseite → Seite „Tagebuch“ (Monate, Zähler) → eigene Sammlungen (privat, mit Titeln) → Letterboxd-CSV-Import (`diary.csv`, `ratings.csv`, `watchlist.csv`) und Trakt-JSON-Import über den bestehenden Import-Job.
 
 ## Repo-Überblick
 ```
@@ -131,13 +131,14 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Konzerte in der Schweiz (Ticketmaster, optional) inkl. Kalender-Abo; Benachrichtigungen für neue Alben der Top-10-Artists und Konzerte
   - [x] Seite „Musik“: Neuerscheinungen, Konzerte, Top-Artists; Soundtrack-Link auf der Detailseite
   - [x] Tests: Root 142, Frontend 55 grün
-- [ ] Phase 9 – Freunde & gemeinsame Listen
-  - Freundschaften, Listen mit Rollen, Abstimmung, „Was schauen wir?“ für die Gruppe, Freunde-Bewertungen (abschaltbar)
-  - **Geschmacks-Match** in % zwischen Freunden
-  - **„Schau das!“:** Titel mit Nachricht an Freund empfehlen → Bereich „Von Freunden empfohlen“
-  - **Wer hat es gesehen?** auf der Detailseite
-  - **Filmabend-Planer:** Terminumfrage + Titel-Abstimmung + ICS-Eintrag für alle
-  - **Aktivitäts-Feed** (opt-in)
+- [x] Phase 9 – Freunde & gemeinsame Listen
+  - [x] Freundschaften per Benutzername oder E-Mail (Ablehnung bleibt unsichtbar, Gegenanfrage nimmt an), Seite „Freunde“
+  - [x] Geschmacks-Match in % (ab 3 gemeinsamen Bewertungen, nur wenn beide Bewertungen teilen), „Wer hat es gesehen?“ auf der Detailseite
+  - [x] „Schau das!“ mit Nachricht → „Von Freunden empfohlen“ (Merken/Ausblenden), Benachrichtigung
+  - [x] Gemeinsame Listen: nur Freunde einladen, Rollen (bearbeiten/abstimmen), 👍/👎, Match wenn alle dafür, „Was schauen wir?“ ohne Gegenstimme, Swipe-Modus (Ziehen, ←/→), eigene geplante Titel übernehmen
+  - [x] Filmabend-Planer: Terminumfrage (bis 4 Termine), Host/Owner legt fest, Titel aus den Stimmen, ICS-Download, Benachrichtigungen
+  - [x] Aktivitäts-Feed (opt-in), Schalter im Profil; Navigation: „Import“ jetzt im Watchlist-Kopf und Profil
+  - [x] Strenge Rechte-Tests (`tests/friends.test.js`): Nicht-Freunde sehen nichts, keine E-Mails, nur eigene Stimmen; Tests Root 155, Frontend 66 grün
 - [ ] Phase 10 – Tagebuch & Sammlungen (neu)
   - **Film-Tagebuch:** wann, wo (Kino/zuhause), mit wem, Notiz, Rewatch-Zähler
   - **Eigene Sammlungen** (z. B. „Weihnachten“, „Mit den Eltern“)

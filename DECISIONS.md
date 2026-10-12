@@ -86,3 +86,13 @@
 
 **D42 – Konzerte über Ticketmaster Discovery (gratis, 5000 Anfragen/Tag):** Nur Events, bei denen der Artist als Act geführt wird (die Stichwortsuche ist unscharf). Ticketcorner (grösster CH-Anbieter) hat keine offene API – die Abdeckung ist deshalb unvollständig.
 
+**D43 – Fremde Profile nur über RPCs** (Phase 9): `profiles` bleibt nur für einen selbst lesbar (enthält die E-Mail). Namen von Freunden und Listen-Mitgliedern kommen aus Security-Definer-Funktionen (`friends_overview`, `list_people`, `friends_on_title`, `friend_activity`), die nie E-Mails liefern und selbst prüfen, ob eine Freundschaft oder Mitgliedschaft besteht.
+
+**D44 – Freundschaftsanfragen über eine Funktion:** Suche per Benutzername oder exakter E-Mail, keine Teilsuche (kein Durchstöbern der Nutzer). Eine Ablehnung sieht die anfragende Person weiterhin als „wartet“. Fragen beide gegenseitig an, sind sie sofort befreundet. Höchstens 20 offene Anfragen.
+
+**D45 – Bewertungen teilen ist gegenseitig:** Den Geschmacks-Match (1 − mittlere Abweichung / 9, ab 3 gemeinsamen Bewertungen) gibt es nur, wenn beide `share_ratings_with_friends` an haben. Aktivität ist standardmässig privat (`share_activity` = aus).
+
+**D46 – Listen-Mitglieder nur aus dem Freundeskreis des Owners**; die bisherige Policy erlaubte beliebige Nutzer-IDs. Stimmen und Verfügbarkeit laufen über kleine Security-Invoker-Funktionen (`cast_vote`, `set_availability`), weil ein PostgREST-Upsert auch die Schlüsselspalten aktualisieren will, für die es (absichtlich) kein Update-Recht gibt.
+
+**D47 – Filmabend ohne eigene Titel-Abstimmung:** Der Titel kommt aus den Stimmen der Liste (bester ohne Gegenstimme); die Terminumfrage ist eine eigene kleine Tabelle. Die Kalenderdatei entsteht im Browser mit demselben ICS-Code wie das Kalender-Abo (jetzt auch mit Uhrzeit).
+

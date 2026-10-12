@@ -317,6 +317,26 @@ $$;
 create trigger movie_night_changed after insert or update on public.movie_nights
   for each row execute function public.movie_night_changed();
 
+-- Votes as one call (insert or change); runs with the caller's rights, so grants and RLS apply.
+create function public.cast_vote(p_list_id uuid, p_media_type text, p_tmdb_id int, p_vote smallint) returns void
+language plpgsql security invoker set search_path = '' as $$
+begin
+  if p_vote = 0 then
+    delete from public.list_votes
+     where list_id = p_list_id and media_type = p_media_type and tmdb_id = p_tmdb_id and user_id = auth.uid();
+  else
+    insert into public.list_votes (list_id, media_type, tmdb_id, vote) values (p_list_id, p_media_type, p_tmdb_id, p_vote)
+    on conflict (list_id, media_type, tmdb_id, user_id) do update set vote = excluded.vote;
+  end if;
+end;
+$$;
+
+create function public.set_availability(p_night_id uuid, p_option smallint, p_available boolean) returns void
+language sql security invoker set search_path = '' as $$
+  insert into public.movie_night_votes (night_id, option_index, available) values (p_night_id, p_option, p_available)
+  on conflict (night_id, user_id, option_index) do update set available = excluded.available;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Privileges for the new functions
 -- ---------------------------------------------------------------------------
@@ -324,11 +344,13 @@ revoke execute on function public.is_friend(uuid), public.notify(uuid, text, tex
   public.send_friend_request(text), public.respond_friend_request(uuid, boolean), public.friends_overview(),
   public.friends_on_title(text, int), public.friend_activity(int),
   public.recommend_title(uuid, text, int, text, text, text, text), public.list_people(uuid), public.night_list(uuid),
-  public.list_member_added(), public.movie_night_changed()
+  public.list_member_added(), public.movie_night_changed(), public.cast_vote(uuid, text, int, smallint),
+  public.set_availability(uuid, smallint, boolean)
   from public, anon;
 grant execute on function public.is_friend(uuid), public.send_friend_request(text), public.respond_friend_request(uuid, boolean),
   public.friends_overview(), public.friends_on_title(text, int), public.friend_activity(int),
-  public.recommend_title(uuid, text, int, text, text, text, text), public.list_people(uuid), public.night_list(uuid)
+  public.recommend_title(uuid, text, int, text, text, text, text), public.list_people(uuid), public.night_list(uuid),
+  public.cast_vote(uuid, text, int, smallint), public.set_availability(uuid, smallint, boolean)
   to authenticated;
 
 -- Export includes recommendations and movie nights.

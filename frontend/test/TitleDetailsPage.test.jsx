@@ -17,11 +17,15 @@ vi.mock('../src/lib/api/watchlist.js', () => ({
 vi.mock('../src/lib/api/tmdb.js', () => ({ MIN_QUERY_LENGTH: 2, searchTitles: vi.fn(), fetchTitleDetails: vi.fn() }));
 vi.mock('../src/lib/api/settings.js', () => ({ fetchSettings: vi.fn() }));
 vi.mock('../src/lib/api/streaming.js', () => ({ fetchAlerts: vi.fn(), createAlert: vi.fn(), deleteAlert: vi.fn() }));
+vi.mock('../src/lib/api/friends.js', () => ({ fetchFriends: vi.fn(), fetchFriendsOnTitle: vi.fn(), recommendTitle: vi.fn() }));
+vi.mock('../src/lib/api/lists.js', () => ({ fetchLists: vi.fn(), addItems: vi.fn(), listKeys: { all: (id) => ['lists', id] } }));
 
 const api = await import('../src/lib/api/watchlist.js');
 const tmdb = await import('../src/lib/api/tmdb.js');
 const settingsApi = await import('../src/lib/api/settings.js');
 const streamingApi = await import('../src/lib/api/streaming.js');
+const friendsApi = await import('../src/lib/api/friends.js');
+const listsApi = await import('../src/lib/api/lists.js');
 const { ToastProvider } = await import('../src/components/toast/ToastProvider.jsx');
 const { default: TitleDetailsPage } = await import('../src/pages/TitleDetails.jsx');
 
@@ -71,6 +75,8 @@ beforeEach(() => {
   vi.resetAllMocks();
   settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [] });
   streamingApi.fetchAlerts.mockResolvedValue([]);
+  friendsApi.fetchFriends.mockResolvedValue([]);
+  listsApi.fetchLists.mockResolvedValue([]);
 });
 
 describe('TitleDetailsPage', () => {
@@ -144,5 +150,21 @@ describe('TitleDetailsPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Benachrichtigen, wenn auf meinen Diensten' }));
     expect(streamingApi.createAlert.mock.calls[0][0]).toEqual({ media_type: 'movie', tmdb_id: 438631, title: 'Dune' });
     expect(await screen.findByText(/sobald „Dune“ auf deinen Streaming-Diensten ist/)).toBeInTheDocument();
+  });
+
+  it('shows which friends know the title and sends a recommendation', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    api.fetchWatchlist.mockResolvedValue([]);
+    friendsApi.fetchFriends.mockResolvedValue([{ user_id: 'ben', display_name: 'Ben', status: 'accepted' }]);
+    friendsApi.fetchFriendsOnTitle.mockResolvedValue([{ user_id: 'ben', display_name: 'Ben', status: 'completed', my_rating: 9 }]);
+    friendsApi.recommendTitle.mockResolvedValue(undefined);
+    renderPage();
+    const panel = await screen.findByRole('region', { name: 'Mit Freunden' });
+    expect(await within(panel).findByText('9/10')).toBeInTheDocument();
+    await userEvent.selectOptions(within(panel).getByLabelText('Schau das!'), 'ben');
+    await userEvent.type(within(panel).getByLabelText('Nachricht (optional)'), 'Musst du sehen!');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Empfehlen' }));
+    expect(friendsApi.recommendTitle).toHaveBeenCalledWith('ben', expect.objectContaining({ tmdb_id: 438631, title: 'Dune' }), 'Musst du sehen!');
+    expect(await screen.findByText('Empfehlung an Ben gesendet.')).toBeInTheDocument();
   });
 });

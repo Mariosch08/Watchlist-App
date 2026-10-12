@@ -134,6 +134,21 @@ describe('shared lists and movie nights', () => {
     await asUser(db, a, "insert into public.list_members (list_id, user_id, role) values ($1, $2, 'editor'), ($1, $3, 'viewer')", [list, b, c]);
   });
 
+  it('votes can be cast, changed and withdrawn in one call; viewers vote, strangers cannot', async () => {
+    await asUser(db, a, "insert into public.list_items (list_id, media_type, tmdb_id, title) values ($1, 'movie', 603, 'Matrix')", [list]);
+    await asUser(db, c, "select public.cast_vote($1, 'movie', 603, 1::smallint)", [list]);
+    await asUser(db, c, "select public.cast_vote($1, 'movie', 603, -1::smallint)", [list]);
+    await asUser(db, b, "select public.cast_vote($1, 'movie', 603, 1::smallint)", [list]);
+    expect(await rows(a, 'select user_id, vote from public.list_votes order by vote')).toEqual([
+      { user_id: c, vote: -1 },
+      { user_id: b, vote: 1 },
+    ]);
+    await asUser(db, c, "select public.cast_vote($1, 'movie', 603, 0::smallint)", [list]);
+    expect(await rows(a, 'select user_id from public.list_votes')).toEqual([{ user_id: b }]);
+    const d = await signUp(db, 'dora@example.com', { invite_code: 'INVITE123456' });
+    await expect(asUser(db, d, "select public.cast_vote($1, 'movie', 603, 1::smallint)", [list])).rejects.toThrow(/row-level security/);
+  });
+
   it('invitees are notified and members see each other by name', async () => {
     expect(await rows(b, "select title from public.notifications where type = 'list_invite'")).toEqual([{ title: 'Anna hat dich zur Liste „Filmabend“ hinzugefügt' }]);
     // Ben and Carla are not friends but share the list.
@@ -150,7 +165,8 @@ describe('shared lists and movie nights', () => {
     const { id: night } = await one(b, "insert into public.movie_nights (list_id, title, options) values ($1, 'Halloween', $2) returning id", [list, options]);
     expect(await rows(a, "select title from public.notifications where type = 'movie_night'")).toEqual([{ title: 'Filmabend „Halloween“: Wann hast du Zeit?' }]);
 
-    await asUser(db, c, 'insert into public.movie_night_votes (night_id, option_index, available) values ($1, 1, true)', [night]);
+    await asUser(db, c, 'select public.set_availability($1, 1::smallint, false)', [night]);
+    await asUser(db, c, 'select public.set_availability($1, 1::smallint, true)', [night]);
     await asUser(db, a, 'insert into public.movie_night_votes (night_id, option_index, available) values ($1, 1, true), ($1, 0, false)', [night]);
     await asUser(db, c, 'update public.movie_night_votes set available = false where user_id = $1', [a]);
     expect((await one(b, 'select count(*) filter (where available)::int as n from public.movie_night_votes')).n).toBe(2);

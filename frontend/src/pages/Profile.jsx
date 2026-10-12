@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Share2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
 import MusicSources from '../components/music/MusicSources.jsx';
@@ -320,15 +321,35 @@ function SettingsCard() {
       {settings.isError ? (
         <LoadError error={settings.error} onRetry={() => settings.refetch()} />
       ) : (
-        <label className="check-row">
-          <input
-            type="checkbox"
-            checked={settings.data?.hide_spoilers ?? true}
-            disabled={!settings.data}
-            onChange={(e) => save.mutate({ hide_spoilers: e.target.checked })}
-          />
-          Spoiler-Schutz: Beschreibungen ungesehener Folgen verbergen
-        </label>
+        <div className="stack">
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.hide_spoilers ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ hide_spoilers: e.target.checked })}
+            />
+            Spoiler-Schutz: Beschreibungen ungesehener Folgen verbergen
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.share_ratings_with_friends ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ share_ratings_with_friends: e.target.checked })}
+            />
+            Freunde sehen meine Bewertungen (für „Wer hat es gesehen?“ und den Geschmacks-Match)
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.share_activity ?? false}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ share_activity: e.target.checked })}
+            />
+            Freunde sehen, was ich hinzufüge, schaue und bewerte (Aktivität)
+          </label>
+        </div>
       )}
     </section>
   );
@@ -341,7 +362,9 @@ function DataCard() {
   return (
     <section className="card" aria-labelledby="data-title">
       <h2 id="data-title">Meine Daten</h2>
-      <p className="muted">Lade alle deine Daten herunter. Für IMDb oder Letterboxd gibt es den Export unter „Import“.</p>
+      <p className="muted">
+        Lade alle deine Daten herunter. Für IMDb oder Letterboxd gibt es den Export unter <Link to="/import">Import / Export</Link>.
+      </p>
       <div className="actions">
         <button disabled={exporting.busy} onClick={() => exporting.run(exportJson)}>
           {exporting.busy ? 'Wird vorbereitet …' : 'Daten als JSON herunterladen'}

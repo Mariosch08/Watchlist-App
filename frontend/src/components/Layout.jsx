@@ -79,10 +79,11 @@ export default function Layout() {
                 Watchlist
               </NavLink>
               <NavLink to="/discover">Für dich</NavLink>
+              <NavLink to="/lists">Listen</NavLink>
+              <NavLink to="/friends">Freunde</NavLink>
               <NavLink to="/music">Musik</NavLink>
               <NavLink to="/calendar">Kalender</NavLink>
               <NavLink to="/streaming">Streaming</NavLink>
-              <NavLink to="/import">Import</NavLink>
               <NavLink to="/profile">Profil</NavLink>
             </div>
             <div className="nav-tools">
