@@ -3,96 +3,78 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** Phase 0 (Grundgerüst, da Repo leer war), Phase 1 (Benutzer & Login)
+- **Erledigt:** Phase 0 (Grundgerüst) und Phase 1 (Benutzer & Login) – **auf Supabase umgebaut** (AWS verworfen, siehe DECISIONS D3)
 - **Nächste Phase:** Phase 2 – Datenmodell
-- **Nächster konkreter Schritt:** `backend/src/lib/keys.js` um SK-Präfixe für alle Phase-2-Entitäten erweitern (siehe Abschnitt „Datenmodell-Plan“). Da es keine Altdaten gibt, darf das Schema frei gestaltet werden. Watchlist-Item um Felder `imdb_id`, `my_rating`, `rated_at`, `status`, `watched_at`, `runtime` erweitern (+ Validierung, `PATCH /watchlist/{media_type}/{tmdb_id}`), Tests.
+- **Nächster konkreter Schritt:** neue Migration `supabase/migrations/<datum>_data_model.sql`: `watchlist` erweitern (`imdb_id`, `my_rating` 1–10, `rated_at`, `watched_at`, `runtime`), neue Tabellen laut „Datenmodell-Plan“ mit RLS + `on delete cascade`, `export_my_data()` ergänzen; Tests in `tests/` (Isolation pro Tabelle).
 
-## Repo-Überblick (Stand nach Session 1)
-Komplett neues Projekt (von Mario bestätigt): Das Repo enthielt beim Start nur eine leere `README.md`. Alles wurde neu aufgebaut (siehe DECISIONS.md D1).
-
+## Repo-Überblick
 ```
-backend/                  Node.js 22 (ESM, plain JS), Tests: vitest + aws-sdk-client-mock
-  src/package.json        {"type":"module"} – src/ wird 1:1 als Lambda-Zip deployed (AWS SDK v3 kommt aus der Runtime)
-  src/handlers/api.js     EINE API-Lambda mit Router (ROUTES-Tabelle) → neue Endpunkte dort registrieren
-  src/handlers/preSignUp.js  Cognito-Trigger: Registrierung nur mit Einladungscode
-  src/routes/{me,watchlist,admin}.js   Endpunkt-Logik, bekommt ctx {event, auth, params, query}
-  src/lib/auth.js         getAuth(event) → userId NUR aus JWT-Claims; requireAdmin()
-  src/lib/db.js           DocumentClient, queryAll, batchDelete; TABLE_NAME env
-  src/lib/keys.js         Schlüssel-Schema (Single-Table)
-  src/lib/http.js|validate.js  HttpError, json(), parseBody(), Validatoren
-  src/lib/tmdb.js         tmdbGet() (Key aus SSM, v3-Key oder v4-Token), de-CH, CH
-  src/lib/ssm.js          getSecret() mit Cache
-  src/lib/invites.js      Code-Generierung/Normalisierung
-  scripts/create-invite.mjs   ersten Einladungscode per CLI erzeugen
-  test/                   helpers.js (apiEvent), *.test.js
-frontend/                 React 18 + Vite 5 + react-router 6, Tests: vitest
-  src/auth/cognito.js     schlanker Cognito-Client (fetch, kein SDK), Fehlermeldungen DE
-  src/auth/session.js     Tokens in localStorage, Auto-Refresh
-  src/api.js              api(path,{method,body}) mit ID-Token
-  src/pages/              Login, Register, Confirm, ForgotPassword, Profile, Watchlist
-infra/
-  envs/dev/               Root-Modul, State in S3 (backend.hcl via scripts/bootstrap-state.sh), outputs → frontend/.env.local
-.devcontainer/           Codespace mit Node 22, AWS CLI, Terraform 1.10.5
-docs/SETUP.md            Einrichtungsanleitung für Mario
-  modules/data            DynamoDB-Tabelle (PK/SK, GSI1, TTL `ttl`, prevent_destroy)
-  modules/auth            Cognito User Pool + Client + Gruppe `admins` (prevent_destroy)
-  modules/api             HTTP API, JWT-Authorizer auf $default-Route
-  modules/lambda_function wiederverwendbar (Role, Log-Group 14d, nodejs22.x arm64)
+package.json, vitest.config.js   Root: Tests für DB (PGlite) + Edge-Function-Logik
+tests/supabase-stub.sql          Nachbau auth-Schema/Rollen/Default-Grants von Supabase
+tests/db.js                      createDb(), signUp(), asUser(db, userId, sql), asAdmin()
+tests/*.test.{js,ts}             auth (Einladungen), isolation (RLS), tmdb
+supabase/config.toml             CLI-Config; Functions mit verify_jwt=false (Login-Prüfung im Code)
+supabase/migrations/*.sql        Schema, RLS, Trigger, RPCs – nur additive Migrationen!
+supabase/functions/_shared/      tmdb.ts (testbare Logik), auth.ts (requireUser), cors.ts
+supabase/functions/tmdb/         Edge Function: {action:'search'|'title'} → TMDb (de-CH), Key = Secret TMDB_API_KEY
+frontend/                        React 18 + Vite 5 + react-router 6 + supabase-js 2.45.4
+  src/lib/supabase.js            Client (VITE_SUPABASE_URL/ANON_KEY), appUrl() für Mail-Links (Pages-Basispfad)
+  src/lib/errors.js              errorMessage() DE, unwrap()
+  src/auth/AuthContext.jsx       useAuth()/useUser(), Recovery-Erkennung
+  src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist
+.github/workflows/deploy.yml     push main / manuell: Tests → supabase db push + functions deploy → GitHub Pages
+docs/SETUP.md                    Einrichtung für Mario (nur Browser)
 ```
 
 ### Befehle
-- Backend-Tests: `cd backend && npm test -- --silent`
+- Root-Tests: `npm test -- --silent` (PGlite braucht ~1 s pro DB-Test)
 - Frontend: `cd frontend && npm test -- --silent && npm run build`
-- Terraform: `cd infra/envs/dev && terraform fmt -recursive ../.. && terraform init -backend=false && terraform validate` (Deploy: `terraform init -backend-config=backend.hcl`, State in S3, siehe docs/SETUP.md)
-- In der Claude-Cloud-Umgebung ist registry.terraform.io gesperrt → Provider-Mirror unter `/root/tfmirror` + `~/.terraformrc` (siehe DECISIONS D9). Terraform-Binary (>= 1.10 wegen S3-Lockfile): `~/bin/terraform` (pro Session neu herunterladen von releases.hashicorp.com).
+- Neue DB-Funktion testen: Migration schreiben → `tests/*.test.js` mit `asUser()`.
 
-### Datenmodell (Single-Table `watchlist-<env>`)
-| PK | SK | Inhalt |
+### Datenmodell (aktuell)
+| Tabelle | Schlüssel | Inhalt / Regeln |
 |---|---|---|
-| `USER#<sub>` | `PROFILE` | email, display_name, username, created_at |
-| `USER#<sub>` | `WL#<movie\|tv>#<tmdb_id>` | Watchlist-Eintrag (tmdb_id, media_type, title, poster_path, release_date, status, source, added_at) |
-| `INVITE#<code>` | `INVITE` | Einladung (uses, max_uses, expires_at, ttl), GSI1PK=`INVITES` |
-| `USERNAME#<name>` | `USERNAME` | Eindeutigkeits-Lock (owner) |
+| `profiles` | `id` → auth.users | email, display_name, username (unique), is_admin (nicht änderbar durch Nutzer). Wird per Trigger beim Sign-up angelegt |
+| `invites` | `code` | max_uses, uses, used_by, expires_at; nur Admins lesen/erstellen/löschen |
+| `watchlist` | (`user_id`, `media_type`, `tmdb_id`) | title, poster_path, release_date, status, source, added_at |
+| RPCs | | `check_invite(code)` (anon), `export_my_data()`, `delete_my_account()`, `is_admin()` |
 
-### Datenmodell-Plan für Phase 2 (Vorschlag)
-- `USER#<sub>` / `SP#<tmdb_id>` series_progress · `TASTE#movie|tv|music` taste_profile · `FEED#<type>#<id>` feed (mit `ttl`) · `IMPORT#<job_id>` import_jobs · `NOTIF#<ts>` notifications · `TOMB#<media>#<id>` Tombstones · `FRIEND#<sub>` friendships (beidseitig) · `LISTREF#<list_id>` Mitgliedschaft
-- `LIST#<id>` / `META`, `MEMBER#<sub>`, `ITEM#<media>#<id>`, `VOTE#<item>#<sub>` gemeinsame Listen
-- `TMDB#<media>#<id>` / `DETAILS#<lang>` + `IMDB#<tt>` / `MAP` tmdb_cache (mit `ttl`)
-- Achtung: Konto löschen (`deleteMe`) muss dann auch Listen-Mitgliedschaften/Freundschaften auf fremden PKs bereinigen.
+### Datenmodell-Plan für Phase 2
+Tabellen (alle mit `user_id uuid default auth.uid() references auth.users on delete cascade`, RLS):
+`series_progress` (pro Serie + gesehene Episoden als Tabelle `watched_episodes`), `taste_profile` (Genre-Gewichte movie/tv/music getrennt als jsonb, Lieblings-Personen/-Artists, abgelehnte IDs), `feed` (type movie/tv/album, source, score, reason, status new/liked/disliked/added, `expires_at`), `streaming_services` (Abos des Nutzers), `import_jobs`, `notifications`, `tombstones` (gelöschte Titel für Import), `friendships` (requester, addressee, status), `shared_lists` / `list_members` (Rolle owner/editor/viewer) / `list_items` / `list_votes` (RLS über Mitgliedschaft), `tmdb_cache` (ohne user_id, nur via Edge Functions/service role, `expires_at`; IMDb↔TMDb-Mapping).
 
 ## Phasen-Checkliste
-- [x] Phase 0 – Grundgerüst (Terraform-Module, API-Lambda, React-Frontend, minimale Watchlist mit TMDb-Suche)
+- [x] Phase 0 – Grundgerüst (Supabase, React-Frontend, minimale Watchlist mit TMDb-Suche, Deploy-Workflow)
 - [x] Phase 1 – Benutzer & Login
-  - [x] Cognito User Pool (E-Mail+Passwort, E-Mail-Verifizierung), Registrierung nur mit Einladungscode (PreSignUp) oder Admin-Anlage per CLI
-  - [x] JWT-Authorizer (Cognito) am HTTP API, `user_id` nur aus Token
-  - [x] Datenmigration entfällt – es gibt keine Altdaten (neues Projekt)
-  - [x] Frontend: Login, Registrierung mit Code, Bestätigung, Passwort vergessen, Profil (Anzeigename, Benutzername, Passwort ändern, Admin-Einladungen)
+  - [x] Supabase Auth (E-Mail + Passwort, E-Mail-Bestätigung), Registrierung nur mit Einladungscode; Admin-Freigabe über Dashboard-Einladung; erster Nutzer = Admin
+  - [x] Zugriffsschutz: RLS auf allen Tabellen, `user_id` nur aus dem Login (getestet), Edge Function prüft Login
+  - [x] Datenmigration entfällt (neues Projekt)
+  - [x] Frontend: Login, Registrierung mit Code (Link `?invite=`), Passwort vergessen/zurücksetzen, Profil (Anzeigename, Benutzername, Passwort, Einladungen für Admins)
   - [x] Konto löschen + JSON-Export
-  - [x] Tests (Backend 34, Frontend 4) grün, `terraform validate` ok, Build ok
+  - [x] Tests grün (Root 25, Frontend 5), Build ok
 - [ ] Phase 2 – Datenmodell
-- [ ] Phase 3 – IMDb-Import & -Export
+- [ ] Phase 3 – IMDb-Import & -Export (Upload in Supabase Storage, privater Bucket pro Nutzer)
 - [ ] Phase 4 – Details & Trailer
-- [ ] Phase 5 – Serien-Tracking
-- [ ] Phase 6 – Empfehlungen Filme/Serien
+- [ ] Phase 5 – Serien-Tracking (pg_cron 07:15 Europe/Zurich → Edge Function)
+- [ ] Phase 6 – Empfehlungen Filme/Serien (pg_cron 06:45)
 - [ ] Phase 7 – Musik
 - [ ] Phase 8 – Freunde & gemeinsame Listen
 - [ ] Phase 9 – Statistiken
-- [ ] Phase 10 – E-Mail-Benachrichtigungen
+- [ ] Phase 10 – E-Mail-Benachrichtigungen (Brevo)
 - [ ] Phase 11 – Abschluss
-- [ ] (offen, ausserhalb der Phasen) Frontend-Hosting (S3 privat + CloudFront OAC) – spätestens in Phase 11
 
 ## Offene Probleme
-- Kein `terraform plan/apply` möglich in der Claude-Umgebung (keine AWS-Credentials) → nur `validate`. Plan/Apply macht Mario im Codespace.
-- `.terraform.lock.hcl` ist absichtlich in `.gitignore` (in der Cloud-Umgebung nur Mirror-Hashes für linux_amd64). Mario kann ihn nach `terraform init` im Codespace committen und aus `.gitignore` entfernen.
+- Nicht gegen ein echtes Supabase-Projekt getestet (hier kein Zugang). Die DB-Logik ist mit PGlite getestet; Abweichungen zu echtem Supabase (z. B. Rechte auf `auth.users`) zeigen sich erst beim ersten Deploy.
+- pg_cron rechnet in UTC → Zeiten in Europe/Zurich müssen bei Sommer-/Winterzeit berücksichtigt werden (Lösung in Phase 5: stündlich laufen und in der Funktion auf Zürich-Zeit prüfen).
 
 ## Offen für Mario
-Komplette Anleitung: **[`docs/SETUP.md`](docs/SETUP.md)** (AWS-Zugang im Codespace, TMDb-Token, State-Bucket, Deploy, erster Account).
-1. AWS-Konto absichern + IAM-Zugangsschlüssel als Codespaces-Secrets (SETUP §1–2)
-2. TMDb-Token holen und in SSM `/watchlist/dev/tmdb_api_key` ablegen (SETUP §3)
-3. `infra/scripts/bootstrap-state.sh`, dann `terraform init/plan/apply` (SETUP §4–5)
-4. Ersten Einladungscode erzeugen, registrieren, sich zur Gruppe `admins` hinzufügen (SETUP §7)
-5. Cognito verschickt Mails mit `COGNITO_DEFAULT` (max. 50/Tag) – reicht für Freunde; Umstellung auf SES in Phase 10.
+Alles in **[`docs/SETUP.md`](docs/SETUP.md)** (nur Browser):
+1. Supabase-Projekt erstellen, 4 Werte als GitHub-Secrets/-Variablen eintragen
+2. TMDb-Token als Supabase-Secret `TMDB_API_KEY`
+3. GitHub Pages auf „GitHub Actions“ stellen, PR mergen → Deploy läuft automatisch
+4. Site-URL in Supabase setzen, **sich sofort als erster Nutzer registrieren** (wird Admin)
+5. Vor Freundes-Einladungen: Brevo-SMTP in Supabase eintragen
 
 ## Ideen (nicht umgesetzt)
-- SRP-Login statt USER_PASSWORD_AUTH; Passkeys/MFA.
-- Mehrere API-Lambdas statt einer, falls Kaltstarts stören.
+- Passkeys/MFA über Supabase Auth.
+- Eigene Domain statt `mariosch08.github.io`.

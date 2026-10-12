@@ -1,0 +1,6 @@
+# Minimal Supabase CLI config (used by `supabase link`, `db push`, `functions deploy`).
+project_id = "watchlist-app"
+
+# Auth is checked inside the function (requireUser), compatible with new JWT signing keys.
+[functions.tmdb]
+verify_jwt = false

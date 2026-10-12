@@ -1,16 +1,13 @@
 # Watchlist-App
 
-Serverlose Film-/Serien-Watchlist (AWS, Terraform, React + Vite, TMDb) – im Ausbau zur Entdeckungs-App für mich und meine Freunde.
+Film-/Serien-Watchlist mit Entdeckungs-Funktionen für mich und meine Freunde.
+**Stack:** React + Vite (GitHub Pages) · Supabase (Postgres mit Row Level Security, Auth, Edge Functions) · TMDb.
 
+- Einrichtung (nur Browser, ~20 Min.): **[`docs/SETUP.md`](docs/SETUP.md)**
 - Fortschritt und nächste Schritte: [`PROGRESS.md`](PROGRESS.md)
-- Architekturentscheidungen: [`DECISIONS.md`](DECISIONS.md)
-
-## Schnellstart (Entwicklung)
+- Entscheidungen: [`DECISIONS.md`](DECISIONS.md)
 
 ```bash
-cd backend && npm install && npm test
-cd ../frontend && npm install && cp ../.env.example .env.local   # Werte aus `terraform output` eintragen
-npm run dev
+npm install && npm test                 # DB- (PGlite) und Funktions-Tests
+cd frontend && npm install && npm test && npm run dev
 ```
-
-Einrichtung (AWS im Codespace, TMDb, Deploy, erster Account): **[`docs/SETUP.md`](docs/SETUP.md)**. Die vollständige Anleitung folgt in Phase 11.

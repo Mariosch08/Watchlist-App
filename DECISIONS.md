@@ -1,29 +1,26 @@
 # Entscheidungen
 
-**D1 – Neues Projekt.** Es gibt keinen Bestand und keine Altdaten (von Mario bestätigt). Der Stack folgt dem Auftrag: Terraform, Lambda, React+Vite, TMDb. Die Phase-1-Aufgabe „bestehende Daten migrieren“ entfällt.
+**D1 – Neues Projekt.** Es gibt keinen Bestand und keine Altdaten (von Mario bestätigt). Die Phase-1-Aufgabe „bestehende Daten migrieren“ entfällt.
 
-**D2 – Branch.** Die Session-Umgebung schreibt den Branch `claude/media-watchlist-discovery-app-00efb2` vor (Push nur dorthin erlaubt). Er übernimmt die Rolle von `feature/discovery-app`; `main` wird nicht angefasst.
+**D2 – Branch.** Die Session-Umgebung schreibt den Branch `claude/media-watchlist-discovery-app-00efb2` vor (Push nur dorthin). Er übernimmt die Rolle von `feature/discovery-app`; `main` wird nicht angefasst – Mario merged per Pull Request.
 
-**D3 – Sprache Backend: Node.js 22 (ESM, plain JavaScript).** Eine Sprache für Frontend und Backend; AWS SDK v3 ist in der Lambda-Runtime enthalten → Zip = nur `backend/src`, keine Build-Pipeline. Tests mit vitest.
+**D3 – Kein AWS, sondern Supabase + GitHub Pages** (Wunsch von Mario: „einfacherer Weg, kein AWS“). Ersetzt den ersten AWS/Terraform-Entwurf (Commits bis `708cd46`).
+- Einrichtung nur per Browser: Projekt anlegen, 4 Werte in GitHub eintragen; Deploy macht GitHub Actions (`.github/workflows/deploy.yml`: Tests → `supabase db push` + `functions deploy` → GitHub Pages).
+- Supabase Free: Postgres 500 MB, Auth, Edge Functions, Storage, pg_cron – reicht für Mario + Freunde. Einschränkung: Projekt pausiert nach 7 Tagen Inaktivität (in Dashboard wieder starten).
+- Abbildung der ursprünglichen AWS-Vorgaben: Cognito → Supabase Auth · API Gateway/Cognito-Authorizer → Row Level Security (`user_id = auth.uid()`) + Edge Functions mit Login-Prüfung · DynamoDB → Postgres-Tabellen · SSM → Supabase-Secrets · S3-Upload → Supabase Storage (Phase 3) · EventBridge → `pg_cron` + `pg_net` ruft Edge Functions (Phase 5/6/10) · SES → SMTP-Dienst Brevo (Free 300/Tag, Phase 10) · Terraform → SQL-Migrationen in `supabase/migrations` (versioniert, nie destruktiv).
 
-**D4 – Single-Table-DynamoDB** (`PK`/`SK`, `GSI1`, TTL-Attribut `ttl`), On-Demand. Alle Nutzerdaten unter `PK=USER#<sub>` → Export und Löschen pro Nutzer sind eine Query. `deletion_protection` + `prevent_destroy`. Kein PITR (kostet).
+**D4 – Sicherheit über Row Level Security.** Das Frontend spricht direkt mit der Datenbank (supabase-js). Jede Tabelle hat RLS; `user_id` hat den Default `auth.uid()` und Policies prüfen `user_id = auth.uid()` – ein mitgeschickter fremder `user_id` wird abgelehnt (getestet). Zusätzlich Spalten-Rechte (z. B. darf niemand `is_admin` oder Einladungs-Zähler setzen) und CHECK-Constraints als Input-Validierung.
 
-**D5 – Eine API-Lambda mit Router** hinter HTTP API (v2, günstiger als REST API). Der „Cognito-Authorizer“ ist beim HTTP API ein JWT-Authorizer mit Cognito als Issuer; er schützt die `$default`-Route, also jeden Endpunkt. CORS-Preflight beantwortet API Gateway selbst.
+**D5 – Tests der Datenbank mit PGlite** (Postgres als WASM in Node, keine Installation): `tests/supabase-stub.sql` bildet das `auth`-Schema, die Rollen `anon`/`authenticated` und Supabase-Standardrechte nach; dann laufen alle Migrationen und Tests als „eingeloggter Nutzer“.
 
-**D6 – ID-Token als Bearer.** Enthält `email` und `cognito:groups`; Audience = Client-ID. `user_id` = `sub` aus dem Token, Request-Body/Query werden dafür nie gelesen (getestet).
+**D6 – Einladungen.** BEFORE-INSERT-Trigger auf `auth.users` verlangt einen gültigen Code (`invites`: nicht abgelaufen, `uses < max_uses`) und zählt ihn atomar hoch. Ausnahmen: der allererste Nutzer (wird Admin, kein Bootstrap-Skript nötig) und im Supabase-Dashboard eingeladene Nutzer (`invited_at` gesetzt = Admin-Freigabe). `check_invite()` gibt dem Formular vorab eine verständliche Fehlermeldung. Risiko: Registriert sich nach dem Deploy jemand Fremdes vor Mario, wäre er Admin → Mario registriert sich direkt nach dem ersten Deploy.
 
-**D7 – Einladungen.** Registrierung nur mit Code (Cognito PreSignUp-Trigger prüft und verbraucht ihn atomar: existiert, `uses < max_uses`, nicht abgelaufen). Codes erstellen Admins (Cognito-Gruppe `admins`) im Profil; der erste Code per CLI-Skript. „Admin-Freigabe“ = Admin legt Nutzer per `admin-create-user` an (Trigger lässt das zu). Nebenwirkung: Bricht jemand nach dem SignUp ab, ist der Code verbraucht → Admin erstellt neuen.
+**D7 – Edge Functions prüfen den Login selbst** (`requireUser` via `auth.getUser`, `verify_jwt = false`), weil das Gateway-Flag mit den neuen asymmetrischen JWT-Keys von Supabase nicht zuverlässig funktioniert. Fachlogik liegt in `supabase/functions/_shared/*.ts` ohne Deno-APIs → mit vitest testbar.
 
-**D8 – Frontend-Auth ohne Amplify.** Schlanker Client gegen die öffentliche Cognito-JSON-API (`USER_PASSWORD_AUTH` über TLS). Tokens in `localStorage` (Refresh-Token 30 Tage, widerrufen beim Abmelden). Spart ~200 kB Bundle. SRP wäre sicherer gegen Passwort-Logging im Client, ist als Idee notiert.
+**D8 – Watchlist-Titel kommen vom Client** (Suchergebnis der TMDb-Funktion). Das ist unkritisch, weil jeder nur seine eigene Liste sieht; Längen sind per CHECK begrenzt. Für geteilte Listen (Phase 8) werden Titeldaten aus dem TMDb-Cache gelesen.
 
-**D9 – Terraform in der Claude-Umgebung.** registry.terraform.io ist gesperrt; Provider kommen über einen Filesystem-Mirror von releases.hashicorp.com. Darum wird `.terraform.lock.hcl` vorerst nicht committet. Region `eu-central-1` (Variable).
+**D9 – Konto löschen** = `delete_my_account()` (security definer) löscht den Auth-Nutzer; alle Nutzertabellen hängen per `ON DELETE CASCADE` an `auth.users`. Neue Tabellen müssen das ebenfalls tun. Export = `export_my_data()` (läuft mit Nutzerrechten, RLS greift) – neue Tabellen dort ergänzen.
 
-**D10 – Konto löschen:** zuerst DynamoDB-Daten, dann `AdminDeleteUser`. Schlägt Cognito fehl, kann sich der Nutzer erneut anmelden und es wiederholen; umgekehrt blieben verwaiste Daten. Von Admins erstellte Einladungen (PK `INVITE#…`) bleiben bestehen (gehören dem Admin-Prozess).
+**D10 – Benutzername** (optional, `[a-z0-9_]{3,20}`, UNIQUE) schon in Phase 1, weil Phase 8 Freunde per Benutzername einlädt.
 
-**D11 – Benutzername** (optional, `[a-z0-9_]{3,20}`, eindeutig über Lock-Item `USERNAME#…` in einer Transaktion) schon in Phase 1, weil Phase 8 Freunde per Benutzername einlädt.
-
-**D12 – Lambda arm64, 256 MB, Logs 14 Tage** (Free-Tier-tauglich, günstiger).
-
-**D13 – Codespaces-Zugang zu AWS über IAM-Access-Keys als Codespaces-Secrets.** Für ein Ein-Personen-Projekt am einfachsten. Sicherer, aber aufwendiger wäre IAM Identity Center (SSO) mit `aws sso login --use-device-code`; das kann später umgestellt werden.
-
-**D14 – Terraform-State in S3** (Bucket per Skript, versioniert, verschlüsselt, S3-Lockfile statt DynamoDB-Lock → Terraform >= 1.10). Grund: Codespaces werden nach Inaktivität gelöscht, lokaler State ginge verloren.
+**D11 – Supabase CLI im Workflow auf `latest`.** Eine fixe Version wäre reproduzierbarer, aber ich konnte hier keine aktuelle Versionsnummer verifizieren. Bei Problemen in `deploy.yml` eine Version pinnen.

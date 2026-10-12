@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { signIn } from '../auth/session.js';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import { unwrap } from '../lib/errors.js';
+import { supabase } from '../lib/supabase.js';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,13 +14,8 @@ export default function LoginPage() {
   const onSubmit = (e) => {
     e.preventDefault();
     run(async () => {
-      try {
-        await signIn(email, password);
-        navigate(location.state?.from ?? '/', { replace: true });
-      } catch (err) {
-        if (err.code === 'UserNotConfirmedException') navigate('/confirm', { state: { email } });
-        else throw err;
-      }
+      unwrap(await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password }));
+      navigate(location.state?.from ?? '/', { replace: true });
     });
   };
 

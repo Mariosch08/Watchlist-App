@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CognitoError, errorMessage } from '../auth/cognito.js';
+import { errorMessage } from '../lib/errors.js';
 
 // Small helper: runs an async submit handler and exposes busy/error/info state.
 export function useSubmit() {
@@ -13,7 +13,7 @@ export function useSubmit() {
     try {
       await fn({ setInfo });
     } catch (err) {
-      setError(err instanceof CognitoError ? errorMessage(err) : err.message);
+      setError(errorMessage(err));
     } finally {
       setBusy(false);
     }

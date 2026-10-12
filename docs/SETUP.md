@@ -1,92 +1,72 @@
-# Einrichtung: AWS, TMDb und erster Deploy (Codespaces)
+# Einrichtung – ohne AWS, alles im Browser
 
-Einmalig, ca. 30–45 Minuten. Reihenfolge einhalten.
+Du brauchst nur **Supabase** (Datenbank + Login + Server-Funktionen, gratis) und **GitHub** (das du schon hast). Kein Terminal nötig. Dauer ca. 20 Minuten.
 
-## 1. AWS-Konto absichern (falls neu)
-1. Konto auf <https://aws.amazon.com> erstellen (Kreditkarte nötig, Free Tier reicht).
-2. Als Root-Nutzer **MFA aktivieren**: oben rechts Kontoname → *Security credentials* → *Assign MFA device*.
-3. **Kostenalarm**: Konsole → *Billing and Cost Management* → *Budgets* → *Create budget* → Vorlage *Monthly cost budget*, z. B. 5 USD, deine E-Mail. (Die ersten zwei Budgets sind kostenlos.)
-4. Oben rechts die Region **Europe (Frankfurt) eu-central-1** wählen.
+## 1. Supabase-Projekt erstellen
+1. Auf <https://supabase.com> mit deinem GitHub-Konto anmelden („Continue with GitHub“).
+2. **New project**: Name `watchlist`, Region **Central EU (Frankfurt)**, Plan **Free**.
+3. **Datenbank-Passwort** erzeugen lassen und **notieren** (brauchst du in Schritt 3).
+4. Warten, bis das Projekt bereit ist (~2 Minuten).
 
-## 2. Zugangsschlüssel für den Codespace
-1. Konsole → **IAM** → *Users* → *Create user* → Name `watchlist-codespaces` (kein Konsolenzugang nötig).
-2. *Attach policies directly* → **AdministratorAccess** (Terraform muss Rollen, Lambdas, Cognito usw. anlegen).
-3. Nutzer öffnen → *Security credentials* → *Create access key* → *Command Line Interface (CLI)* → beide Werte kopieren. **Den Secret Key siehst du nur einmal.**
-4. GitHub → dein Profilbild → *Settings* → *Codespaces* → *Secrets* → *New secret*. Lege diese drei an und wähle jeweils bei *Repository access* `Watchlist-App` aus:
+## 2. Drei Werte aus Supabase kopieren
+| Was | Wo in Supabase |
+|---|---|
+| **Project ref** (z. B. `abcdefghijklmnopqrst`) | *Project Settings → General → Project ID* |
+| **Anon/Publishable key** (öffentlich, darf ins Frontend) | *Project Settings → API Keys* (`anon` bzw. `publishable`) |
+| **Access token** (geheim) | Profilbild oben rechts → *Account preferences → Access Tokens → Generate new token*, Name `github-deploy` |
 
-   | Name | Wert |
-   |---|---|
-   | `AWS_ACCESS_KEY_ID` | Access key aus Schritt 3 |
-   | `AWS_SECRET_ACCESS_KEY` | Secret access key aus Schritt 3 |
-   | `AWS_DEFAULT_REGION` | `eu-central-1` |
+## 3. Werte in GitHub eintragen
+GitHub → Repo **Watchlist-App** → *Settings* → *Secrets and variables* → *Actions*:
 
-5. Codespace neu erstellen bzw. neu bauen: Befehlspalette (`F1`) → **Codespaces: Rebuild Container**. Dabei werden auch AWS CLI, Terraform und Node installiert (`.devcontainer/devcontainer.json`).
-6. Testen im Terminal:
-   ```bash
-   aws sts get-caller-identity     # zeigt deine Account-ID → Zugang funktioniert
-   terraform version               # >= 1.10
-   ```
+- Tab **Secrets** → *New repository secret*:
+  - `SUPABASE_ACCESS_TOKEN` = Access token
+  - `SUPABASE_DB_PASSWORD` = Datenbank-Passwort aus Schritt 1
+- Tab **Variables** → *New repository variable*:
+  - `SUPABASE_PROJECT_REF` = Project ref
+  - `SUPABASE_ANON_KEY` = Anon/Publishable key
 
-> Die Schlüssel landen nie im Repo – Codespaces gibt sie nur als Umgebungsvariablen in deinen Codespace. Falls ein Schlüssel einmal öffentlich wird: in IAM sofort deaktivieren und neu erstellen.
+## 4. TMDb-Key in Supabase hinterlegen
+1. Konto auf <https://www.themoviedb.org/signup> erstellen → *Einstellungen → API* → Developer-Key beantragen (persönliches, nicht-kommerzielles Projekt).
+2. Den **API Read Access Token** kopieren (beginnt mit `eyJ`).
+3. Supabase → *Edge Functions* → *Secrets* (bzw. *Project Settings → Edge Functions*) → **Add new secret**: Name `TMDB_API_KEY`, Wert = Token.
 
-## 3. TMDb-Zugang
-1. Konto auf <https://www.themoviedb.org/signup> erstellen und E-Mail bestätigen.
-2. Profilbild → *Einstellungen* → **API** → *Create* / *Request an API key* → Typ **Developer**, Nutzung „persönliches, nicht-kommerzielles Projekt“. Formular ausfüllen (App-URL darf z. B. dein GitHub-Repo sein).
-3. Auf derselben Seite den **API Read Access Token** kopieren (langer Text, beginnt mit `eyJ`). Der kürzere *API Key* funktioniert auch – der Code erkennt beides.
-4. Im Codespace-Terminal sicher in AWS ablegen (der Token erscheint dabei nicht im Terminal-Verlauf):
-   ```bash
-   read -rsp "TMDb Token: " TMDB_TOKEN && echo
-   aws ssm put-parameter --name /watchlist/dev/tmdb_api_key --type SecureString --value "$TMDB_TOKEN" --overwrite
-   unset TMDB_TOKEN
-   aws ssm get-parameter --name /watchlist/dev/tmdb_api_key --query Parameter.Name   # Kontrolle
-   ```
+## 5. GitHub Pages einschalten
+GitHub → Repo → *Settings* → *Pages* → *Build and deployment* → Source: **GitHub Actions**.
 
-## 4. Terraform-State in S3 (einmalig)
-Ein Codespace wird nach 30 Tagen Inaktivität gelöscht – der Terraform-State darf deshalb nicht nur dort liegen.
+## 6. Deployen
+1. Den Branch `claude/media-watchlist-discovery-app-00efb2` per Pull Request in `main` mergen (GitHub → *Pull requests* → *New pull request*; oder Claude bitten, ihn zu erstellen). Danach startet der Deploy automatisch.
+2. Unter *Actions* zuschauen, bis alle drei Schritte grün sind (Tests → Supabase → Pages).
+3. Deine App läuft dann unter **https://mariosch08.github.io/Watchlist-App/**
+
+## 7. Login-Links einstellen
+Supabase → *Authentication* → *URL Configuration*:
+- **Site URL**: `https://mariosch08.github.io/Watchlist-App/`
+- **Redirect URLs** → *Add URL*: `https://mariosch08.github.io/Watchlist-App/**` und `http://localhost:5173/**`
+
+Optional unter *Authentication → Sign In / Providers → Email*: „Minimum password length“ auf **10** setzen.
+
+## 8. Dein Konto
+Öffne die App → *Registrieren*. **Der allererste Nutzer braucht keinen Code und wird automatisch Admin** – also gleich nach dem Deploy selbst registrieren. Bestätigungslink in der Mail anklicken, anmelden. Auf der Profil-Seite erstellst du dann Einladungscodes für Freunde („Link kopieren“ und verschicken).
+
+## 9. Bevor sich Freunde registrieren: E-Mail-Versand
+Der eingebaute Supabase-Mailversand schickt nur an Mitglieder deines Supabase-Teams (also nur an dich) und nur wenige Mails pro Stunde. Für Freunde einen kostenlosen Mail-Dienst anschliessen:
+1. Konto bei <https://www.brevo.com> (Free: 300 Mails/Tag) → *Senders* → deine E-Mail-Adresse als Absender bestätigen.
+2. Brevo → *SMTP & API* → *SMTP* → **SMTP-Key erzeugen**.
+3. Supabase → *Authentication* → *Emails* → *SMTP Settings* → **Enable custom SMTP**:
+   Host `smtp-relay.brevo.com`, Port `587`, Benutzer = Brevo-Login (steht auf der SMTP-Seite), Passwort = SMTP-Key, Absender = deine bestätigte Adresse, Name `Watchlist`.
+
+Alternative ohne Mail-Setup: Freunde in Supabase unter *Authentication → Users → Invite user* einladen (das ist die „Admin-Freigabe“, braucht keinen Code).
+
+## Lokal entwickeln (optional, z. B. im Codespace)
 ```bash
-./infra/scripts/bootstrap-state.sh
+npm install && npm test                    # Datenbank- und Funktions-Tests
+cd frontend && npm install
+cp ../.env.example .env.local              # VITE_SUPABASE_URL = https://<project-ref>.supabase.co, Key eintragen
+npm run dev
 ```
-Legt den Bucket `watchlist-tfstate-<account-id>` an (verschlüsselt, versioniert, privat) und schreibt `infra/envs/dev/backend.hcl`.
-
-## 5. Deploy
-```bash
-cd infra/envs/dev
-# Erlaubte Frontend-Adressen: lokal + die weitergeleitete Codespace-Adresse
-cat > terraform.tfvars <<EOT
-cors_origins = ["http://localhost:5173", "https://${CODESPACE_NAME}-5173.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"]
-EOT
-terraform init -backend-config=backend.hcl
-terraform plan          # anschauen: es sollte nur "create" vorkommen
-terraform apply         # mit "yes" bestätigen
-```
-
-## 6. Frontend verbinden und starten
-```bash
-cd infra/envs/dev
-cat > ../../../frontend/.env.local <<EOT
-VITE_AWS_REGION=$(terraform output -raw region)
-VITE_USER_POOL_ID=$(terraform output -raw user_pool_id)
-VITE_USER_POOL_CLIENT_ID=$(terraform output -raw user_pool_client_id)
-VITE_API_URL=$(terraform output -raw api_url)
-EOT
-cd ../../../frontend && npm run dev
-```
-Codespaces zeigt unten rechts „Open in Browser“ für Port 5173.
-
-## 7. Erster Account (du) und Admin-Rechte
-```bash
-cd backend
-AWS_REGION=eu-central-1 TABLE_NAME=watchlist-dev node scripts/create-invite.mjs     # gibt einen Einladungscode aus
-```
-Im Browser: *Registrieren* → Code, E-Mail, Passwort → Bestätigungscode aus der Mail eingeben → anmelden.
-Dann dich zum Admin machen (danach ab- und wieder anmelden):
-```bash
-POOL=$(cd ../infra/envs/dev && terraform output -raw user_pool_id)
-aws cognito-idp admin-add-user-to-group --user-pool-id "$POOL" --username "deine@email.ch" --group-name admins
-```
-Ab jetzt erstellst du Einladungen für Freunde direkt auf der Profil-Seite.
 
 ## Häufige Probleme
-- **`Unable to locate credentials`**: Secrets fehlen oder Codespace wurde nach dem Anlegen nicht neu gebaut (Schritt 2.5).
-- **CORS-Fehler im Browser**: Neuer Codespace = neue Adresse → Schritt 5 (`terraform.tfvars` + `apply`) wiederholen.
-- **Suche liefert Fehler 502**: TMDb-Token fehlt oder ist falsch (Schritt 3).
+- **Action „supabase“ rot**: Secret/Variable falsch geschrieben oder DB-Passwort falsch (Schritt 3).
+- **Suche zeigt Fehler**: `TMDB_API_KEY` fehlt in Supabase (Schritt 4).
+- **Link in Bestätigungsmail führt auf localhost**: Site URL setzen (Schritt 7).
+- **Projekt pausiert**: Gratis-Projekte pausieren nach 7 Tagen ohne Nutzung; im Supabase-Dashboard auf *Restore* klicken.

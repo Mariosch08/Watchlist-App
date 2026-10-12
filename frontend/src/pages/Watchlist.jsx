@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api.js';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import { unwrap } from '../lib/errors.js';
+import { supabase } from '../lib/supabase.js';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w154';
 const TYPE_LABEL = { movie: 'Film', tv: 'Serie' };
@@ -27,7 +28,7 @@ export default function WatchlistPage() {
   const { busy, error, run } = useSubmit();
 
   useEffect(() => {
-    run(async () => setItems((await api('/watchlist')).items));
+    run(async () => setItems(unwrap(await supabase.from('watchlist').select().order('added_at', { ascending: false }))));
   }, []);
 
   const key = (i) => `${i.media_type}-${i.tmdb_id}`;
@@ -35,16 +36,17 @@ export default function WatchlistPage() {
 
   const search = (e) => {
     e.preventDefault();
-    run(async () => setResults((await api(`/search?q=${encodeURIComponent(query.trim())}`)).results));
+    run(async () => setResults(unwrap(await supabase.functions.invoke('tmdb', { body: { action: 'search', query: query.trim() } })).results));
   };
   const add = (r) =>
     run(async () => {
-      const { item } = await api('/watchlist', { method: 'POST', body: { tmdb_id: r.tmdb_id, media_type: r.media_type } });
+      const row = { tmdb_id: r.tmdb_id, media_type: r.media_type, title: r.title, poster_path: r.poster_path, release_date: r.release_date };
+      const item = unwrap(await supabase.from('watchlist').upsert(row, { onConflict: 'user_id,media_type,tmdb_id', ignoreDuplicates: true }).select().maybeSingle()) ?? row;
       setItems((list) => [item, ...list.filter((i) => key(i) !== key(item))]);
     });
   const remove = (i) =>
     run(async () => {
-      await api(`/watchlist/${i.media_type}/${i.tmdb_id}`, { method: 'DELETE' });
+      unwrap(await supabase.from('watchlist').delete().match({ media_type: i.media_type, tmdb_id: i.tmdb_id }));
       setItems((list) => list.filter((x) => key(x) !== key(i)));
     });
 

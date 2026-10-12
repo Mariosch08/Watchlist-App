@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
-import { signOut } from '../auth/session.js';
+import { supabase } from '../lib/supabase.js';
 
 export default function Layout() {
   const user = useUser();
@@ -12,7 +12,7 @@ export default function Layout() {
           <nav>
             <NavLink to="/">Watchlist</NavLink>
             <NavLink to="/profile">Profil</NavLink>
-            <button className="link" onClick={signOut}>
+            <button className="link" onClick={() => supabase.auth.signOut()}>
               Abmelden
             </button>
           </nav>

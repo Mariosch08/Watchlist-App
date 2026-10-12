@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api.js';
-import { cognito, clearSession, getAccessToken } from '../auth/session.js';
+import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import { unwrap } from '../lib/errors.js';
+import { appUrl, supabase } from '../lib/supabase.js';
 
 const DELETE_CONFIRMATION = 'LÖSCHEN';
 
@@ -12,12 +13,17 @@ function ProfileForm({ profile, onSaved }) {
   const onSubmit = (e) => {
     e.preventDefault();
     run(async ({ setInfo }) => {
-      const body = { display_name: displayName };
-      if (username && username !== profile.username) body.username = username;
-      const res = await api('/me', { method: 'PUT', body });
-      onSaved(res.profile);
+      const saved = unwrap(
+        await supabase
+          .from('profiles')
+          .update({ display_name: displayName.trim(), username: username.trim() || null })
+          .eq('id', profile.id)
+          .select()
+          .single(),
+      );
+      onSaved(saved);
       setInfo('Gespeichert.');
-    }).catch(() => {});
+    });
   };
   return (
     <form className="card" onSubmit={onSubmit}>
@@ -31,22 +37,20 @@ function ProfileForm({ profile, onSaved }) {
         Benutzername (3–20 Zeichen: a–z, 0–9, _), damit Freunde dich finden
         <input pattern="[a-z0-9_]{3,20}" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase())} />
       </label>
-      <Messages error={error === 'Username already taken' ? 'Dieser Benutzername ist bereits vergeben.' : error} info={info} />
+      <Messages error={error} info={info} />
       <button disabled={busy}>Speichern</button>
     </form>
   );
 }
 
 function ChangePassword() {
-  const [oldPw, setOldPw] = useState('');
-  const [newPw, setNewPw] = useState('');
+  const [password, setPassword] = useState('');
   const { busy, error, info, run } = useSubmit();
   const onSubmit = (e) => {
     e.preventDefault();
     run(async ({ setInfo }) => {
-      await cognito.changePassword(await getAccessToken(), oldPw, newPw);
-      setOldPw('');
-      setNewPw('');
+      unwrap(await supabase.auth.updateUser({ password }));
+      setPassword('');
       setInfo('Passwort geändert.');
     });
   };
@@ -54,12 +58,8 @@ function ChangePassword() {
     <form className="card" onSubmit={onSubmit}>
       <h2>Passwort ändern</h2>
       <label>
-        Aktuelles Passwort
-        <input type="password" autoComplete="current-password" required value={oldPw} onChange={(e) => setOldPw(e.target.value)} />
-      </label>
-      <label>
         Neues Passwort
-        <input type="password" autoComplete="new-password" minLength={10} required value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+        <input type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
       <Messages error={error} info={info} />
       <button disabled={busy}>Passwort ändern</button>
@@ -70,24 +70,29 @@ function ChangePassword() {
 function Invites() {
   const [invites, setInvites] = useState([]);
   const [maxUses, setMaxUses] = useState(1);
-  const { busy, error, run } = useSubmit();
-  const load = () => run(async () => setInvites((await api('/admin/invites')).invites));
+  const { busy, error, info, run } = useSubmit();
+  const load = async () =>
+    setInvites(unwrap(await supabase.from('invites').select().order('created_at', { ascending: false })));
   useEffect(() => {
-    load();
+    run(load);
   }, []);
   const create = (e) => {
     e.preventDefault();
     run(async () => {
-      await api('/admin/invites', { method: 'POST', body: { max_uses: Number(maxUses) } });
-      setInvites((await api('/admin/invites')).invites);
+      unwrap(await supabase.from('invites').insert({ max_uses: Number(maxUses) }));
+      await load();
     });
   };
   const revoke = (code) =>
     run(async () => {
-      await api(`/admin/invites/${code}`, { method: 'DELETE' });
+      unwrap(await supabase.from('invites').delete().eq('code', code));
       setInvites((list) => list.filter((i) => i.code !== code));
     });
-  const link = (code) => `${window.location.origin}/register?invite=${code}`;
+  const copyLink = (code) =>
+    run(async ({ setInfo }) => {
+      await navigator.clipboard.writeText(appUrl(`register?invite=${code}`));
+      setInfo('Einladungslink kopiert.');
+    });
   return (
     <section className="card">
       <h2>Einladungen (Admin)</h2>
@@ -98,12 +103,12 @@ function Invites() {
         </label>
         <button disabled={busy}>Code erstellen</button>
       </form>
-      <Messages error={error} />
+      <Messages error={error} info={info} />
       <ul className="plain">
         {invites.map((i) => (
           <li key={i.code}>
             <code>{i.code}</code> – {i.uses}/{i.max_uses} genutzt, gültig bis {new Date(i.expires_at).toLocaleDateString('de-CH')}{' '}
-            <button className="link" onClick={() => navigator.clipboard?.writeText(link(i.code))}>
+            <button className="link" onClick={() => copyLink(i.code)}>
               Link kopieren
             </button>{' '}
             <button className="link danger" onClick={() => revoke(i.code)}>
@@ -121,7 +126,7 @@ function DataSection() {
   const { busy, error, run } = useSubmit();
   const exportData = () =>
     run(async () => {
-      const data = await api('/me/export');
+      const data = unwrap(await supabase.rpc('export_my_data'));
       const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
       const a = Object.assign(document.createElement('a'), { href: url, download: 'watchlist-export.json' });
       a.click();
@@ -129,8 +134,8 @@ function DataSection() {
     });
   const deleteAccount = () =>
     run(async () => {
-      await api('/me', { method: 'DELETE' });
-      clearSession();
+      unwrap(await supabase.rpc('delete_my_account'));
+      await supabase.auth.signOut({ scope: 'local' });
     });
   return (
     <section className="card">
@@ -154,11 +159,12 @@ function DataSection() {
 }
 
 export default function ProfilePage() {
+  const user = useUser();
   const [profile, setProfile] = useState(null);
-  const [error, setError] = useState('');
+  const { error, run } = useSubmit();
   useEffect(() => {
-    api('/me').then((r) => setProfile(r.profile), (e) => setError(e.message));
-  }, []);
+    run(async () => setProfile(unwrap(await supabase.from('profiles').select().eq('id', user.id).single())));
+  }, [user.id]);
   if (error) return <p className="error">{error}</p>;
   if (!profile) return <p>Lade …</p>;
   return (
