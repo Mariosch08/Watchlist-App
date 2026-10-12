@@ -4,7 +4,8 @@
 
 ## Status
 - **Erledigt:** Phase 0, 1 (Login, Supabase), 2 (Datenmodell), 3 (IMDb-Import/-Export), Design-System „Quiet Ink“
-- **Aktuelle Phase:** 3b – Frontend-Logik überarbeiten, danach Phase 4 – Details & Trailer
+- **Aktuelle Phase:** 3b – Frontend-Logik überarbeiten, danach Gesamt-Überarbeitung (Sicherheit, DB, Functions, CI, Produkt), dann Phase 4 – Details & Trailer
+- **Zwischenstand bei Abbruch:** Befunde der Frontend-Analyse in `docs/reviews/frontend-findings.md` (35 Befunde F01–F35). Gesamt-Review (Backend/Produkt) lief parallel; falls dessen Ergebnis fehlt: neu starten (Lenses: security, data-model, edge-functions, ops, product, docs-dx).
 - **Nächster konkreter Schritt:** Edge Function `tmdb` um Aktion `details` erweitern (Details + `/credits` + `/videos` + `/watch/providers` CH + `/similar` in einem Aufruf via `append_to_response`, de-CH mit en-US-Fallback für Overview/Trailer), Cache in `tmdb_cache` (`details:<type>:<id>:de-CH`, TTL 24 h); Route `/title/:type/:id` mit Poster/Backdrop, Trailer via `youtube-nocookie.com`, Anbieter-Logos (Flatrate/Leihen/Kaufen), Ähnliche Titel, Zur Watchlist, Bewerten; Titel in Watchlist/Suche verlinken. Vorher `docs/DESIGN.md` lesen.
 
 ## Repo-Überblick
