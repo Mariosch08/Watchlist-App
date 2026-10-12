@@ -20,7 +20,8 @@ export default function LoginPage() {
   };
 
   return (
-    <form className="card narrow" onSubmit={onSubmit}>
+    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
+      <p className="eyebrow">Dein Kinoprogramm, mit Freunden geteilt</p>
       <h1>Anmelden</h1>
       <label>
         E-Mail

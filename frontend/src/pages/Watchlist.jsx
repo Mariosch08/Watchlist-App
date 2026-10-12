@@ -1,36 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Messages, useSubmit } from '../components/Form.jsx';
-import { unwrap } from '../lib/errors.js';
-import { invokeFunction, supabase } from '../lib/supabase.js';
-
-const POSTER_BASE = 'https://image.tmdb.org/t/p/w154';
-const TYPE_LABEL = { movie: 'Film', tv: 'Serie' };
-const STATUS_LABEL = {
-  planned: 'Geplant',
-  watching: 'Am Schauen',
-  completed: 'Gesehen',
-  paused: 'Pausiert',
-  dropped: 'Abgebrochen',
-};
-const RATINGS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-
-function TitleRow({ item, action }) {
-  return (
-    <li className="title-row">
-      {item.poster_path ? <img src={POSTER_BASE + item.poster_path} alt="" loading="lazy" /> : <div className="poster-placeholder" />}
-      <div className="grow">
-        <strong>{item.title}</strong>
-        <div className="muted">
-          {TYPE_LABEL[item.media_type]}
-          {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ''}
-          {item.original_title && item.original_title !== item.title ? ` · Originaltitel: ${item.original_title}` : ''}
-          {Number(item.vote_average) > 0 ? ` · ★ ${Number(item.vote_average).toFixed(1)}` : ''}
-        </div>
-      </div>
-      {action}
-    </li>
-  );
-}
+import TitleRow from '../components/TitleRow.jsx';
+import WatchlistActions from '../components/WatchlistActions.jsx';
+import { titleKey } from '../lib/labels.js';
+import { addToWatchlist, loadWatchlist, removeFromWatchlist, searchTitles, updateWatchlistItem } from '../lib/watchlist.js';
 
 export default function WatchlistPage() {
   const [items, setItems] = useState(null);
@@ -39,101 +12,76 @@ export default function WatchlistPage() {
   const { busy, error, run } = useSubmit();
 
   useEffect(() => {
-    run(async () => setItems(unwrap(await supabase.from('watchlist').select().order('added_at', { ascending: false }))));
+    run(async () => setItems(await loadWatchlist()));
   }, []);
 
-  const key = (i) => `${i.media_type}-${i.tmdb_id}`;
-  const inList = new Set((items ?? []).map(key));
+  const inList = new Set((items ?? []).map(titleKey));
+  const replace = (saved) => setItems((list) => list.map((x) => (titleKey(x) === titleKey(saved) ? saved : x)));
 
   const search = (e) => {
     e.preventDefault();
-    run(async () => setResults((await invokeFunction('tmdb', { action: 'search', query: query.trim() })).results));
+    run(async () => setResults(await searchTitles(query)));
   };
   const add = (r) =>
     run(async () => {
-      const row = {
-        tmdb_id: r.tmdb_id,
-        media_type: r.media_type,
-        title: r.title,
-        original_title: r.original_title,
-        poster_path: r.poster_path,
-        release_date: r.release_date,
-        vote_average: r.vote_average ? Math.round(r.vote_average * 10) / 10 : null,
-      };
-      const item = unwrap(await supabase.from('watchlist').upsert(row, { onConflict: 'user_id,media_type,tmdb_id', ignoreDuplicates: true }).select().maybeSingle()) ?? row;
-      setItems((list) => [item, ...list.filter((i) => key(i) !== key(item))]);
+      const item = await addToWatchlist(r);
+      setItems((list) => [item, ...list.filter((i) => titleKey(i) !== titleKey(item))]);
     });
-  const update = (i, changes) =>
-    run(async () => {
-      const saved = unwrap(
-        await supabase.from('watchlist').update(changes).match({ media_type: i.media_type, tmdb_id: i.tmdb_id }).select().single(),
-      );
-      setItems((list) => list.map((x) => (key(x) === key(saved) ? saved : x)));
-    });
+  const update = (i, changes) => run(async () => replace(await updateWatchlistItem(i, changes)));
   const remove = (i) =>
     run(async () => {
-      unwrap(await supabase.from('watchlist').delete().match({ media_type: i.media_type, tmdb_id: i.tmdb_id }));
-      setItems((list) => list.filter((x) => key(x) !== key(i)));
+      await removeFromWatchlist(i);
+      setItems((list) => list.filter((x) => titleKey(x) !== titleKey(i)));
     });
 
   return (
     <>
-      <section className="card">
-        <form className="row" onSubmit={search}>
-          <input placeholder="Film oder Serie suchen …" value={query} onChange={(e) => setQuery(e.target.value)} required maxLength={100} />
+      <section className="panel reveal" style={{ '--i': 0 }}>
+        <p className="eyebrow">Suchen</p>
+        <form className="row search-form" onSubmit={search}>
+          <input
+            className="search-input"
+            placeholder="Film oder Serie …"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            required
+            maxLength={100}
+          />
           <button disabled={busy}>Suchen</button>
         </form>
-        <ul className="plain">
-          {results.map((r) => (
-            <TitleRow
-              key={key(r)}
-              item={r}
-              action={
-                <button disabled={busy || inList.has(key(r))} onClick={() => add(r)}>
-                  {inList.has(key(r)) ? '✓' : '＋'}
+        {results.length > 0 && (
+          <ul className="plain">
+            {results.map((r, index) => (
+              <TitleRow key={titleKey(r)} item={r} index={index}>
+                <button
+                  className="icon-button"
+                  aria-label={inList.has(titleKey(r)) ? 'Bereits in der Watchlist' : 'Zur Watchlist hinzufügen'}
+                  disabled={busy || inList.has(titleKey(r))}
+                  onClick={() => add(r)}
+                >
+                  {inList.has(titleKey(r)) ? '✓' : '+'}
                 </button>
-              }
-            />
-          ))}
-        </ul>
+              </TitleRow>
+            ))}
+          </ul>
+        )}
       </section>
       <Messages error={error} />
-      <section className="card">
-        <h1>Meine Watchlist</h1>
+      <section className="panel reveal" style={{ '--i': 1 }}>
+        <div className="panel-head">
+          <h1>Meine Watchlist</h1>
+          {items?.length > 0 && <span className="eyebrow">{items.length} Titel</span>}
+        </div>
         {items === null ? (
-          <p>Lade …</p>
+          <p className="muted">Lade …</p>
         ) : items.length === 0 ? (
           <p className="muted">Noch leer. Suche oben nach Filmen und Serien.</p>
         ) : (
           <ul className="plain">
-            {items.map((i) => (
-              <TitleRow
-                key={key(i)}
-                item={i}
-                action={
-                  <div className="row-actions">
-                    <select aria-label="Status" value={i.status} disabled={busy} onChange={(e) => update(i, { status: e.target.value })}>
-                      {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label="Meine Bewertung"
-                      value={i.my_rating ?? ''}
-                      disabled={busy}
-                      onChange={(e) => update(i, { my_rating: e.target.value ? Number(e.target.value) : null })}
-                    >
-                      <option value="">Bewerten</option>
-                      {RATINGS.map((r) => (
-                        <option key={r} value={r}>{r} / 10</option>
-                      ))}
-                    </select>
-                    <button className="link danger" disabled={busy} onClick={() => remove(i)}>
-                      Entfernen
-                    </button>
-                  </div>
-                }
-              />
+            {items.map((i, index) => (
+              <TitleRow key={titleKey(i)} item={i} index={index + 2}>
+                <WatchlistActions item={i} busy={busy} onUpdate={(changes) => update(i, changes)} onRemove={() => remove(i)} />
+              </TitleRow>
             ))}
           </ul>
         )}

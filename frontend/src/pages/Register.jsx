@@ -33,8 +33,9 @@ export default function RegisterPage() {
 
   if (done) {
     return (
-      <div className="card narrow">
-        <h1>Fast geschafft</h1>
+      <div className="panel panel--narrow panel--ticket reveal">
+        <p className="eyebrow">Nur mit Einladung</p>
+      <h1>Fast geschafft</h1>
         <p>Wir haben dir eine E-Mail an {form.email} geschickt. Klicke auf den Link darin, um dein Konto zu bestätigen.</p>
         <Link to="/login">Zur Anmeldung</Link>
       </div>
@@ -42,7 +43,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <form className="card narrow" onSubmit={onSubmit}>
+    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
       <h1>Registrieren</h1>
       <p className="muted">Die Registrierung ist nur mit einem Einladungscode möglich.</p>
       <label>

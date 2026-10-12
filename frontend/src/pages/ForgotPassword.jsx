@@ -17,7 +17,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <form className="card narrow" onSubmit={onSubmit}>
+    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
+      <p className="eyebrow">Kein Problem</p>
       <h1>Passwort vergessen</h1>
       <label>
         E-Mail

@@ -26,7 +26,7 @@ function ProfileForm({ profile, onSaved }) {
     });
   };
   return (
-    <form className="card" onSubmit={onSubmit}>
+    <form className="panel reveal" onSubmit={onSubmit}>
       <h2>Profil</h2>
       <p className="muted">E-Mail: {profile.email}</p>
       <label>
@@ -55,7 +55,7 @@ function ChangePassword() {
     });
   };
   return (
-    <form className="card" onSubmit={onSubmit}>
+    <form className="panel reveal" onSubmit={onSubmit}>
       <h2>Passwort ändern</h2>
       <label>
         Neues Passwort
@@ -94,7 +94,7 @@ function Invites() {
       setInfo('Einladungslink kopiert.');
     });
   return (
-    <section className="card">
+    <section className="panel reveal">
       <h2>Einladungen (Admin)</h2>
       <form className="row" onSubmit={create}>
         <label>
@@ -104,7 +104,7 @@ function Invites() {
         <button disabled={busy}>Code erstellen</button>
       </form>
       <Messages error={error} info={info} />
-      <ul className="plain">
+      <ul className="plain invite-list">
         {invites.map((i) => (
           <li key={i.code}>
             <code>{i.code}</code> – {i.uses}/{i.max_uses} genutzt, gültig bis {new Date(i.expires_at).toLocaleDateString('de-CH')}{' '}
@@ -138,7 +138,7 @@ function DataSection() {
       await supabase.auth.signOut({ scope: 'local' });
     });
   return (
-    <section className="card">
+    <section className="panel reveal">
       <h2>Meine Daten</h2>
       <button disabled={busy} onClick={exportData}>
         Daten als JSON exportieren

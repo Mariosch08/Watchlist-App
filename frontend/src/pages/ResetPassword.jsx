@@ -22,9 +22,9 @@ export default function ResetPasswordPage() {
   };
 
   if (loading) return <p>Lade …</p>;
-  if (!user) return <p className="card narrow">Der Link ist ungültig oder abgelaufen. Fordere unter „Passwort vergessen“ einen neuen an.</p>;
+  if (!user) return <p className="panel panel--narrow panel--ticket reveal">Der Link ist ungültig oder abgelaufen. Fordere unter „Passwort vergessen“ einen neuen an.</p>;
   return (
-    <form className="card narrow" onSubmit={onSubmit}>
+    <form className="panel panel--narrow panel--ticket reveal" onSubmit={onSubmit}>
       <h1>Neues Passwort setzen</h1>
       <label>
         Neues Passwort

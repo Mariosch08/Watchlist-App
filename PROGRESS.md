@@ -22,8 +22,12 @@ frontend/                        React 18 + Vite 5 + react-router 6 + supabase-j
   src/lib/errors.js              errorMessage() DE, unwrap()
   src/auth/AuthContext.jsx       useAuth()/useUser(), Recovery-Erkennung
   src/pages/                     Login, Register, ForgotPassword, ResetPassword, Profile, Watchlist
+  src/components/                Layout, Form (useSubmit/Messages), TitleRow, WatchlistActions
+  src/lib/                       supabase, errors, labels, watchlist (Datenzugriff)
+  src/styles/                    tokens.css, base.css, components.css, motion.css (index.css importiert alles + Fonts)
 .github/workflows/deploy.yml     push main / manuell: Tests → supabase db push + functions deploy → GitHub Pages
 docs/SETUP.md                    Einrichtung für Mario (nur Browser)
+docs/DESIGN.md                   **Design-Regeln – vor jeder UI-Arbeit lesen** (Tokens, Schriften, Primitive, Motion)
 ```
 
 ### Befehle
