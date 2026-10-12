@@ -34,3 +34,11 @@
 **D15 – Tombstones per Trigger:** Löschen eines Watchlist-Eintrags erzeugt einen Tombstone; manuelles Hinzufügen hebt ihn auf, ein Import (`source='imdb'`) muss ihn respektieren (Phase 3). Beim Löschen des Kontos werden keine Tombstones erzeugt.
 
 **D16 – Status und Bewertung schon in Phase 2 in der Watchlist-UI**, damit das neue Datenmodell nutzbar ist (zwei Auswahlfelder, kein eigener Screen). Detailseite mit Bewerten folgt in Phase 4.
+
+**D17 – IMDb-Upload ohne Datei-Speicher:** Statt Bucket + Upload-URL schickt das Frontend den CSV-Text (max. 5 MB) per HTTPS direkt an die Edge Function `imdb`. Die Datei wird nie gespeichert (besser als „nach 7 Tagen löschen“); nur die geparsten Zeilen liegen bis zum Abschluss im Job und werden dann geleert.
+
+**D18 – Import in Batches, vom Client angetrieben:** Edge Functions haben ein Zeitlimit; deshalb verarbeitet jeder `continue`-Aufruf 40 Zeilen (TMDb-Lookups mit 6 parallel, Retry bei 429). Bricht der Browser ab, lässt sich der Job fortsetzen. Ein Cron-getriebener Hintergrund-Import wäre möglich, ist aber für Einzelimporte unnötig.
+
+**D19 – Merge-Regeln:** Neue Titel: bewertet → `completed` + Bewertung, sonst `planned`; `source='imdb'`. Bestehende: Bewertung nur ersetzen, wenn das IMDb-Datum neuer ist; „Geplant“ wird bei Bewertung zu „Gesehen“; fehlende IMDb-ID/Laufzeit werden ergänzt; sonst unverändert. Tombstones verhindern Wiederanlage. TV-Episoden, Spiele, Podcasts werden übersprungen.
+
+**D20 – Edge Functions schreiben mit Service-Role**, filtern aber jede Abfrage explizit auf die verifizierte `user.id` (`requireUser`). `import_jobs` kann der Client nur lesen/löschen.

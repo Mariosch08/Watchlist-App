@@ -15,6 +15,7 @@ export default function Layout() {
             <NavLink to="/" end>
               Watchlist
             </NavLink>
+            <NavLink to="/import">Import</NavLink>
             <NavLink to="/profile">Profil</NavLink>
             <button className="link" onClick={() => supabase.auth.signOut()}>
               Abmelden

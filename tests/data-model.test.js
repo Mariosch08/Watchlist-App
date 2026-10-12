@@ -231,3 +231,12 @@ describe('shared lists', () => {
     expect(await rows(b, 'select * from public.shared_lists')).toEqual([]);
   });
 });
+
+describe('import jobs (phase 3)', () => {
+  it('clients cannot create jobs themselves but can read their own', async () => {
+    await expect(asUser(db, a, "insert into public.import_jobs (kind) values ('unknown')")).rejects.toThrow(/permission denied/);
+    await asAdmin(db, "insert into public.import_jobs (user_id, total, items) values ($1, 2, '[{\"imdb_id\":\"tt0133093\"}]')", [a]);
+    expect(await rows(a, 'select total, processed from public.import_jobs')).toEqual([{ total: 2, processed: 0 }]);
+    expect(await rows(b, 'select * from public.import_jobs')).toEqual([]);
+  });
+});

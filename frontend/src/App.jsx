@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import ForgotPasswordPage from './pages/ForgotPassword.jsx';
+import ImportExportPage from './pages/ImportExport.jsx';
 import LoginPage from './pages/Login.jsx';
 import ProfilePage from './pages/Profile.jsx';
 import RegisterPage from './pages/Register.jsx';
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/forgot-password" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/" element={<RequireAuth><WatchlistPage /></RequireAuth>} />
+        <Route path="/import" element={<RequireAuth><ImportExportPage /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
