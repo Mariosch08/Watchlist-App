@@ -1,6 +1,6 @@
 # Entscheidungen
 
-**D1 – Leeres Repo → Neuaufbau.** Das Repo enthielt nur eine leere README; der beschriebene Bestand (Terraform, TMDb, React) war nicht vorhanden. Statt zu warten habe ich ein schlankes Grundgerüst gebaut, das den beschriebenen Stack nachbildet (Terraform, Lambda, React+Vite, TMDb), plus ein tolerantes Migrationsskript für Altdaten aus einer beliebigen DynamoDB-Tabelle.
+**D1 – Neues Projekt.** Es gibt keinen Bestand und keine Altdaten (von Mario bestätigt). Der Stack folgt dem Auftrag: Terraform, Lambda, React+Vite, TMDb. Die Phase-1-Aufgabe „bestehende Daten migrieren“ entfällt.
 
 **D2 – Branch.** Die Session-Umgebung schreibt den Branch `claude/media-watchlist-discovery-app-00efb2` vor (Push nur dorthin erlaubt). Er übernimmt die Rolle von `feature/discovery-app`; `main` wird nicht angefasst.
 

@@ -5,10 +5,10 @@
 ## Status
 - **Erledigt:** Phase 0 (Grundgerüst, da Repo leer war), Phase 1 (Benutzer & Login)
 - **Nächste Phase:** Phase 2 – Datenmodell
-- **Nächster konkreter Schritt:** `backend/src/lib/keys.js` um SK-Präfixe für alle Phase-2-Entitäten erweitern (siehe Abschnitt „Datenmodell-Plan“), Watchlist-Item um Felder `imdb_id`, `my_rating`, `rated_at`, `status`, `watched_at`, `runtime` erweitern (+ Validierung, `PATCH /watchlist/{media_type}/{tmdb_id}`), Tests.
+- **Nächster konkreter Schritt:** `backend/src/lib/keys.js` um SK-Präfixe für alle Phase-2-Entitäten erweitern (siehe Abschnitt „Datenmodell-Plan“). Da es keine Altdaten gibt, darf das Schema frei gestaltet werden. Watchlist-Item um Felder `imdb_id`, `my_rating`, `rated_at`, `status`, `watched_at`, `runtime` erweitern (+ Validierung, `PATCH /watchlist/{media_type}/{tmdb_id}`), Tests.
 
 ## Repo-Überblick (Stand nach Session 1)
-Das Repo enthielt beim Start **nur eine leere `README.md`** – kein bestehender Code, kein Terraform. Alles wurde neu aufgebaut (siehe DECISIONS.md D1).
+Komplett neues Projekt (von Mario bestätigt): Das Repo enthielt beim Start nur eine leere `README.md`. Alles wurde neu aufgebaut (siehe DECISIONS.md D1).
 
 ```
 backend/                  Node.js 22 (ESM, plain JS), Tests: vitest + aws-sdk-client-mock
@@ -23,9 +23,7 @@ backend/                  Node.js 22 (ESM, plain JS), Tests: vitest + aws-sdk-cl
   src/lib/tmdb.js         tmdbGet() (Key aus SSM, v3-Key oder v4-Token), de-CH, CH
   src/lib/ssm.js          getSecret() mit Cache
   src/lib/invites.js      Code-Generierung/Normalisierung
-  src/lib/legacy.js       Mapping alter Watchlist-Einträge (Migration)
   scripts/create-invite.mjs   ersten Einladungscode per CLI erzeugen
-  scripts/migrate-legacy.mjs  Altdaten aus anderer DynamoDB-Tabelle Mario zuordnen (Dry-Run default)
   test/                   helpers.js (apiEvent), *.test.js
 frontend/                 React 18 + Vite 5 + react-router 6, Tests: vitest
   src/auth/cognito.js     schlanker Cognito-Client (fetch, kein SDK), Fehlermeldungen DE
@@ -65,10 +63,10 @@ infra/
 - [x] Phase 1 – Benutzer & Login
   - [x] Cognito User Pool (E-Mail+Passwort, E-Mail-Verifizierung), Registrierung nur mit Einladungscode (PreSignUp) oder Admin-Anlage per CLI
   - [x] JWT-Authorizer (Cognito) am HTTP API, `user_id` nur aus Token
-  - [x] Migrationsskript für Altdaten → Mario (`backend/scripts/migrate-legacy.mjs`)
+  - [x] Datenmigration entfällt – es gibt keine Altdaten (neues Projekt)
   - [x] Frontend: Login, Registrierung mit Code, Bestätigung, Passwort vergessen, Profil (Anzeigename, Benutzername, Passwort ändern, Admin-Einladungen)
   - [x] Konto löschen + JSON-Export
-  - [x] Tests (Backend 37, Frontend 4) grün, `terraform validate` ok, Build ok
+  - [x] Tests (Backend 34, Frontend 4) grün, `terraform validate` ok, Build ok
 - [ ] Phase 2 – Datenmodell
 - [ ] Phase 3 – IMDb-Import & -Export
 - [ ] Phase 4 – Details & Trailer
@@ -86,13 +84,12 @@ infra/
 - `.terraform.lock.hcl` ist absichtlich in `.gitignore` (in der Cloud-Umgebung nur Mirror-Hashes für linux_amd64). Mario kann ihn nach `terraform init` im Codespace committen und aus `.gitignore` entfernen.
 
 ## Offen für Mario
-1. **Bestehendes Projekt?** Das Repo war leer. Falls es den alten Code (Codespace) noch gibt: pushen und mir sagen – sonst gilt der Neuaufbau. Altdaten-Migration: `TABLE_NAME=watchlist-dev node backend/scripts/migrate-legacy.mjs <alte-tabelle> <deine-cognito-sub>` (erst ohne, dann mit `--apply`).
-2. **TMDb-Key in SSM ablegen:** `aws ssm put-parameter --name /watchlist/dev/tmdb_api_key --type SecureString --value '<v3-key oder v4-token>'`
-3. **Deploy:** `cd infra/envs/dev && terraform init && terraform plan && terraform apply` (eu-central-1). Danach Outputs in `frontend/.env.local` eintragen (Vorlage `.env.example`).
-4. **Ersten Account anlegen:** `cd backend && AWS_REGION=eu-central-1 TABLE_NAME=watchlist-dev node scripts/create-invite.mjs` → Code im Frontend unter „Registrieren“ verwenden. Danach dich zum Admin machen: `aws cognito-idp admin-add-user-to-group --user-pool-id <id> --username <deine-email> --group-name admins` und neu anmelden.
+1. **TMDb-Key in SSM ablegen:** `aws ssm put-parameter --name /watchlist/dev/tmdb_api_key --type SecureString --value '<v3-key oder v4-token>'`
+2. **Deploy:** `cd infra/envs/dev && terraform init && terraform plan && terraform apply` (eu-central-1). Danach Outputs in `frontend/.env.local` eintragen (Vorlage `.env.example`).
+3. **Ersten Account anlegen:** `cd backend && AWS_REGION=eu-central-1 TABLE_NAME=watchlist-dev node scripts/create-invite.mjs` → Code im Frontend unter „Registrieren“ verwenden. Danach dich zum Admin machen: `aws cognito-idp admin-add-user-to-group --user-pool-id <id> --username <deine-email> --group-name admins` und neu anmelden.
    Alternative (Admin-Freigabe ohne Code): `aws cognito-idp admin-create-user --user-pool-id <id> --username <email> --user-attributes Name=email,Value=<email> Name=email_verified,Value=true --message-action SUPPRESS` + `aws cognito-idp admin-set-user-password --user-pool-id <id> --username <email> --password '<pw>' --permanent`.
-5. Cognito verschickt Mails mit `COGNITO_DEFAULT` (max. 50/Tag) – reicht für Freunde; Umstellung auf SES in Phase 10.
-6. Optional: Terraform-State in S3-Backend verschieben.
+4. Cognito verschickt Mails mit `COGNITO_DEFAULT` (max. 50/Tag) – reicht für Freunde; Umstellung auf SES in Phase 10.
+5. Optional: Terraform-State in S3-Backend verschieben.
 
 ## Ideen (nicht umgesetzt)
 - SRP-Login statt USER_PASSWORD_AUTH; Passkeys/MFA.
