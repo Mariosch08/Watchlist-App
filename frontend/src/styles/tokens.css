@@ -1,41 +1,36 @@
-/*
- * Design tokens – "Projektionsraum": warm darkroom black, marquee amber as the
- * dominant accent, vermilion as the sharp print accent, paper-cream text.
- * Light theme = cream poster paper with ink. All components use these tokens only.
- */
+/* Design tokens – "Quiet Ink" (see docs/DESIGN.md). Components use these variables only. */
 :root {
-  /* Palette – dark (default) */
-  --color-ink: #120e0b;
-  --color-surface: #1d1712;
-  --color-surface-raised: #271f18;
-  --color-line: #3b3027;
-  --color-line-strong: #5a4838;
-  --color-text: #f2e7d4;
-  --color-text-muted: #a99780;
-  --color-accent: #f5a524;          /* marquee amber */
-  --color-accent-ink: #1a1208;      /* text on amber */
-  --color-accent-soft: rgb(245 165 36 / 0.14);
-  --color-print: #ec4b2c;           /* vermilion */
-  --color-print-soft: rgb(236 75 44 / 0.14);
-  --color-success: #8fbf6a;
-  --beam: rgb(245 165 36 / 0.16);
-  --grain-opacity: 0.07;
-  --shadow-panel: 0 1px 0 rgb(255 235 205 / 0.04) inset, 0 18px 40px -24px rgb(0 0 0 / 0.8);
-  --shadow-poster: 0 10px 22px -12px rgb(0 0 0 / 0.9);
+  --color-canvas: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f4f2ee;
+  --color-border: #e6e3dd;
+  --color-border-strong: #d3cec6;
+  --color-text: #1f1e1c;
+  --color-text-muted: #5f5b55;
+  --color-text-subtle: #8a857d;
+  --color-accent: #2f5d8a;
+  --color-accent-hover: #264d73;
+  --color-accent-soft: #e8eef4;
+  --color-on-accent: #ffffff;
+  --color-success: #2e7d4f;
+  --color-success-soft: #e7f2eb;
+  --color-warning: #a2650e;
+  --color-warning-soft: #f8efe0;
+  --color-danger: #b3362c;
+  --color-danger-soft: #f7e6e4;
 
-  /* Typography */
-  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', serif;
-  --font-body: 'Instrument Sans', 'Avenir Next', 'Segoe UI Variable', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
-  --text-xs: 0.72rem;
-  --text-s: 0.86rem;
-  --text-m: 1rem;
-  --text-l: 1.25rem;
-  --text-xl: 1.75rem;
-  --text-2xl: clamp(2.1rem, 6vw, 3.2rem);
-  --tracking-mono: 0.08em;
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --text-display: 40px;
+  --text-h1: 32px;
+  --text-h2: 24px;
+  --text-h3: 18px;
+  --text-body: 16px;
+  --text-body-sm: 14px;
+  --text-label: 13px;
+  --text-caption: 12px;
 
-  /* Spacing, shape, motion */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -43,35 +38,78 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
-  --radius-s: 4px;
-  --radius-m: 10px;
-  --page-width: 820px;
-  --poster-w: 54px;
-  --poster-h: 81px;
-  --dur-fast: 140ms;
-  --dur-reveal: 520ms;
-  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --stagger: 45ms;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(31 30 28 / 0.06);
+  --shadow-md: 0 4px 12px rgb(31 30 28 / 0.08), 0 1px 3px rgb(31 30 28 / 0.06);
+  --shadow-lg: 0 12px 32px rgb(31 30 28 / 0.12), 0 2px 6px rgb(31 30 28 / 0.06);
+
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --easing: cubic-bezier(0.2, 0, 0, 1);
+
+  --container-app: 1120px;
+  --container-reading: 720px;
+  --control-height: 36px;
+  --control-height-compact: 32px;
+  --topbar-height: 56px;
+  --row-height: 44px;
+  --badge-height: 22px;
+  --button-padding-x: 14px;
+  --text-h1-mobile: 26px;
+  --auth-width: 400px;
+  --poster-w: 48px;
+  --poster-h: 72px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --color-ink: #efe4d0;
-    --color-surface: #f8f1e3;
-    --color-surface-raised: #fffaf0;
-    --color-line: #dccdb3;
-    --color-line-strong: #b9a483;
-    --color-text: #1c1510;
-    --color-text-muted: #6d5c48;
-    --color-accent: #c26a06;
-    --color-accent-ink: #fff8ec;
-    --color-accent-soft: rgb(194 106 6 / 0.12);
-    --color-print: #c4381c;
-    --color-print-soft: rgb(196 56 28 / 0.1);
-    --color-success: #4d7a2a;
-    --beam: rgb(236 75 44 / 0.08);
-    --grain-opacity: 0.09;
-    --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 16px 34px -26px rgb(60 35 10 / 0.55);
-    --shadow-poster: 0 8px 18px -10px rgb(60 35 10 / 0.6);
+/* Dark set: same roles, warm tones (not an inversion). */
+:root[data-theme='dark'] {
+  --color-canvas: #191817;
+  --color-surface: #211f1e;
+  --color-surface-sunken: #161514;
+  --color-border: #33302d;
+  --color-border-strong: #45413d;
+  --color-text: #ece9e4;
+  --color-text-muted: #aba59d;
+  --color-text-subtle: #7d776f;
+  --color-accent: #7fa7d1;
+  --color-accent-hover: #9bbbdd;
+  --color-accent-soft: #24303c;
+  --color-on-accent: #191817;
+  --color-success: #6fbf8c;
+  --color-success-soft: #1f2e25;
+  --color-warning: #d9a456;
+  --color-warning-soft: #33291b;
+  --color-danger: #e07a70;
+  --color-danger-soft: #3a2422;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-canvas: #191817;
+    --color-surface: #211f1e;
+    --color-surface-sunken: #161514;
+    --color-border: #33302d;
+    --color-border-strong: #45413d;
+    --color-text: #ece9e4;
+    --color-text-muted: #aba59d;
+    --color-text-subtle: #7d776f;
+    --color-accent: #7fa7d1;
+    --color-accent-hover: #9bbbdd;
+    --color-accent-soft: #24303c;
+    --color-on-accent: #191817;
+    --color-success: #6fbf8c;
+    --color-success-soft: #1f2e25;
+    --color-warning: #d9a456;
+    --color-warning-soft: #33291b;
+    --color-danger: #e07a70;
+    --color-danger-soft: #3a2422;
   }
 }

@@ -1,3 +1,4 @@
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { errorMessage } from '../lib/errors.js';
 
@@ -21,11 +22,22 @@ export function useSubmit() {
   return { busy, error, info, run, setError };
 }
 
+// Status messages always carry an icon and text, never color alone.
 export function Messages({ error, info }) {
   return (
     <>
-      {error && <p className="error" role="alert">{error}</p>}
-      {info && <p className="info">{info}</p>}
+      {error && (
+        <p className="notice notice--error" role="alert">
+          <AlertCircle size={16} aria-hidden="true" />
+          <span>{error}</span>
+        </p>
+      )}
+      {info && (
+        <p className="notice notice--success" role="status">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>{info}</span>
+        </p>
+      )}
     </>
   );
 }

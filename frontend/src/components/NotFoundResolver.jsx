@@ -14,25 +14,25 @@ export default function NotFoundResolver({ row, busy, onResolve, run }) {
           <span className="title-name">{row.title || row.imdb_id}</span>
           <div className="meta">
             {row.year && <span>{row.year}</span>}
-            {row.rating && <span className="badge-mine">Ich {row.rating}/10</span>}
-            <a href={`https://www.imdb.com/title/${row.imdb_id}/`} target="_blank" rel="noreferrer">
+            {row.rating && <span className="badge badge--accent">Meine Bewertung {row.rating}/10</span>}
+            <a className="mono" href={`https://www.imdb.com/title/${row.imdb_id}/`} target="_blank" rel="noreferrer">
               {row.imdb_id}
             </a>
           </div>
         </div>
         {results === null && (
-          <button className="link" disabled={busy || !row.title} onClick={search}>
+          <button className="btn-compact" disabled={busy || !row.title} onClick={search}>
             Zuordnen
           </button>
         )}
       </div>
       {results && (
-        <ul className="plain">
-          {results.length === 0 && <li className="muted">Keine Treffer.</li>}
-          {results.slice(0, 5).map((r, index) => (
-            <TitleRow key={titleKey(r)} item={r} index={index}>
-              <button disabled={busy} onClick={() => onResolve(r)}>
-                Das ist es
+        <ul className="list">
+          {results.length === 0 && <li className="empty">Keine Treffer für „{row.title}“.</li>}
+          {results.slice(0, 5).map((r) => (
+            <TitleRow key={titleKey(r)} item={r}>
+              <button className="btn-compact" disabled={busy} onClick={() => onResolve(r)}>
+                Übernehmen
               </button>
             </TitleRow>
           ))}
