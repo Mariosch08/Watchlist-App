@@ -1,0 +1,26 @@
+{
+  "name": "Watchlist",
+  "short_name": "Watchlist",
+  "description": "Filme, Serien und Musik entdecken – mit Freunden.",
+  "lang": "de-CH",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#2f5d8a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "./share",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
+  "shortcuts": [
+    { "name": "Für dich", "url": "./discover" },
+    { "name": "Tagebuch", "url": "./diary" },
+    { "name": "Listen", "url": "./lists" }
+  ]
+}

@@ -10,7 +10,7 @@ const rows = async (userId, sql, params) => (await asUser(db, userId, sql, param
 
 beforeEach(async () => {
   db = await createDb();
-  a = await signUp(db, 'a@example.com');
+  a = await signUp(db, 'a@example.com', {}, new Date().toISOString());
   await asAdmin(db, "insert into public.invites (code, max_uses) values ('INVITE123456', 5)");
   b = await signUp(db, 'b@example.com', { invite_code: 'INVITE123456' });
   c = await signUp(db, 'c@example.com', { invite_code: 'INVITE123456' });
@@ -161,7 +161,8 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(2);
+    expect(data.version).toBe(7);
+    expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
     expect(data.feed).toHaveLength(1);
@@ -203,6 +204,14 @@ describe('shared lists', () => {
   let list;
   beforeEach(async () => {
     [{ id: list }] = await rows(a, "insert into public.shared_lists (name) values ('Filmabend') returning id");
+    await asAdmin(db, "insert into public.friendships (requester_id, addressee_id, status) values ($1, $2, 'accepted'), ($1, $3, 'accepted')", [a, b, c]);
+  });
+
+  it('only friends can be added as members', async () => {
+    const d = await signUp(db, 'd@example.com', { invite_code: 'INVITE123456' });
+    await expect(asUser(db, a, "insert into public.list_members (list_id, user_id, role) values ($1, $2, 'viewer')", [list, d])).rejects.toThrow(
+      /row-level security/,
+    );
   });
 
   it('creator becomes owner; non-members see nothing', async () => {
@@ -256,5 +265,168 @@ describe('import jobs (phase 3)', () => {
     await asAdmin(db, "insert into public.import_jobs (user_id, total, items) values ($1, 2, '[{\"imdb_id\":\"tt0133093\"}]')", [a]);
     expect(await rows(a, 'select total, processed from public.import_jobs')).toEqual([{ total: 2, processed: 0 }]);
     expect(await rows(b, 'select * from public.import_jobs')).toEqual([]);
+  });
+});
+
+describe('series tracking (phase 5)', () => {
+  it('series_overview returns own series with title and progress only', async () => {
+    await asUser(db, a, "insert into public.watchlist (media_type, tmdb_id, title, status) values ('tv', 1399, 'GoT', 'watching')");
+    await asUser(db, a, 'insert into public.series_progress (tmdb_id) values (1399)');
+    await asUser(db, a, 'insert into public.watched_episodes (tmdb_id, season_number, episode_number) values (1399, 1, 1), (1399, 1, 2)');
+    await asUser(db, b, 'insert into public.series_progress (tmdb_id) values (1399)');
+    const mine = await rows(a, 'select tmdb_id, title, watch_status, watched_count from public.series_overview()');
+    expect(mine).toEqual([{ tmdb_id: 1399, title: 'GoT', watch_status: 'watching', watched_count: 2 }]);
+    expect((await rows(b, 'select watched_count from public.series_overview()'))[0].watched_count).toBe(0);
+  });
+
+  it('calendar token is private, can be regenerated, and is unique per user', async () => {
+    const [before] = await rows(a, 'select calendar_token from public.user_settings');
+    const [{ regenerate_calendar_token: next }] = await rows(a, 'select public.regenerate_calendar_token()');
+    expect(next).not.toBe(before.calendar_token);
+    expect(await rows(b, 'select * from public.user_settings where calendar_token = $1', [next])).toEqual([]);
+    await expect(asUser(db, a, 'update public.user_settings set calendar_token = gen_random_uuid()')).rejects.toThrow(/permission denied/);
+    await asUser(db, a, 'update public.user_settings set hide_spoilers = false');
+  });
+
+  it('notifications are deduplicated per user and key', async () => {
+    const insert = "insert into public.notifications (user_id, type, title, dedupe_key) values ($1, 'new_episode', 'x', 'episode:1:S01E01') on conflict (user_id, dedupe_key) do nothing";
+    await asAdmin(db, insert, [a]);
+    await asAdmin(db, insert, [a]);
+    await asAdmin(db, insert, [b]);
+    expect((await asAdmin(db, 'select count(*)::int as n from public.notifications')).rows[0].n).toBe(2);
+  });
+});
+
+describe('feed feedback (phase 6)', () => {
+  let feedId;
+  beforeEach(async () => {
+    const res = await asAdmin(
+      db,
+      "insert into public.feed (user_id, type, external_id, title, source, score, data) values ($1, 'movie', '438631', 'Dune', 'discover', 50, '{\"genre_ids\": [878, 12]}') returning id",
+      [a],
+    );
+    feedId = res.rows[0].id;
+  });
+
+  it('like raises the genre weights of that title (bounded)', async () => {
+    await asUser(db, a, "update public.taste_profile set genre_weights_movie = '{\"878\": 0.95}'");
+    await asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'like']);
+    const [t] = await rows(a, 'select genre_weights_movie from public.taste_profile');
+    expect(t.genre_weights_movie['878']).toBe(1);
+    expect(t.genre_weights_movie['12']).toBeCloseTo(0.1);
+    expect((await rows(a, 'select status from public.feed'))[0].status).toBe('liked');
+  });
+
+  it('dislike lowers weights and rejects the title once', async () => {
+    await asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'dislike']);
+    await asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'dislike']);
+    const [t] = await rows(a, 'select genre_weights_movie, rejected_ids from public.taste_profile');
+    expect(t.rejected_ids).toEqual(['movie:438631']);
+    expect(t.genre_weights_movie['878']).toBeCloseTo(-0.3);
+  });
+
+  it('other users cannot give feedback on my feed; invalid actions are rejected', async () => {
+    await expect(asUser(db, b, 'select public.feed_feedback($1, $2)', [feedId, 'like'])).rejects.toThrow(/FEED_NOT_FOUND/);
+    await expect(asUser(db, a, 'select public.feed_feedback($1, $2)', [feedId, 'love'])).rejects.toThrow(/INVALID_ACTION/);
+  });
+});
+
+describe('availability alerts (phase 7)', () => {
+  it('are private and cannot be marked as notified by the client', async () => {
+    await asUser(db, a, "insert into public.availability_alerts (media_type, tmdb_id, title) values ('movie', 693134, 'Dune 2')");
+    expect(await rows(b, 'select * from public.availability_alerts')).toEqual([]);
+    await expect(asUser(db, a, 'update public.availability_alerts set notified_at = now()')).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(db, a, "insert into public.availability_alerts (user_id, media_type, tmdb_id, title) values ($1, 'movie', 1, 'x')", [b]),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it('notifications accept the new type', async () => {
+    await asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'available', 'Jetzt im Abo')", [a]);
+    await expect(asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'spam', 'x')", [a])).rejects.toThrow(/check constraint/);
+  });
+});
+
+describe('music (phase 8)', () => {
+  beforeEach(async () => {
+    await asAdmin(
+      db,
+      "insert into public.spotify_connections (user_id, spotify_user_id, display_name, refresh_token_enc) values ($1, 'mario', 'Mario', 'v1.secret')",
+      [a],
+    );
+    await asAdmin(db, "insert into public.music_artists (user_id, artist_key, name, sources, rank) values ($1, 'radiohead', 'Radiohead', '{lastfm}', 1)", [a]);
+    await asAdmin(
+      db,
+      "insert into public.concerts (user_id, event_id, artist, name, local_date, url) values ($1, 'tm1', 'Radiohead', 'Radiohead Live', '2027-03-01', 'https://ticketmaster.ch/x')",
+      [a],
+    );
+  });
+
+  it('never exposes the encrypted Spotify token to clients', async () => {
+    expect(await rows(a, 'select display_name from public.spotify_connections')).toEqual([{ display_name: 'Mario' }]);
+    await expect(asUser(db, a, 'select refresh_token_enc from public.spotify_connections')).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, 'select * from public.spotify_connections')).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, "update public.spotify_connections set display_name = 'x'")).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(db, b, "insert into public.spotify_connections (user_id, spotify_user_id, refresh_token_enc) values ($1, 'x', 'y')", [b]),
+    ).rejects.toThrow(/permission denied/);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.version).toBe(7);
+    expect(exported.spotify).toMatchObject({ display_name: 'Mario' });
+    expect(JSON.stringify(exported)).not.toContain('v1.secret');
+    expect(exported.music_artists).toHaveLength(1);
+    expect(exported.concerts).toHaveLength(1);
+  });
+
+  it('lets the owner disconnect, but nobody else', async () => {
+    await asUser(db, b, 'delete from public.spotify_connections');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.spotify_connections')).rows[0].n).toBe(1);
+    await asUser(db, a, 'delete from public.spotify_connections');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.spotify_connections')).rows[0].n).toBe(0);
+  });
+
+  it('keeps artists and concerts private and read-only', async () => {
+    expect(await rows(b, 'select * from public.music_artists')).toEqual([]);
+    expect(await rows(b, 'select * from public.concerts')).toEqual([]);
+    await expect(asUser(db, a, "update public.music_artists set rank = 2")).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, 'delete from public.concerts')).rejects.toThrow(/permission denied/);
+  });
+
+  it('accepts valid Last.fm user names only', async () => {
+    await asUser(db, a, "update public.user_settings set lastfm_username = 'mario_08' where user_id = $1", [a]);
+    await expect(asUser(db, a, "update public.user_settings set lastfm_username = '1; drop' where user_id = $1", [a])).rejects.toThrow(/check constraint/);
+    await expect(asAdmin(db, "insert into public.notifications (user_id, type, title) values ($1, 'concert', 'Konzert')", [a])).resolves.toBeDefined();
+  });
+});
+
+describe('diary (phase 10)', () => {
+  it('is private, validated and deduplicates Letterboxd imports only', async () => {
+    await asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, place, rating) values ('movie', 603, 'Matrix', '2026-10-01', 'cinema', 9)");
+    await asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, rewatch) values ('movie', 603, 'Matrix', '2026-10-01', true)");
+    expect(await rows(b, 'select * from public.diary_entries')).toEqual([]);
+    await expect(asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, place) values ('movie', 1, 'x', '2026-10-01', 'moon')")).rejects.toThrow(
+      /check constraint/,
+    );
+    await expect(
+      asUser(db, a, "insert into public.diary_entries (media_type, tmdb_id, title, watched_on, import_ref) values ('movie', 1, 'x', '2026-10-01', 'letterboxd')"),
+    ).rejects.toThrow(/permission denied/);
+    await asUser(db, a, "update public.diary_entries set note = 'Mit Popcorn' where rewatch");
+    await asUser(db, b, 'delete from public.diary_entries');
+    expect((await asAdmin(db, 'select count(*)::int as n from public.diary_entries')).rows[0].n).toBe(2);
+
+    const lb = "insert into public.diary_entries (user_id, media_type, tmdb_id, title, watched_on, import_ref) values ($1, 'movie', 603, 'Matrix', '2026-10-01', 'letterboxd') on conflict do nothing";
+    await asAdmin(db, lb, [a]);
+    await asAdmin(db, lb, [a]);
+    expect((await asAdmin(db, 'select count(*)::int as n from public.diary_entries')).rows[0].n).toBe(3);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.diary).toHaveLength(3);
+  });
+});
+
+describe('e-mail settings (phase 12)', () => {
+  it('lets users switch mails but not fake the digest time', async () => {
+    await asUser(db, a, 'update public.user_settings set email_digest = false, email_instant = false where user_id = $1', [a]);
+    await expect(asUser(db, a, 'update public.user_settings set digest_sent_at = now() where user_id = $1', [a])).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, 'update public.user_settings set unsubscribe_token = gen_random_uuid() where user_id = $1', [a])).rejects.toThrow(/permission denied/);
   });
 });

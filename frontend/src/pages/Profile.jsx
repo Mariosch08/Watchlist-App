@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Share2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
+import MusicSources from '../components/music/MusicSources.jsx';
+import StreamingCard from '../components/profile/StreamingCard.jsx';
+import TasteCard from '../components/profile/TasteCard.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -10,6 +14,7 @@ import { deleteAccount, exportJson } from '../lib/api/account.js';
 import { PASSWORD_MIN_LENGTH, setPassword, signOutOtherDevices } from '../lib/api/auth.js';
 import { createInvite, fetchInvites, inviteLink, inviteState, revokeInvite } from '../lib/api/invites.js';
 import { fetchProfile, updateProfile, USERNAME_PATTERN } from '../lib/api/profile.js';
+import { fetchSettings, sendTestMail, updateSettings } from '../lib/api/settings.js';
 import { errorMessage } from '../lib/errors.js';
 import { formatDate } from '../lib/labels.js';
 import { queryKeys } from '../lib/queryClient.js';
@@ -296,6 +301,89 @@ function InvitesCard() {
   );
 }
 
+function SettingsCard() {
+  const user = useUser();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const testMail = useMutation({
+    mutationFn: sendTestMail,
+    onSuccess: (res) => toast.success(res.sandbox ? 'Test-Mail angenommen (Sandbox: Brevo stellt sie nicht zu).' : `Test-Mail an ${res.to} verschickt.`),
+    onError: (err) => (err?.code === 'RATE_LIMITED' ? toast.info('Pro Stunde geht eine Test-Mail raus.') : toast.error(errorMessage(err))),
+  });
+  const key = queryKeys.settings(user.id);
+  const settings = useQuery({ queryKey: key, queryFn: fetchSettings });
+  const save = useMutation({
+    mutationFn: (changes) => updateSettings(changes),
+    onMutate: (changes) => queryClient.setQueryData(key, (s) => (s ? { ...s, ...changes } : s)),
+    onError: (err) => {
+      queryClient.invalidateQueries({ queryKey: key });
+      toast.error(`Einstellung nicht gespeichert. ${errorMessage(err)}`);
+    },
+  });
+  return (
+    <section className="card" aria-labelledby="settings-title">
+      <h2 id="settings-title">Einstellungen</h2>
+      {settings.isError ? (
+        <LoadError error={settings.error} onRetry={() => settings.refetch()} />
+      ) : (
+        <div className="stack">
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.hide_spoilers ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ hide_spoilers: e.target.checked })}
+            />
+            Spoiler-Schutz: Beschreibungen ungesehener Folgen verbergen
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.share_ratings_with_friends ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ share_ratings_with_friends: e.target.checked })}
+            />
+            Freunde sehen meine Bewertungen (für „Wer hat es gesehen?“ und den Geschmacks-Match)
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.share_activity ?? false}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ share_activity: e.target.checked })}
+            />
+            Freunde sehen, was ich hinzufüge, schaue und bewerte (Aktivität)
+          </label>
+          <h3 className="subheading">E-Mails</h3>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.email_instant ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ email_instant: e.target.checked })}
+            />
+            Sofort-Mails bei Freundschaftsanfragen, Empfehlungen, Filmabenden, neuen Staffeln und Verfügbarkeits-Alarmen
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.email_digest ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ email_digest: e.target.checked })}
+            />
+            Wochenrückblick am Sonntagabend (neue Folgen, Vorschläge, was passiert ist)
+          </label>
+          <div className="actions">
+            <button type="button" className="btn-ghost btn-compact" disabled={testMail.isPending} onClick={() => testMail.mutate()}>
+              {testMail.isPending ? 'Wird gesendet …' : 'Test-Mail an mich senden'}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function DataCard() {
   const [confirm, setConfirm] = useState('');
   const exporting = useSubmit();
@@ -303,7 +391,9 @@ function DataCard() {
   return (
     <section className="card" aria-labelledby="data-title">
       <h2 id="data-title">Meine Daten</h2>
-      <p className="muted">Lade alle deine Daten herunter. Für IMDb oder Letterboxd gibt es den Export unter „Import“.</p>
+      <p className="muted">
+        Lade alle deine Daten herunter. Für IMDb oder Letterboxd gibt es den Export unter <Link to="/import">Import / Export</Link>.
+      </p>
       <div className="actions">
         <button disabled={exporting.busy} onClick={() => exporting.run(exportJson)}>
           {exporting.busy ? 'Wird vorbereitet …' : 'Daten als JSON herunterladen'}
@@ -341,6 +431,13 @@ export default function ProfilePage() {
       ) : (
         <CardSkeleton />
       )}
+      <StreamingCard />
+      <TasteCard />
+      <section className="card" aria-labelledby="music-sources-title">
+        <h2 id="music-sources-title">Musik verbinden</h2>
+        <MusicSources />
+      </section>
+      <SettingsCard />
       <PasswordCard />
       {profile.data?.is_admin && <InvitesCard />}
       <DataCard />

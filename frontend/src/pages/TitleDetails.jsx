@@ -4,8 +4,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import CastList from '../components/details/CastList.jsx';
 import DetailActions from '../components/details/DetailActions.jsx';
 import SimilarTitles from '../components/details/SimilarTitles.jsx';
+import DiaryLog from '../components/details/DiaryLog.jsx';
+import FriendsPanel from '../components/details/FriendsPanel.jsx';
 import StreamingProviders from '../components/details/StreamingProviders.jsx';
 import Trailer from '../components/details/Trailer.jsx';
+import SeriesProgress from '../components/series/SeriesProgress.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { useTitleDetails } from '../hooks/useTitleDetails.js';
@@ -101,14 +104,20 @@ function Details({ details: d }) {
         <DetailActions details={d} entry={entry} loading={watchlist.isPending && !watchlist.isError} />
         {d.tagline && <p className="tagline">{d.tagline}</p>}
         {d.overview ? <p className="overview">{d.overview}</p> : <p className="muted">Keine Beschreibung vorhanden.</p>}
-        {d.imdb_id && (
-          <p className="links">
+        <p className="links">
+          {d.imdb_id && (
             <a href={`https://www.imdb.com/title/${encodeURIComponent(d.imdb_id)}/`} target="_blank" rel="noopener noreferrer">
               Auf IMDb ansehen
             </a>
-          </p>
-        )}
+          )}
+          <a href={`https://open.spotify.com/search/${encodeURIComponent(`${d.original_title || d.title} soundtrack`)}`} target="_blank" rel="noopener noreferrer">
+            Soundtrack auf Spotify
+          </a>
+        </p>
       </section>
+      {d.media_type === 'tv' && <SeriesProgress details={d} />}
+      <DiaryLog details={d} entry={entry} />
+      <FriendsPanel details={d} />
 
       {d.trailer && (
         <section className="card" aria-labelledby="trailer-title">
@@ -117,7 +126,7 @@ function Details({ details: d }) {
         </section>
       )}
 
-      <StreamingProviders providers={d.providers} />
+      <StreamingProviders providers={d.providers} details={d} />
       <CastList cast={d.cast} crew={d.crew} />
       <SimilarTitles titles={d.similar} byKey={byKey} />
     </>

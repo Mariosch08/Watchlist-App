@@ -15,9 +15,19 @@ vi.mock('../src/lib/api/watchlist.js', () => ({
   restoreItem: vi.fn(),
 }));
 vi.mock('../src/lib/api/tmdb.js', () => ({ MIN_QUERY_LENGTH: 2, searchTitles: vi.fn(), fetchTitleDetails: vi.fn() }));
+vi.mock('../src/lib/api/settings.js', () => ({ fetchSettings: vi.fn() }));
+vi.mock('../src/lib/api/streaming.js', () => ({ fetchAlerts: vi.fn(), createAlert: vi.fn(), deleteAlert: vi.fn() }));
+vi.mock('../src/lib/api/friends.js', () => ({ fetchFriends: vi.fn(), fetchFriendsOnTitle: vi.fn(), recommendTitle: vi.fn() }));
+vi.mock('../src/lib/api/diary.js', () => ({ fetchTitleDiary: vi.fn(), addDiaryEntry: vi.fn(), diaryKeys: { all: (id) => ['diary', id], title: (...k) => ['diary', ...k] } }));
+vi.mock('../src/lib/api/lists.js', () => ({ fetchLists: vi.fn(), addItems: vi.fn(), listKeys: { all: (id) => ['lists', id] } }));
 
 const api = await import('../src/lib/api/watchlist.js');
 const tmdb = await import('../src/lib/api/tmdb.js');
+const settingsApi = await import('../src/lib/api/settings.js');
+const streamingApi = await import('../src/lib/api/streaming.js');
+const friendsApi = await import('../src/lib/api/friends.js');
+const listsApi = await import('../src/lib/api/lists.js');
+const diaryApi = await import('../src/lib/api/diary.js');
 const { ToastProvider } = await import('../src/components/toast/ToastProvider.jsx');
 const { default: TitleDetailsPage } = await import('../src/pages/TitleDetails.jsx');
 
@@ -63,7 +73,14 @@ function renderPage(path = '/title/movie/438631') {
   );
 }
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [] });
+  streamingApi.fetchAlerts.mockResolvedValue([]);
+  friendsApi.fetchFriends.mockResolvedValue([]);
+  listsApi.fetchLists.mockResolvedValue([]);
+  diaryApi.fetchTitleDiary.mockResolvedValue([]);
+});
 
 describe('TitleDetailsPage', () => {
   it('shows details, streaming, cast and similar titles', async () => {
@@ -117,5 +134,63 @@ describe('TitleDetailsPage', () => {
     renderPage('/title/book/abc');
     expect(await screen.findByRole('heading', { name: 'Titel nicht gefunden' })).toBeInTheDocument();
     expect(tmdb.fetchTitleDetails).not.toHaveBeenCalled();
+  });
+
+  it('confirms availability on my services or offers an alert', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    api.fetchWatchlist.mockResolvedValue([]);
+    settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [8] });
+    renderPage();
+    expect(await screen.findByText('Mit deinen Abos verfügbar: Netflix.')).toBeInTheDocument();
+  });
+
+  it('creates an availability alert when the title is not on my services', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    api.fetchWatchlist.mockResolvedValue([]);
+    settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [337] });
+    streamingApi.createAlert.mockResolvedValue(undefined);
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Benachrichtigen, wenn auf meinen Diensten' }));
+    expect(streamingApi.createAlert.mock.calls[0][0]).toEqual({ media_type: 'movie', tmdb_id: 438631, title: 'Dune' });
+    expect(await screen.findByText(/sobald „Dune“ auf deinen Streaming-Diensten ist/)).toBeInTheDocument();
+  });
+
+  it('shows which friends know the title and sends a recommendation', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    api.fetchWatchlist.mockResolvedValue([]);
+    friendsApi.fetchFriends.mockResolvedValue([{ user_id: 'ben', display_name: 'Ben', status: 'accepted' }]);
+    friendsApi.fetchFriendsOnTitle.mockResolvedValue([{ user_id: 'ben', display_name: 'Ben', status: 'completed', my_rating: 9 }]);
+    friendsApi.recommendTitle.mockResolvedValue(undefined);
+    renderPage();
+    const panel = await screen.findByRole('region', { name: 'Mit Freunden' });
+    expect(await within(panel).findByText('9/10')).toBeInTheDocument();
+    await userEvent.selectOptions(within(panel).getByLabelText('Schau das!'), 'ben');
+    await userEvent.type(within(panel).getByLabelText('Nachricht (optional)'), 'Musst du sehen!');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Empfehlen' }));
+    expect(friendsApi.recommendTitle).toHaveBeenCalledWith('ben', expect.objectContaining({ tmdb_id: 438631, title: 'Dune' }), 'Musst du sehen!');
+    expect(await screen.findByText('Empfehlung an Ben gesendet.')).toBeInTheDocument();
+  });
+
+  it('logs a viewing in the diary and marks a planned movie as watched on that day', async () => {
+    tmdb.fetchTitleDetails.mockResolvedValue(DETAILS);
+    const entry = { media_type: 'movie', tmdb_id: 438631, title: 'Dune', status: 'planned', my_rating: null };
+    api.fetchWatchlist.mockResolvedValue([entry]);
+    diaryApi.addDiaryEntry.mockResolvedValue({});
+    api.updateItem.mockResolvedValue({ ...entry, status: 'completed' });
+    renderPage();
+    const diary = await screen.findByRole('region', { name: 'Tagebuch' });
+    await userEvent.click(within(diary).getByRole('button', { name: /Gesehen am/ }));
+    const date = within(diary).getByLabelText('Datum');
+    await userEvent.clear(date);
+    await userEvent.type(date, '2026-10-03');
+    await userEvent.selectOptions(within(diary).getByLabelText('Wo'), 'cinema');
+    await userEvent.type(within(diary).getByLabelText('Mit wem (optional)'), 'Anna');
+    await userEvent.selectOptions(within(diary).getByLabelText('Bewertung'), '9');
+    await userEvent.click(within(diary).getByRole('button', { name: 'Eintragen' }));
+    expect(await screen.findByText('Im Tagebuch eingetragen.')).toBeInTheDocument();
+    expect(diaryApi.addDiaryEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ tmdb_id: 438631, watched_on: '2026-10-03', place: 'cinema', with_whom: 'Anna', rating: 9, rewatch: false }),
+    );
+    expect(api.updateItem).toHaveBeenCalledWith(entry, { status: 'completed', watched_at: '2026-10-03T20:00:00', my_rating: 9 });
   });
 });

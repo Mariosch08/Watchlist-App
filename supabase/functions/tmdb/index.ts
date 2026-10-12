@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
   if (!(await requireUser(req))) return json(401, { error: 'Unauthorized' });
   const body = await req.json().catch(() => null);
-  const cache = body?.action === 'details' ? detailsCache() : undefined;
+  const cache = ['details', 'season', 'providers', 'genres'].includes(body?.action) ? detailsCache() : undefined;
   const result = await handleTmdbRequest(body, Deno.env.get('TMDB_API_KEY'), fetch, cache);
   return json(result.status, result.body);
 });

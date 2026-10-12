@@ -26,4 +26,10 @@ export const queryKeys = {
   profile: (userId) => ['profile', userId],
   invites: (userId) => ['invites', userId],
   importJobs: (userId) => ['importJobs', userId],
+  seriesOverview: (userId) => ['seriesOverview', userId],
+  seriesProgress: (userId, tmdbId) => ['seriesProgress', userId, String(tmdbId)],
+  season: (tmdbId, season) => ['season', String(tmdbId), season],
+  settings: (userId) => ['settings', userId],
+  notifications: (userId) => ['notifications', userId],
+  music: (userId, part) => (part ? ['music', userId, part] : ['music', userId]),
 };

@@ -49,6 +49,16 @@ jobs:
       - run: supabase link --project-ref "$PROJECT_REF"
       - run: supabase db push
       - run: supabase functions deploy --project-ref "$PROJECT_REF"
+      - name: Pass the cron secret to the Edge Functions
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then supabase secrets set CRON_SECRET="$CRON_SECRET" --project-ref "$PROJECT_REF"; fi
+      - name: Tell the Edge Functions where the app lives (links in e-mails)
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: supabase secrets set APP_URL="https://${OWNER,,}.github.io/${REPO}/" --project-ref "$PROJECT_REF"
 
   pages:
     needs: supabase
@@ -67,6 +77,7 @@ jobs:
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          VITE_SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

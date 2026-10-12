@@ -18,9 +18,19 @@ const PG_CODES = {
   PGRST116: 'Dieser Eintrag existiert nicht mehr. Lade die Seite neu.',
 };
 
+// Raised by our own SQL functions (raise exception '<CODE>').
+const DB_RAISES = {
+  USER_NOT_FOUND: 'Niemand mit diesem Benutzernamen oder dieser E-Mail gefunden.',
+  TOO_MANY_REQUESTS: 'Zu viele Anfragen in kurzer Zeit. Bitte versuche es später nochmals.',
+  NOT_FRIENDS: 'Ihr seid noch nicht befreundet.',
+  REQUEST_NOT_FOUND: 'Diese Anfrage gibt es nicht mehr.',
+  FEED_NOT_FOUND: 'Dieser Vorschlag existiert nicht mehr.',
+};
+
 // Machine-readable codes returned by our Edge Functions ({ error, code }).
 const FUNCTION_CODES = {
   NOT_IMDB_CSV: 'Das ist keine IMDb-CSV-Datei (die Spalte „Const“ fehlt).',
+  UNSUPPORTED_FILE: 'Diese Datei kenne ich nicht. Unterstützt werden Exporte von IMDb (CSV), Letterboxd (CSV) und Trakt (JSON).',
   CSV_TOO_LARGE: 'Die Datei ist zu gross (max. 5 MB).',
   TOO_MANY_ROWS: 'Die Datei hat zu viele Zeilen (max. 20 000).',
   TMDB_NOT_CONFIGURED: 'Die Filmdatenbank ist noch nicht eingerichtet (TMDb-Schlüssel fehlt).',
@@ -32,6 +42,17 @@ const FUNCTION_CODES = {
   INVALID_QUERY: 'Bitte gib mindestens 2 Zeichen ein.',
   INVALID_INPUT: 'Ungültige Eingabe.',
   UNAUTHORIZED: 'Deine Sitzung ist abgelaufen. Bitte melde dich neu an.',
+  RATE_LIMITED: 'Gerade erst aktualisiert. Versuch es in ein paar Minuten nochmals.',
+  MAIL_NOT_CONFIGURED: 'Der E-Mail-Versand ist noch nicht eingerichtet (Brevo-Schlüssel fehlt).',
+  NO_MUSIC_SOURCE: 'Verbinde zuerst Last.fm oder Spotify.',
+  LASTFM_USER_NOT_FOUND: 'Diesen Last.fm-Benutzernamen gibt es nicht. Prüfe die Schreibweise.',
+  LASTFM_NOT_CONFIGURED: 'Last.fm ist noch nicht eingerichtet (API-Schlüssel fehlt).',
+  LASTFM_UNAVAILABLE: 'Last.fm ist gerade nicht erreichbar. Versuche es später nochmals.',
+  MUSICBRAINZ_UNAVAILABLE: 'Die Musikdatenbank ist gerade überlastet. Versuche es später nochmals.',
+  SPOTIFY_NOT_CONFIGURED: 'Spotify ist noch nicht eingerichtet.',
+  SPOTIFY_AUTH_FAILED: 'Die Verbindung mit Spotify hat nicht geklappt. Bitte versuche es nochmals.',
+  SPOTIFY_REVOKED: 'Spotify hat den Zugriff entzogen. Bitte verbinde dich neu.',
+  SPOTIFY_UNAVAILABLE: 'Spotify ist gerade nicht erreichbar. Versuche es später nochmals.',
 };
 
 const NETWORK_PATTERN = /Failed to fetch|NetworkError|Load failed|Failed to send a request|fetch failed|Network request failed/i;
@@ -62,6 +83,7 @@ export function errorMessage(err) {
   if (err instanceof AppError) return err.message;
   if (isNetworkError(err)) return NETWORK_MESSAGE;
   if (err.code && AUTH_CODES[err.code]) return AUTH_CODES[err.code];
+  if (DB_RAISES[err.message]) return DB_RAISES[err.message];
   if (err.code && PG_CODES[err.code]) return PG_CODES[err.code];
   // A failing sign-up trigger surfaces as a generic database error.
   if (/Database error saving new user/i.test(err.message ?? '')) {

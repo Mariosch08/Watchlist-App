@@ -1,0 +1,66 @@
+name: Daily jobs
+
+# Runs the scheduled Edge Functions. Side effect: the daily request keeps the
+# free Supabase project from pausing after 7 days without activity.
+on:
+  schedule:
+    - cron: '45 4 * * *' # 06:45 Zurich in summer (05:45 in winter): recommendations
+    - cron: '15 5 * * *' # 07:15 Zurich in summer (06:15 in winter): series check
+    - cron: '7,37 * * * *' # every 30 minutes: e-mails (Sunday 18:00 Zurich also the weekly digest)
+  workflow_dispatch:
+
+jobs:
+  discovery-media:
+    if: github.event.schedule == '45 4 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build recommendations for all users
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/discovery-media
+          ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "::warning::Secret CRON_SECRET fehlt (siehe docs/SETUP.md)"; exit 0; fi
+          curl -fsS -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'
+      - name: Build music releases and concerts for all users
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/discovery-music
+          ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then exit 0; fi
+          curl -fsS --max-time 170 -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'
+
+  series-tracker:
+    if: github.event.schedule == '15 5 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tracked series for new seasons and episodes
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/series-tracker
+          ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "::warning::Secret CRON_SECRET fehlt (siehe docs/SETUP.md)"; exit 0; fi
+          curl -fsS -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'
+      - name: Check availability alerts
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/availability
+          ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then exit 0; fi
+          curl -fsS -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{"action":"check"}'
+
+  notify-email:
+    if: github.event.schedule == '7,37 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send e-mails (instant and weekly digest)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/notify-email
+          ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then exit 0; fi
+          curl -fsS --max-time 120 -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'

@@ -60,3 +60,57 @@
 **D28 – Trailer erst nach Klick:** Bis „Trailer abspielen“ gedrückt wird, geht keine Anfrage an YouTube; danach `youtube-nocookie.com`. Nur YouTube-Keys mit sicherem Zeichensatz werden übernommen. Reihenfolge: Trailer vor Teaser, Deutsch vor Englisch, offiziell bevorzugt.
 
 **D29 – „Ähnliche Titel“ = TMDb-Empfehlungen** (was andere auch geschaut haben), Fallback auf das genrebasierte `similar`, wenn es keine Empfehlungen gibt. Streaming CH: Gratis- und Werbe-Angebote zählen zu „Im Abo“; TMDb verlangt die Quellenangabe JustWatch.
+**D30 – Erst-Admin nur per Dashboard-Einladung (Sicherheit, 13.10.2026).** Die frühere Regel „erster Nutzer wird Admin“ war über die öffentliche Sign-up-API ausnutzbar (auch wieder, wenn alle Konten gelöscht sind) und hatte eine Race-Condition. Jetzt: Registrierung immer mit Code oder Dashboard-Einladung; Admin wird nur ein dashboard-eingeladener Nutzer, solange es keinen Admin gibt; Advisory-Lock serialisiert Sign-ups. Ersetzt D6 (Teil „erster Nutzer“).
+
+**D31 – Zeitgesteuerte Jobs über GitHub Actions statt pg_cron** (Phase 5): Kein Vault-Setup in Supabase nötig, ein Secret (`CRON_SECRET`) genügt, und der tägliche Aufruf verhindert das Pausieren des Gratis-Projekts. GitHub-Cron läuft in UTC (05:15 = 07:15 Sommerzeit). Achtung: GitHub deaktiviert geplante Workflows nach 60 Tagen ohne Repo-Aktivität – dann in Actions wieder einschalten.
+
+**D32 – Serienfortschritt aus Episodenzahlen statt Episodenlisten:** „Ausgestrahlt“, „bis hier“ und „Als Nächstes“ werden aus `seasons[].episode_count` + `last_episode_to_air` berechnet; Episodenlisten (Titel, Beschreibung) lädt nur eine geöffnete Staffel. Spart viele TMDb-Aufrufe.
+
+**D33 – Geschmacksprofil = abgeleitet + Anpassungen** (Phase 6): Die Genre-Gewichte werden bei jedem Lauf frisch aus den Bewertungen berechnet; `taste_profile.genre_weights_*` speichert nur die Verschiebungen durch 👍/👎 und die Regler. So bleiben neue Bewertungen immer wirksam, und Feedback geht nicht verloren.
+
+**D34 – Streaming-Bonus über TMDb-Discover statt pro Titel abzufragen:** Für „auf meinen Abos“ wird `/discover` mit `with_watch_providers` (CH, Flatrate/Gratis/Werbung) als eigene Quelle abgefragt. Das kostet zwei Aufrufe pro Nutzer statt einen pro Kandidat.
+
+**D35 – Scoring-Code einmal für Server und Browser:** `supabase/functions/_shared/scoring.ts` hat keine Deno-Abhängigkeiten und wird vom Frontend direkt importiert (Genre-Regler, Abend-Picker).
+
+**D36 – Abo-Optimierer rechnet im Browser** (Phase 7): Die Function `availability` liefert nur die Flatrate-Anbieter pro Titel (24 h im `tmdb_cache`, höchstens 300 offene Titel, die zuletzt hinzugefügten zuerst). Zählen, „Lohnt sich“, „Kaum genutzt“ (< 3 Titel) und die beste Zweier-Kombination (greedy) macht `_shared/availability.ts` – derselbe Code wie im Cron, im Browser direkt importiert.
+
+**D37 – Kein „bald weg“:** TMDb (Daten von JustWatch) liefert, wo ein Titel läuft, aber nicht, bis wann. Eine andere Quelle wäre kostenpflichtig oder Scraping. Deshalb nur Verfügbarkeits-Alarme in die andere Richtung („jetzt auf deinen Diensten“).
+
+**D38 – Verfügbarkeits-Alarm einmalig:** Ein Alarm meldet sich einmal (`notified_at`), Benachrichtigung mit `dedupe_key`, damit ein doppelter Cron-Lauf nichts doppelt meldet. Ohne gewählte Dienste zählt jeder Flatrate-Anbieter.
+
+**D39 – Musik-Quelle Nr. 1 ist Last.fm, Spotify nur optional** (Phase 8): Last.fm braucht nur den öffentlichen Benutzernamen (kein Login, kein Token) und funktioniert für alle Freunde. Spotify-Apps im Entwicklungsmodus sind auf eingetragene Nutzer beschränkt; genutzt werden nur `/me/top/artists`, `/me/following` und `/artists/{id}/albums` (keine eingeschränkten Endpunkte wie `/recommendations`).
+
+**D40 – Neuerscheinungen über eine MusicBrainz-Suche pro 25 Artists:** Eine Lucene-Abfrage `arid:… OR …` mit Datumsbereich statt einer Anfrage pro Artist – so bleibt das Limit von 1 Anfrage/s (eigener User-Agent) auch mit mehreren Nutzern im Cron einhaltbar. Cover von der Cover Art Archive (direkter Bildlink, kein API-Aufruf); Live-Alben, Compilations und Remixe werden ausgefiltert.
+
+**D41 – Spotify-Token verschlüsselt, Schlüssel per HKDF:** Refresh-Tokens werden in der Function mit AES-GCM (zufälliger IV) verschlüsselt. Der Schlüssel kommt aus `TOKEN_ENCRYPTION_KEY` oder, falls nicht gesetzt, per HKDF aus dem Service-Role-Key – ein Secret weniger für Mario. Lässt sich ein Token nicht mehr entschlüsseln (Schlüssel gewechselt) oder hat Spotify den Zugriff entzogen, wird die Verbindung gelöscht und der Nutzer verbindet sich neu. Die Spalte ist für Clients per Spalten-Grant gesperrt.
+
+**D42 – Konzerte über Ticketmaster Discovery (gratis, 5000 Anfragen/Tag):** Nur Events, bei denen der Artist als Act geführt wird (die Stichwortsuche ist unscharf). Ticketcorner (grösster CH-Anbieter) hat keine offene API – die Abdeckung ist deshalb unvollständig.
+
+**D43 – Fremde Profile nur über RPCs** (Phase 9): `profiles` bleibt nur für einen selbst lesbar (enthält die E-Mail). Namen von Freunden und Listen-Mitgliedern kommen aus Security-Definer-Funktionen (`friends_overview`, `list_people`, `friends_on_title`, `friend_activity`), die nie E-Mails liefern und selbst prüfen, ob eine Freundschaft oder Mitgliedschaft besteht.
+
+**D44 – Freundschaftsanfragen über eine Funktion:** Suche per Benutzername oder exakter E-Mail, keine Teilsuche (kein Durchstöbern der Nutzer). Eine Ablehnung sieht die anfragende Person weiterhin als „wartet“. Fragen beide gegenseitig an, sind sie sofort befreundet. Höchstens 20 offene Anfragen.
+
+**D45 – Bewertungen teilen ist gegenseitig:** Den Geschmacks-Match (1 − mittlere Abweichung / 9, ab 3 gemeinsamen Bewertungen) gibt es nur, wenn beide `share_ratings_with_friends` an haben. Aktivität ist standardmässig privat (`share_activity` = aus).
+
+**D46 – Listen-Mitglieder nur aus dem Freundeskreis des Owners**; die bisherige Policy erlaubte beliebige Nutzer-IDs. Stimmen und Verfügbarkeit laufen über kleine Security-Invoker-Funktionen (`cast_vote`, `set_availability`), weil ein PostgREST-Upsert auch die Schlüsselspalten aktualisieren will, für die es (absichtlich) kein Update-Recht gibt.
+
+**D47 – Filmabend ohne eigene Titel-Abstimmung:** Der Titel kommt aus den Stimmen der Liste (bester ohne Gegenstimme); die Terminumfrage ist eine eigene kleine Tabelle. Die Kalenderdatei entsteht im Browser mit demselben ICS-Code wie das Kalender-Abo (jetzt auch mit Uhrzeit).
+
+**D48 – Sammlungen sind Listen ohne Mitglieder** (Phase 10): Eine „Sammlung“ („Weihnachten“, „Mit den Eltern“) ist technisch eine gemeinsame Liste, in die niemand eingeladen wurde. Das spart doppelte Tabellen, Rechte und Oberflächen, und eine Sammlung lässt sich jederzeit mit Freunden teilen.
+
+**D49 – Ein Import-Weg für alle Quellen:** IMDb, Letterboxd und Trakt laufen durch denselben Import-Job (Batches, Wiederaufnahme, „nicht gefunden“ manuell zuordnen). Jede Zeile hat eine `ref` (IMDb-ID, `lb:…`, `trakt:…`); gesucht wird über TMDb-ID (Trakt), IMDb-ID (`/find`) oder Titel + Jahr (Letterboxd, `/search`, Toleranz ±1 Jahr). Treffer werden für immer, Fehlschläge 7 Tage gecacht.
+
+**D50 – Tagebuch getrennt von der Watchlist:** Ein Titel steht einmal in der Watchlist, kann aber beliebig oft im Tagebuch stehen. Ein Eintrag „Gesehen am …“ setzt Filme auf „Gesehen“ (mit diesem Datum); Serien behalten ihren Fortschritt. Letterboxd-Einträge tragen `import_ref`, damit ein erneuter Import nichts doppelt anlegt – von Hand erfasste Einträge werden nie dedupliziert.
+
+**D51 – Diagramme selbst gebaut** (Phase 11): Drei kleine SVG-Komponenten (Monate, Bewertungen, Balkenliste) statt einer Chart-Bibliothek – weniger als 3 kB statt 50–200 kB, passen zu den Design-Tokens und haben je eine Tabelle/Liste als Textalternative.
+
+**D52 – „TMDb Top 100“ statt IMDb Top 250, keine Oscar-Liste:** Für die IMDb-Top-250 und Oscar-Gewinner gibt es keine freie, offizielle Quelle (Scraping von IMDb ist ausgeschlossen, eine eingebaute Liste würde veralten). Die TMDb-Bestenliste kommt über die API (7 Tage gecacht). Weitere Herausforderungen nutzen nur eigene Daten.
+
+**D53 – Statistik rechnet im Browser:** Watchlist und Tagebuch sind ohnehin geladen; jede Tagebuch-Sichtung zählt, gesehene Titel ohne Tagebuch-Eintrag zählen einmal am Datum „gesehen“. Kein zusätzlicher Server-Code, keine weiteren Daten verlassen das Konto. Der Jahresrückblick entsteht als SVG im Browser und wird erst beim Teilen zum PNG.
+
+**D54 – Mails über die Brevo-API, angestossen von GitHub Actions** (Phase 12): Alle 30 Minuten sammelt `notify-email` neue Benachrichtigungen (`emailed_at` ist leer) und schickt pro Person eine Mail, höchstens 100 pro Lauf (Brevo-Gratis: 300/Tag). Der Wochenrückblick geht So 18:00 Zürcher Zeit raus (`digest_sent_at` verhindert Doppelte). Abmelden per Token im Link, ohne Login, auch als One-Click (`List-Unsubscribe-Post`). Sandbox über `X-Sib-Sandbox: drop`. Der Cron-Job hält Supabase nebenbei wach.
+
+**D55 – Kein Web-Push:** Web-Push bräuchte VAPID-Schlüssel und die Verschlüsselung der Nachrichten (RFC 8291) in der Edge Function, und auf dem iPhone geht es nur für installierte Apps. Ohne echtes Gerät nicht verlässlich testbar. Die Mails decken denselben Zweck ab; Web-Push bleibt unter „Ideen“.
+
+**D56 – Service Worker nur für die App-Shell:** Gecacht werden nur die eigene index.html (Netzwerk zuerst, offline aus dem Cache) und die gehashten Build-Dateien (Cache zuerst). Anfragen an Supabase und TMDb gehen nie über den Cache – keine veralteten oder fremden Daten auf geteilten Geräten.
+

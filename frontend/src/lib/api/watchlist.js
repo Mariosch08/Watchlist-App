@@ -4,7 +4,7 @@ import { supabase } from '../supabase.js';
 
 // Columns the list, filters and undo need. The detail page loads the full row itself.
 export const LIST_COLUMNS =
-  'media_type,tmdb_id,title,original_title,poster_path,release_date,vote_average,status,my_rating,rated_at,watched_at,runtime,imdb_id,source,added_at';
+  'media_type,tmdb_id,title,original_title,poster_path,release_date,vote_average,status,my_rating,rated_at,watched_at,runtime,imdb_id,source,added_at,genre_ids';
 
 const PAGE_SIZE = 1000; // PostgREST returns at most 1000 rows per request
 
@@ -39,6 +39,7 @@ export function toWatchlistRow(result, status = 'planned') {
     poster_path: result.poster_path ?? null,
     release_date: result.release_date ?? null,
     vote_average: result.vote_average ? Math.round(result.vote_average * 10) / 10 : null,
+    genre_ids: Array.isArray(result.genre_ids) ? result.genre_ids : null,
     status,
   };
 }

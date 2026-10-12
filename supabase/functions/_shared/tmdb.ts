@@ -1,3 +1,5 @@
+import { pickFindResult } from './imdb.ts';
+
 // Pure TMDb logic (no Deno APIs) so it can be unit-tested with vitest.
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 export const TMDB_LANGUAGE = 'de-CH';
@@ -53,7 +55,14 @@ export function normalizeTitle(raw: Record<string, any>, mediaType: MediaType) {
     release_date: raw.release_date || raw.first_air_date || null,
     vote_average: raw.vote_average ?? null,
     vote_count: raw.vote_count ?? 0,
+    genre_ids: genreIds(raw),
   };
+}
+
+// Search/list results carry genre_ids, detail responses carry genres [{ id, name }].
+export function genreIds(raw: Record<string, any>): number[] {
+  if (Array.isArray(raw.genre_ids)) return raw.genre_ids.filter((g: unknown) => Number.isInteger(g));
+  return (raw.genres ?? []).map((g: any) => g?.id).filter((g: unknown) => Number.isInteger(g));
 }
 
 type Title = ReturnType<typeof normalizeTitle>;
@@ -182,8 +191,63 @@ export function normalizeDetails(raw: Record<string, any>, mediaType: MediaType,
     trailer: pickTrailer(raw.videos?.results),
     providers: normalizeProviders(raw['watch/providers']),
     similar: normalizeSimilar(raw, mediaType),
+    ...(mediaType === 'tv' ? normalizeSeriesInfo(raw) : {}),
   };
 }
+
+export function pickEpisode(ep: any) {
+  if (!ep || !Number.isInteger(ep.season_number) || !Number.isInteger(ep.episode_number)) return null;
+  return { season_number: ep.season_number, episode_number: ep.episode_number, name: ep.name || null, air_date: ep.air_date || null };
+}
+
+// Series-only fields: seasons (without specials), airing status, last/next episode.
+export function normalizeSeriesInfo(raw: Record<string, any>) {
+  return {
+    tmdb_status: raw.status || null,
+    seasons: (raw.seasons ?? [])
+      .filter((s: any) => Number.isInteger(s.season_number) && s.season_number >= 1)
+      .map((s: any) => ({ season_number: s.season_number, name: s.name || `Staffel ${s.season_number}`, episode_count: s.episode_count ?? 0, air_date: s.air_date || null }))
+      .sort((a: any, b: any) => a.season_number - b.season_number),
+    last_episode_to_air: pickEpisode(raw.last_episode_to_air),
+    next_episode_to_air: pickEpisode(raw.next_episode_to_air),
+  };
+}
+
+export function normalizeSeason(raw: Record<string, any>) {
+  return {
+    season_number: raw.season_number,
+    name: raw.name || `Staffel ${raw.season_number}`,
+    episodes: (raw.episodes ?? [])
+      .filter((e: any) => Number.isInteger(e.episode_number))
+      .map((e: any) => ({
+        episode_number: e.episode_number,
+        name: e.name || null,
+        overview: e.overview || null,
+        air_date: e.air_date || null,
+        runtime: e.runtime ?? null,
+        still_path: e.still_path ?? null,
+      })),
+  };
+}
+
+export const PROVIDERS_CACHE_KEY = `providers:${WATCH_REGION}`;
+export const GENRES_CACHE_KEY = `genres:${TMDB_LANGUAGE}`;
+export const TOP_RATED_CACHE_KEY = `top_rated:movie:${TMDB_LANGUAGE}`;
+export const TOP_RATED_PAGES = 5; // 100 titles
+
+// Streaming services available in Switzerland (movies and series merged), most relevant first.
+export function mergeProviders(movie: any[], tv: any[]) {
+  const byId = new Map<number, any>();
+  for (const p of [...movie, ...tv]) {
+    if (!Number.isInteger(p?.provider_id)) continue;
+    const prio = p.display_priorities?.[WATCH_REGION] ?? p.display_priority ?? 999;
+    const prev = byId.get(p.provider_id);
+    if (!prev || prio < prev.priority) byId.set(p.provider_id, { id: p.provider_id, name: p.provider_name, logo_path: p.logo_path ?? null, priority: prio });
+  }
+  return [...byId.values()].sort((a, b) => a.priority - b.priority).slice(0, 40);
+}
+
+export const seasonCacheKey = (id: number, season: number) => `season:tv:${id}:${season}:${TMDB_LANGUAGE}`;
 
 // One TMDb request for the whole page (append_to_response); a second one only if there is no German overview.
 export async function fetchDetails(mediaType: MediaType, id: number, token: string, fetchImpl: Fetch) {
@@ -263,6 +327,62 @@ export async function handleTmdbRequest(body: any, token: string | undefined, fe
         if (!details) throw new HttpError(404, 'Not found', 'NOT_FOUND');
         await cache?.set(key, details, DETAILS_TTL_MS).catch((err) => console.error('cache write', err));
         return { status: 200, body: details };
+      }
+      case 'providers': {
+        const cached = await cache?.get(PROVIDERS_CACHE_KEY).catch(() => null);
+        if (cached) return { status: 200, body: cached };
+        const params = { watch_region: WATCH_REGION, language: TMDB_LANGUAGE };
+        const [movie, tv] = await Promise.all([
+          tmdbGet('/watch/providers/movie', params, token, fetchImpl),
+          tmdbGet('/watch/providers/tv', params, token, fetchImpl),
+        ]);
+        const result = { providers: mergeProviders(movie?.results ?? [], tv?.results ?? []) };
+        await cache?.set(PROVIDERS_CACHE_KEY, result, 7 * 86_400_000).catch(() => {});
+        return { status: 200, body: result };
+      }
+      case 'genres': {
+        const cached = await cache?.get(GENRES_CACHE_KEY).catch(() => null);
+        if (cached) return { status: 200, body: cached };
+        const [movie, tv] = await Promise.all([
+          tmdbGet('/genre/movie/list', { language: TMDB_LANGUAGE }, token, fetchImpl),
+          tmdbGet('/genre/tv/list', { language: TMDB_LANGUAGE }, token, fetchImpl),
+        ]);
+        const result = { movie: movie?.genres ?? [], tv: tv?.genres ?? [] };
+        await cache?.set(GENRES_CACHE_KEY, result, 30 * 86_400_000).catch(() => {});
+        return { status: 200, body: result };
+      }
+      case 'find': {
+        // IMDb id → TMDb title (e.g. a link shared from the IMDb app).
+        const imdbId = typeof body.imdb_id === 'string' ? body.imdb_id : '';
+        if (!/^tt\d{5,10}$/.test(imdbId)) throw new HttpError(400, 'Invalid imdb_id', 'INVALID_INPUT');
+        const find = await tmdbGet(`/find/${imdbId}`, { external_source: 'imdb_id', language: TMDB_LANGUAGE }, token, fetchImpl);
+        const picked = pickFindResult(find, '');
+        if (!picked) throw new HttpError(404, 'Not found', 'NOT_FOUND');
+        return { status: 200, body: normalizeTitle(picked.raw, picked.media_type) };
+      }
+      case 'top_rated': {
+        // Best-rated movies on TMDb (vote-weighted) for the "Top 100" challenge.
+        const cached = await cache?.get(TOP_RATED_CACHE_KEY).catch(() => null);
+        if (cached) return { status: 200, body: cached };
+        const pages = await Promise.all(
+          Array.from({ length: TOP_RATED_PAGES }, (_, i) => tmdbGet('/movie/top_rated', { language: TMDB_LANGUAGE, page: i + 1 }, token, fetchImpl)),
+        );
+        const titles = pages.flatMap((p) => (p?.results ?? []).map((r: any) => normalizeTitle(r, 'movie')));
+        const result = { titles };
+        if (titles.length) await cache?.set(TOP_RATED_CACHE_KEY, result, 7 * 86_400_000).catch(() => {});
+        return { status: 200, body: result };
+      }
+      case 'season': {
+        const id = intParam(body.tmdb_id, 'tmdb_id', 1, 1e9);
+        const season = intParam(body.season_number, 'season_number', 1, 500);
+        const key = seasonCacheKey(id, season);
+        const cached = await cache?.get(key).catch((err) => (console.error('cache read', err), null));
+        if (cached) return { status: 200, body: cached };
+        const raw = await tmdbGet(`/tv/${id}/season/${season}`, { language: TMDB_LANGUAGE }, token, fetchImpl);
+        if (!raw) throw new HttpError(404, 'Not found', 'NOT_FOUND');
+        const result = normalizeSeason(raw);
+        await cache?.set(key, result, DETAILS_TTL_MS).catch((err) => console.error('cache write', err));
+        return { status: 200, body: result };
       }
       default:
         throw new HttpError(400, 'Unknown action', 'INVALID_INPUT');

@@ -7,7 +7,7 @@ let b;
 
 beforeEach(async () => {
   db = await createDb();
-  a = await signUp(db, 'a@example.com');
+  a = await signUp(db, 'a@example.com', {}, new Date().toISOString());
   await asAdmin(db, "insert into public.invites (code, max_uses) values ('INVITE123456', 5)");
   b = await signUp(db, 'b@example.com', { invite_code: 'INVITE123456' });
   await asUser(db, a, "insert into public.watchlist (media_type, tmdb_id, title) values ('movie', 603, 'Matrix')");

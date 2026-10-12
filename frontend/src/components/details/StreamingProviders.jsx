@@ -1,4 +1,5 @@
 import { LOGO_BASE } from '../../lib/labels.js';
+import AvailabilityAlert from './AvailabilityAlert.jsx';
 
 const GROUPS = [
   ['flatrate', 'Im Abo'],
@@ -7,7 +8,7 @@ const GROUPS = [
 ];
 
 // Where to watch in Switzerland. TMDb's data comes from JustWatch, which must be credited.
-export default function StreamingProviders({ providers }) {
+export default function StreamingProviders({ providers, details }) {
   const groups = GROUPS.filter(([key]) => providers?.[key]?.length > 0);
   return (
     <section className="card" aria-labelledby="streaming-title">
@@ -31,6 +32,7 @@ export default function StreamingProviders({ providers }) {
           </div>
         ))
       )}
+      {details && <AvailabilityAlert details={details} />}
       <p className="caption">
         Daten von JustWatch.
         {providers?.link && (

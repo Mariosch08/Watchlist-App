@@ -1,7 +1,9 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Messages } from '../components/Form.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
+import ContinueWatching from '../components/watchlist/ContinueWatching.jsx';
 import SearchResults from '../components/watchlist/SearchResults.jsx';
 import WatchlistList from '../components/watchlist/WatchlistList.jsx';
 import WatchlistToolbar from '../components/watchlist/WatchlistToolbar.jsx';
@@ -39,6 +41,9 @@ export default function WatchlistPage() {
           Meine Watchlist
         </h1>
         {items && <span className="caption">{total === 1 ? '1 Titel' : `${total} Titel`}</span>}
+        <Link className="button-link btn-ghost btn-compact page-head-end" to="/import">
+          Import / Export
+        </Link>
       </div>
 
       <div className="search-field" role="search">
@@ -58,6 +63,8 @@ export default function WatchlistPage() {
           </button>
         )}
       </div>
+
+      {!searching && view.segment === 'next' && <ContinueWatching />}
 
       {searching && <SearchResults search={search} byKey={byKey} expanded={expanded} onExpand={() => setExpanded(true)} />}
 

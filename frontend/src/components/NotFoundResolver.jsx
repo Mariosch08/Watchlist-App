@@ -31,14 +31,22 @@ export default function NotFoundResolver({ row, onResolve, onDismiss, pending })
     <li className="resolver" aria-busy={pending || undefined}>
       <div className="resolver-head">
         <div className="title-main">
-          <span className="title-name">{row.title || row.imdb_id}</span>
+          <span className="title-name">{row.title || row.imdb_id || row.ref}</span>
           <div className="meta">
             {row.year && <span>{row.year}</span>}
             {row.rating && <span className="badge badge--accent">Meine Bewertung {row.rating}/10</span>}
             {row.file && <span className="mono">{row.file}</span>}
-            <a className="mono" href={`https://www.imdb.com/title/${row.imdb_id}/`} target="_blank" rel="noreferrer">
-              {row.imdb_id}
-            </a>
+            {row.imdb_id ? (
+              <a className="mono" href={`https://www.imdb.com/title/${row.imdb_id}/`} target="_blank" rel="noreferrer">
+                {row.imdb_id}
+              </a>
+            ) : row.ref?.startsWith('lb:boxd.it/') ? (
+              <a className="mono" href={`https://${row.ref.slice(3)}`} target="_blank" rel="noreferrer">
+                Letterboxd
+              </a>
+            ) : (
+              row.source && <span>{row.source === 'trakt' ? 'Trakt' : 'Letterboxd'}</span>
+            )}
           </div>
         </div>
         <button className="btn-ghost btn-compact" disabled={pending} onClick={onDismiss}>
