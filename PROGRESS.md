@@ -64,16 +64,13 @@ Tabellen (alle mit `user_id uuid default auth.uid() references auth.users on del
 - [ ] Phase 11 – Abschluss
 
 ## Offene Probleme
-- Nicht gegen ein echtes Supabase-Projekt getestet (hier kein Zugang). Die DB-Logik ist mit PGlite getestet; Abweichungen zu echtem Supabase (z. B. Rechte auf `auth.users`) zeigen sich erst beim ersten Deploy.
+- Migrationen + Function laufen auf dem echten Supabase-Projekt (Deploy grün). Claude-Umgebung erreicht github.io/supabase.co nicht direkt → App-Verhalten nur über Marios Rückmeldung prüfbar.
 - pg_cron rechnet in UTC → Zeiten in Europe/Zurich müssen bei Sommer-/Winterzeit berücksichtigt werden (Lösung in Phase 5: stündlich laufen und in der Funktion auf Zürich-Zeit prüfen).
 
 ## Offen für Mario
-Alles in **[`docs/SETUP.md`](docs/SETUP.md)** (nur Browser):
-1. Supabase-Projekt erstellen, 4 Werte als GitHub-Secrets/-Variablen eintragen
-2. TMDb-Token als Supabase-Secret `TMDB_API_KEY`
-3. GitHub Pages auf „GitHub Actions“ stellen, PR mergen → Deploy läuft automatisch
-4. Site-URL in Supabase setzen, **sich sofort als erster Nutzer registrieren** (wird Admin)
-5. Vor Freundes-Einladungen: Brevo-SMTP in Supabase eintragen
+- [x] Einrichtung laut `docs/SETUP.md` erledigt, erster Deploy grün (12.10.2026), App: https://mariosch08.github.io/Watchlist-App/
+- [ ] Vor Freundes-Einladungen: Brevo-SMTP in Supabase eintragen (SETUP §9)
+- Hinweis: Ab jetzt deployt jeder Merge nach `main` automatisch (Tests → Supabase → Pages). Läuft der Supabase-Token ab, Secret `SUPABASE_ACCESS_TOKEN` erneuern.
 
 ## Ideen (nicht umgesetzt)
 - Passkeys/MFA über Supabase Auth.

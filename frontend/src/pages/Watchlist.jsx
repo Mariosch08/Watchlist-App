@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Messages, useSubmit } from '../components/Form.jsx';
 import { unwrap } from '../lib/errors.js';
-import { supabase } from '../lib/supabase.js';
+import { invokeFunction, supabase } from '../lib/supabase.js';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w154';
 const TYPE_LABEL = { movie: 'Film', tv: 'Serie' };
@@ -13,7 +13,10 @@ function TitleRow({ item, action }) {
       <div className="grow">
         <strong>{item.title}</strong>
         <div className="muted">
-          {TYPE_LABEL[item.media_type]} {item.release_date ? `· ${item.release_date.slice(0, 4)}` : ''}
+          {TYPE_LABEL[item.media_type]}
+          {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ''}
+          {item.original_title && item.original_title !== item.title ? ` · Originaltitel: ${item.original_title}` : ''}
+          {item.vote_average ? ` · ★ ${item.vote_average.toFixed(1)}` : ''}
         </div>
       </div>
       {action}
@@ -36,7 +39,7 @@ export default function WatchlistPage() {
 
   const search = (e) => {
     e.preventDefault();
-    run(async () => setResults(unwrap(await supabase.functions.invoke('tmdb', { body: { action: 'search', query: query.trim() } })).results));
+    run(async () => setResults((await invokeFunction('tmdb', { action: 'search', query: query.trim() })).results));
   };
   const add = (r) =>
     run(async () => {

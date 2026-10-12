@@ -22,3 +22,20 @@ describe('unwrap', () => {
     expect(() => unwrap({ data: null, error: new Error('x') })).toThrow('x');
   });
 });
+
+describe('functionError', async () => {
+  const { functionError } = await import('../src/lib/errors.js');
+  const ctx = (status, body) => ({ context: new Response(JSON.stringify(body), { status }) });
+  it('explains a missing TMDb key', async () => {
+    expect((await functionError(ctx(500, { error: 'TMDB_API_KEY is not configured' }))).message).toMatch(/TMDB_API_KEY in Supabase anlegen/);
+  });
+  it('includes status and server message', async () => {
+    expect((await functionError(ctx(502, { error: 'TMDb request failed (401)' }))).message).toBe(
+      'TMDb lehnt den Schlüssel ab – Secret TMDB_API_KEY in Supabase prüfen. (Status 502: TMDb request failed (401))',
+    );
+  });
+  it('passes through errors without response', async () => {
+    const e = new Error('offline');
+    expect(await functionError(e)).toBe(e);
+  });
+});

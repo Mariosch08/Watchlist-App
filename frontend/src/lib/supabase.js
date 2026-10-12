@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { functionError } from './errors.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -9,3 +10,10 @@ export const supabase = createClient(url ?? 'http://localhost', anonKey ?? 'miss
 
 // Absolute app URL incl. GitHub Pages base path, used for e-mail links.
 export const appUrl = (path = '') => new URL(import.meta.env.BASE_URL + path, window.location.origin).toString();
+
+// Calls an Edge Function and throws a readable error on failure.
+export async function invokeFunction(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) throw await functionError(error);
+  return data;
+}
