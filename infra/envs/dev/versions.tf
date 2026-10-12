@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.10"
 
   required_providers {
     aws = {
@@ -12,7 +12,8 @@ terraform {
     }
   }
 
-  # Local state for now. Moving to an S3 backend is listed under "Offen für Mario" in PROGRESS.md.
+  # Bucket etc. come from backend.hcl, created by infra/scripts/bootstrap-state.sh.
+  backend "s3" {}
 }
 
 provider "aws" {

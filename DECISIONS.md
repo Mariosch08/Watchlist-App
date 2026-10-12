@@ -23,3 +23,7 @@
 **D11 – Benutzername** (optional, `[a-z0-9_]{3,20}`, eindeutig über Lock-Item `USERNAME#…` in einer Transaktion) schon in Phase 1, weil Phase 8 Freunde per Benutzername einlädt.
 
 **D12 – Lambda arm64, 256 MB, Logs 14 Tage** (Free-Tier-tauglich, günstiger).
+
+**D13 – Codespaces-Zugang zu AWS über IAM-Access-Keys als Codespaces-Secrets.** Für ein Ein-Personen-Projekt am einfachsten. Sicherer, aber aufwendiger wäre IAM Identity Center (SSO) mit `aws sso login --use-device-code`; das kann später umgestellt werden.
+
+**D14 – Terraform-State in S3** (Bucket per Skript, versioniert, verschlüsselt, S3-Lockfile statt DynamoDB-Lock → Terraform >= 1.10). Grund: Codespaces werden nach Inaktivität gelöscht, lokaler State ginge verloren.

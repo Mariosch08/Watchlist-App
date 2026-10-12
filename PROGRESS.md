@@ -31,7 +31,9 @@ frontend/                 React 18 + Vite 5 + react-router 6, Tests: vitest
   src/api.js              api(path,{method,body}) mit ID-Token
   src/pages/              Login, Register, Confirm, ForgotPassword, Profile, Watchlist
 infra/
-  envs/dev/               Root-Modul (lokaler State), outputs → frontend/.env.local
+  envs/dev/               Root-Modul, State in S3 (backend.hcl via scripts/bootstrap-state.sh), outputs → frontend/.env.local
+.devcontainer/           Codespace mit Node 22, AWS CLI, Terraform 1.10.5
+docs/SETUP.md            Einrichtungsanleitung für Mario
   modules/data            DynamoDB-Tabelle (PK/SK, GSI1, TTL `ttl`, prevent_destroy)
   modules/auth            Cognito User Pool + Client + Gruppe `admins` (prevent_destroy)
   modules/api             HTTP API, JWT-Authorizer auf $default-Route
@@ -41,8 +43,8 @@ infra/
 ### Befehle
 - Backend-Tests: `cd backend && npm test -- --silent`
 - Frontend: `cd frontend && npm test -- --silent && npm run build`
-- Terraform: `cd infra/envs/dev && terraform fmt -recursive ../.. && terraform init -backend=false && terraform validate`
-- In der Claude-Cloud-Umgebung ist registry.terraform.io gesperrt → Provider-Mirror unter `/root/tfmirror` + `~/.terraformrc` (siehe DECISIONS D9). Terraform-Binary: `~/bin/terraform` (pro Session neu herunterladen von releases.hashicorp.com).
+- Terraform: `cd infra/envs/dev && terraform fmt -recursive ../.. && terraform init -backend=false && terraform validate` (Deploy: `terraform init -backend-config=backend.hcl`, State in S3, siehe docs/SETUP.md)
+- In der Claude-Cloud-Umgebung ist registry.terraform.io gesperrt → Provider-Mirror unter `/root/tfmirror` + `~/.terraformrc` (siehe DECISIONS D9). Terraform-Binary (>= 1.10 wegen S3-Lockfile): `~/bin/terraform` (pro Session neu herunterladen von releases.hashicorp.com).
 
 ### Datenmodell (Single-Table `watchlist-<env>`)
 | PK | SK | Inhalt |
@@ -84,12 +86,12 @@ infra/
 - `.terraform.lock.hcl` ist absichtlich in `.gitignore` (in der Cloud-Umgebung nur Mirror-Hashes für linux_amd64). Mario kann ihn nach `terraform init` im Codespace committen und aus `.gitignore` entfernen.
 
 ## Offen für Mario
-1. **TMDb-Key in SSM ablegen:** `aws ssm put-parameter --name /watchlist/dev/tmdb_api_key --type SecureString --value '<v3-key oder v4-token>'`
-2. **Deploy:** `cd infra/envs/dev && terraform init && terraform plan && terraform apply` (eu-central-1). Danach Outputs in `frontend/.env.local` eintragen (Vorlage `.env.example`).
-3. **Ersten Account anlegen:** `cd backend && AWS_REGION=eu-central-1 TABLE_NAME=watchlist-dev node scripts/create-invite.mjs` → Code im Frontend unter „Registrieren“ verwenden. Danach dich zum Admin machen: `aws cognito-idp admin-add-user-to-group --user-pool-id <id> --username <deine-email> --group-name admins` und neu anmelden.
-   Alternative (Admin-Freigabe ohne Code): `aws cognito-idp admin-create-user --user-pool-id <id> --username <email> --user-attributes Name=email,Value=<email> Name=email_verified,Value=true --message-action SUPPRESS` + `aws cognito-idp admin-set-user-password --user-pool-id <id> --username <email> --password '<pw>' --permanent`.
-4. Cognito verschickt Mails mit `COGNITO_DEFAULT` (max. 50/Tag) – reicht für Freunde; Umstellung auf SES in Phase 10.
-5. Optional: Terraform-State in S3-Backend verschieben.
+Komplette Anleitung: **[`docs/SETUP.md`](docs/SETUP.md)** (AWS-Zugang im Codespace, TMDb-Token, State-Bucket, Deploy, erster Account).
+1. AWS-Konto absichern + IAM-Zugangsschlüssel als Codespaces-Secrets (SETUP §1–2)
+2. TMDb-Token holen und in SSM `/watchlist/dev/tmdb_api_key` ablegen (SETUP §3)
+3. `infra/scripts/bootstrap-state.sh`, dann `terraform init/plan/apply` (SETUP §4–5)
+4. Ersten Einladungscode erzeugen, registrieren, sich zur Gruppe `admins` hinzufügen (SETUP §7)
+5. Cognito verschickt Mails mit `COGNITO_DEFAULT` (max. 50/Tag) – reicht für Freunde; Umstellung auf SES in Phase 10.
 
 ## Ideen (nicht umgesetzt)
 - SRP-Login statt USER_PASSWORD_AUTH; Passkeys/MFA.

@@ -13,4 +13,4 @@ cd ../frontend && npm install && cp ../.env.example .env.local   # Werte aus `te
 npm run dev
 ```
 
-Deployment und Einrichtung (TMDb-Key, erster Account, Admin): siehe „Offen für Mario“ in `PROGRESS.md`. Die vollständige Anleitung folgt in Phase 11.
+Einrichtung (AWS im Codespace, TMDb, Deploy, erster Account): **[`docs/SETUP.md`](docs/SETUP.md)**. Die vollständige Anleitung folgt in Phase 11.
