@@ -8,6 +8,7 @@ import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { KIND_LABEL } from '../../../supabase/functions/_shared/agenda.ts';
+import MonthCalendar from '../components/calendar/MonthCalendar.jsx';
 import { CatchUpList } from '../components/series/CatchUp.jsx';
 import { useAgenda } from '../hooks/useAgenda.js';
 import { calendarUrl, fetchSettings, regenerateCalendarToken, webcalUrl } from '../lib/api/settings.js';
@@ -73,10 +74,12 @@ export default function CalendarPage() {
   const byDay = (items ?? []).reduce((acc, e) => acc.set(e.date, [...(acc.get(e.date) ?? []), e]), new Map());
   return (
     <>
-      <section className="card" aria-labelledby="calendar-title">
-        <PageTitle area="calendar" id="calendar-title">
-          Kalender
-        </PageTitle>
+      <PageTitle area="calendar" id="calendar-title">
+        Kalender
+      </PageTitle>
+      <MonthCalendar />
+      <section className="card" aria-labelledby="next-title">
+        <h2 id="next-title">Als Nächstes</h2>
         <p className="muted">Die nächsten {DAYS} Tage: Folgen, Filmstarts, Konzerte, Alben, Aufhol-Termine und Abo-Erinnerungen.</p>
         {error ? (
           <Messages error={errorMessage(error)} />

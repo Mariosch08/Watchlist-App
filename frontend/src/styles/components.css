@@ -2480,3 +2480,166 @@ button.provider-stat-head:hover:not(:disabled) {
   align-items: baseline;
   font-size: var(--text-body-sm);
 }
+
+/* ---- Calendar: month grid ---------------------------------------------------------------------- */
+.month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.month-head h2 {
+  margin: 0;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.month-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.month-weekdays span {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.month-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.month-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  height: auto;
+  min-height: 76px;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-weight: 400;
+  text-align: left;
+  overflow: hidden;
+}
+
+.month-day--out {
+  opacity: 0.45;
+}
+
+.month-day--today .month-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.month-day[aria-pressed='true'] {
+  border-color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.month-num {
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-music {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.month-artist {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--text-micro);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.month-marks {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.month-mark {
+  font-size: var(--text-micro);
+  line-height: 1;
+}
+
+.month-mark--seen {
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+.month-mark--plan {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-muted);
+}
+
+.month-week-line {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+}
+
+.day-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.day-details h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-body);
+}
+
+.day-details ul {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.day-details p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .month-day {
+    min-height: 56px;
+    padding: var(--space-1);
+  }
+
+  .month-artist {
+    display: none;
+  }
+}

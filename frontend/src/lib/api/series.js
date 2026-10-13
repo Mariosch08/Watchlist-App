@@ -14,6 +14,13 @@ export async function dismissCatchup(tmdbId, seasonNumber) {
   unwrap(await supabase.from('catchup_plans').update({ dismissed: true }).match({ tmdb_id: tmdbId, season_number: seasonNumber }));
 }
 
+// Episodes ticked off in a time range (calendar).
+export async function fetchEpisodesBetween(fromIso, toIso) {
+  return unwrap(
+    await supabase.from('watched_episodes').select('tmdb_id, season_number, episode_number, watched_at').gte('watched_at', fromIso).lt('watched_at', toIso).order('watched_at').limit(3000),
+  );
+}
+
 // Episodes marked as watched since a date (for the viewing pace).
 export async function fetchRecentEpisodes(since) {
   return unwrap(await supabase.from('watched_episodes').select('tmdb_id, watched_at').gte('watched_at', since).order('watched_at').limit(3000));
