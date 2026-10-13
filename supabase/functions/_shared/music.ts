@@ -502,7 +502,8 @@ export interface MusicContext {
 const KIND_BONUS: Record<ReleaseKind, number> = { Album: 8, EP: 3, Single: -2 };
 const KIND_NEW: Record<ReleaseKind, string> = { Album: 'Neues Album', EP: 'Neue EP', Single: 'Neue Single' };
 const TREND_BONUS: Record<Trend, number> = { rising: 5, core: 3, steady: 0, fading: 0 };
-const thousands = (n: number) => n.toLocaleString('de-CH');
+// Swiss grouping (18’000) without depending on the ICU data of the runtime.
+const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '’');
 
 // Why an artist's release matters to me – the strongest reason wins.
 function ownReason(a: Album, own: Artist) {
