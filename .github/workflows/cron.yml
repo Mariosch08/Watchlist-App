@@ -29,7 +29,12 @@ jobs:
           ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
         run: |
           if [ -z "$CRON_SECRET" ]; then exit 0; fi
-          curl -fsS --max-time 170 -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}'
+          # One call has a time budget; users that did not fit are done by the next call.
+          for attempt in 1 2 3 4; do
+            out=$(curl -fsS --max-time 170 -X POST "$URL" -H "x-cron-secret: $CRON_SECRET" -H "apikey: $ANON_KEY" -H "content-type: application/json" -d '{}')
+            echo "$out"
+            [ "$(echo "$out" | jq -r '.remaining // 0')" = "0" ] && break
+          done
 
   series-tracker:
     if: github.event.schedule == '15 5 * * *' || github.event_name == 'workflow_dispatch'

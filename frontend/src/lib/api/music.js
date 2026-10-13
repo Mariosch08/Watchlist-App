@@ -14,7 +14,13 @@ export async function fetchMusicFeed() {
 }
 
 export async function fetchArtists() {
-  return unwrap(await supabase.from('music_artists').select('artist_key, name, sources, rank, playcount, followed, image_url, updated_at').order('rank').limit(30));
+  return unwrap(
+    await supabase
+      .from('music_artists')
+      .select('artist_key, name, sources, rank, playcount, followed, image_url, affinity, trend, niche, listeners, popularity, loved, genres, updated_at')
+      .order('rank')
+      .limit(300),
+  );
 }
 
 export async function fetchConcerts() {

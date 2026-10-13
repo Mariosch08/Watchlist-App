@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
 import AlbumRow from '../components/music/AlbumRow.jsx';
+import MusicProfile from '../components/music/MusicProfile.jsx';
 import MusicSources from '../components/music/MusicSources.jsx';
 import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton, TitleRowSkeleton } from '../components/Skeleton.jsx';
@@ -90,6 +91,10 @@ export default function MusicPage() {
     }
   };
 
+  const today = new Date().toISOString().slice(0, 10);
+  const released = feed.data?.filter((f) => !f.release_date || f.release_date <= today);
+  const upcoming = feed.data?.filter((f) => f.release_date > today).sort((a, b) => a.release_date.localeCompare(b.release_date)) ?? [];
+
   const updated = artists.data?.[0]?.updated_at ? new Date(artists.data[0].updated_at).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' }) : null;
 
   if (settings.isError) return <Messages error={errorMessage(settings.error)} />;
@@ -127,41 +132,37 @@ export default function MusicPage() {
             </div>
             {feed.isError ? (
               <Messages error={errorMessage(feed.error)} />
-            ) : !feed.data ? (
+            ) : !released ? (
               <TitleRowSkeleton rows={3} />
-            ) : feed.data.length === 0 ? (
+            ) : released.length === 0 ? (
               <p className="empty">
                 {artists.data?.length ? 'In den letzten 30 Tagen ist von deinen Artists nichts Neues erschienen.' : 'Noch nichts berechnet. „Neu suchen“ holt deine Hördaten.'}
               </p>
             ) : (
               <ul className="list">
-                {feed.data.map((f) => (
+                {released.map((f) => (
                   <AlbumRow key={f.id} entry={f} pending={pending === f.id} onFeedback={feedback} />
                 ))}
               </ul>
             )}
           </section>
+          {upcoming.length > 0 && (
+            <section className="card" aria-labelledby="upcoming-title">
+              <h2 id="upcoming-title">Demnächst</h2>
+              <ul className="list">
+                {upcoming.map((f) => (
+                  <AlbumRow key={f.id} entry={f} pending={pending === f.id} onFeedback={feedback} />
+                ))}
+              </ul>
+            </section>
+          )}
           <section className="card" aria-labelledby="concerts-title">
             <h2 id="concerts-title">
               Konzerte in der Schweiz
             </h2>
             {concerts.isError ? <Messages error={errorMessage(concerts.error)} /> : concerts.data ? <Concerts concerts={concerts.data} /> : <TitleRowSkeleton rows={2} />}
           </section>
-          {artists.data?.length > 0 && (
-            <section className="card" aria-labelledby="artists-title">
-              <h2 id="artists-title">
-                Deine Top-Artists
-              </h2>
-              <ol className="chip-list">
-                {artists.data.slice(0, 20).map((a) => (
-                  <li key={a.artist_key} className="chip">
-                    {a.name}
-                  </li>
-                ))}
-              </ol>
-              <p className="caption">Aus {[...new Set(artists.data.flatMap((a) => a.sources))].map((s) => ({ lastfm: 'Last.fm', statsfm: 'stats.fm', spotify: 'Spotify' })[s]).join(' und ')}, letzte 6 Monate.</p>
-            </section>
-          )}
+          {artists.data?.length > 0 && <MusicProfile artists={artists.data} />}
         </>
       )}
     </>

@@ -392,6 +392,22 @@ describe('music (phase 8)', () => {
     await expect(asUser(db, a, 'delete from public.concerts')).rejects.toThrow(/permission denied/);
   });
 
+  it('stores the listening profile per artist and checks its ranges', async () => {
+    await asAdmin(
+      db,
+      "update public.music_artists set affinity = 0.82, trend = 'rising', niche = 0.6, listeners = 120000, popularity = 41, loved = 3, genres = '{indie,dream pop}' where user_id = $1",
+      [a],
+    );
+    expect(await rows(a, 'select affinity, trend, niche, listeners, popularity, loved, genres from public.music_artists')).toEqual([
+      { affinity: expect.closeTo(0.82, 5), trend: 'rising', niche: expect.closeTo(0.6, 5), listeners: 120000, popularity: 41, loved: 3, genres: ['indie', 'dream pop'] },
+    ]);
+    await expect(asAdmin(db, "update public.music_artists set affinity = 1.2")).rejects.toThrow(/check/);
+    await expect(asAdmin(db, "update public.music_artists set trend = 'viral'")).rejects.toThrow(/check/);
+    await expect(asAdmin(db, "update public.music_artists set popularity = 101")).rejects.toThrow(/check/);
+    await expect(asAdmin(db, "update public.music_artists set genres = '{a,b,c,d,e,f}'")).rejects.toThrow(/check/);
+    await expect(asUser(db, a, 'update public.music_artists set affinity = 1')).rejects.toThrow(/permission denied/);
+  });
+
   it('accepts valid Last.fm user names only', async () => {
     await asUser(db, a, "update public.user_settings set lastfm_username = 'mario_08' where user_id = $1", [a]);
     await expect(asUser(db, a, "update public.user_settings set lastfm_username = '1; drop' where user_id = $1", [a])).rejects.toThrow(/check constraint/);
