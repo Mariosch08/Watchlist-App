@@ -6,6 +6,7 @@ import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
 import MovieNights from '../components/lists/MovieNights.jsx';
 import SwipeDeck from '../components/lists/SwipeDeck.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton, TitleRowSkeleton } from '../components/Skeleton.jsx';
 import TitleRow from '../components/TitleRow.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
@@ -227,9 +228,9 @@ export default function ListDetailPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="list-title" tabIndex={-1}>
+        <PageTitle area="lists" id="list-title">
           {list.data.name}
-        </h1>
+        </PageTitle>
         <span className="caption">
           {ranked.length === 1 ? '1 Titel' : `${ranked.length} Titel`} · {people.data.length === 1 ? 'nur du' : `${people.data.length} Mitglieder`}
         </span>
@@ -245,7 +246,10 @@ export default function ListDetailPage() {
       {ranked.length > 0 && (
         <section className="card tonight-group" aria-labelledby="group-pick-title">
           <div className="card-head">
-            <h2 id="group-pick-title">Was schauen wir?</h2>
+            <h2 id="group-pick-title">
+              <Dices size={18} aria-hidden="true" />
+              Was schauen wir?
+            </h2>
             <button className="btn-compact" onClick={() => setTonight(groupPick(ranked) ?? 'none')}>
               <Dices size={16} aria-hidden="true" /> {tonight ? 'Nochmal' : 'Vorschlag'}
             </button>

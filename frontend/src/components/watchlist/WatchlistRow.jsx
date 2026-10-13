@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useUpdateItem } from '../../hooks/useWatchlist.js';
 import { RATINGS, STATUS_LABEL } from '../../lib/labels.js';
@@ -22,15 +23,15 @@ function WatchlistRow({ item, onRemove }) {
           value={item.my_rating ?? ''}
           onChange={(e) => save({ my_rating: e.target.value ? Number(e.target.value) : null })}
         >
-          <option value="">Nicht bewertet</option>
+          <option value="">Bewerten</option>
           {RATINGS.map((r) => (
             <option key={r} value={r}>
               {r} / 10
             </option>
           ))}
         </select>
-        <button className="btn-ghost btn-compact" onClick={() => onRemove(item)}>
-          Entfernen
+        <button className="btn-ghost btn-compact btn-icon" aria-label="Entfernen" title="Entfernen" onClick={() => onRemove(item)}>
+          <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
     </TitleRow>

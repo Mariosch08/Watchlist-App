@@ -3,6 +3,7 @@ import { CalendarPlus, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -58,7 +59,10 @@ function Subscribe() {
   };
   return (
     <section className="card" aria-labelledby="subscribe-title">
-      <h2 id="subscribe-title">Im eigenen Kalender abonnieren</h2>
+      <h2 id="subscribe-title">
+        <CalendarPlus size={18} aria-hidden="true" />
+        Im eigenen Kalender abonnieren
+      </h2>
       <p className="muted">
         Neue Folgen deiner Serien und Filmstarts aus deiner Watchlist erscheinen automatisch in Google Kalender, Apple Kalender oder Outlook. Der Link ist
         privat – teile ihn nicht.
@@ -92,9 +96,9 @@ export default function CalendarPage() {
   return (
     <>
       <section className="card" aria-labelledby="calendar-title">
-        <h1 id="calendar-title" tabIndex={-1}>
+        <PageTitle area="calendar" id="calendar-title">
           Kalender
-        </h1>
+        </PageTitle>
         <p className="muted">Die nächsten {DAYS} Tage: neue Folgen deiner Serien und Filmstarts aus deiner Watchlist.</p>
         {series.isError || watchlist.isError ? (
           <Messages error={errorMessage(series.error ?? watchlist.error)} />

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { connectSpotify, refreshMusic } from '../lib/api/music.js';
@@ -39,9 +40,9 @@ export default function SpotifyCallbackPage() {
 
   return (
     <section className="card" aria-labelledby="spotify-title">
-      <h1 id="spotify-title" tabIndex={-1}>
+      <PageTitle area="music" id="spotify-title">
         Spotify verbinden
-      </h1>
+      </PageTitle>
       {error ? (
         <>
           <Messages error={error} />

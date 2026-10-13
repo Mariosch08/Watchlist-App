@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import ContinueWatching from '../components/watchlist/ContinueWatching.jsx';
 import SearchResults from '../components/watchlist/SearchResults.jsx';
@@ -37,13 +37,10 @@ export default function WatchlistPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="watchlist-title" ref={headingRef} tabIndex={-1}>
+        <PageTitle area="watchlist" id="watchlist-title" headingRef={headingRef}>
           Meine Watchlist
-        </h1>
+        </PageTitle>
         {items && <span className="caption">{total === 1 ? '1 Titel' : `${total} Titel`}</span>}
-        <Link className="button-link btn-ghost btn-compact page-head-end" to="/import">
-          Import / Export
-        </Link>
       </div>
 
       <div className="search-field" role="search">

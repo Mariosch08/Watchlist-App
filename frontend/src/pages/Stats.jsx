@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Share2, Trophy } from 'lucide-react';
+import { Headphones, Heart, Hourglass, Shapes, Share2, Sparkles, Star, Trophy } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { BarList, MonthBars, RatingBars } from '../components/stats/Charts.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
@@ -115,9 +116,9 @@ export default function StatsPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="stats-title" tabIndex={-1}>
+        <PageTitle area="stats" id="stats-title">
           Statistik
-        </h1>
+        </PageTitle>
         {years.length > 1 && (
           <div className="segmented" role="group" aria-label="Jahr">
             {years.slice(0, 6).map((y) => (
@@ -131,7 +132,10 @@ export default function StatsPage() {
 
       <section className="card review" aria-labelledby="review-title">
         <div className="card-head">
-          <h2 id="review-title">Mein Filmjahr {year}</h2>
+          <h2 id="review-title">
+            <Sparkles size={18} aria-hidden="true" />
+            Mein Filmjahr {year}
+          </h2>
           <button className="btn-compact" disabled={sharing || stats.total === 0} onClick={share}>
             <Share2 size={16} aria-hidden="true" /> {sharing ? 'Wird erstellt …' : 'Als Bild teilen'}
           </button>
@@ -177,24 +181,36 @@ export default function StatsPage() {
       {stats.total > 0 && (
         <div className="grid-2">
           <section className="card" aria-labelledby="genres-title">
-            <h2 id="genres-title">Genres</h2>
+            <h2 id="genres-title">
+              <Shapes size={18} aria-hidden="true" />
+              Genres
+            </h2>
             <BarList
               items={stats.genres.map((g) => ({ key: g.id, label: g.name, value: g.count, display: g.average ? `${g.count} · Ø ${g.average}` : g.count }))}
             />
           </section>
           <section className="card" aria-labelledby="ratings-title">
-            <h2 id="ratings-title">Meine Bewertungen</h2>
+            <h2 id="ratings-title">
+              <Star size={18} aria-hidden="true" />
+              Meine Bewertungen
+            </h2>
             <RatingBars values={stats.ratings} />
           </section>
           {stats.decades.length > 0 && (
             <section className="card" aria-labelledby="decades-title">
-              <h2 id="decades-title">Filme nach Jahrzehnt</h2>
+              <h2 id="decades-title">
+                <Hourglass size={18} aria-hidden="true" />
+                Filme nach Jahrzehnt
+              </h2>
               <BarList items={stats.decades.map((d) => ({ key: d.decade, label: `${d.decade}er`, value: d.count }))} />
             </section>
           )}
           {stats.favourites.length > 0 && (
             <section className="card" aria-labelledby="favourites-title">
-              <h2 id="favourites-title">Lieblinge {year}</h2>
+              <h2 id="favourites-title">
+                <Heart size={18} aria-hidden="true" />
+                Lieblinge {year}
+              </h2>
               <ol className="favourites">
                 {stats.favourites.map((f) => (
                   <li key={`${f.media_type}-${f.tmdb_id}`}>
@@ -208,13 +224,19 @@ export default function StatsPage() {
       )}
 
       <section className="card" aria-labelledby="challenges-title">
-        <h2 id="challenges-title">Herausforderungen</h2>
+        <h2 id="challenges-title">
+          <Trophy size={18} aria-hidden="true" />
+          Herausforderungen
+        </h2>
         <Challenges list={goals} />
       </section>
 
       {artists.data?.length > 0 && (
         <section className="card" aria-labelledby="music-stats-title">
-          <h2 id="music-stats-title">Musik: meistgehört</h2>
+          <h2 id="music-stats-title">
+            <Headphones size={18} aria-hidden="true" />
+            Musik: meistgehört
+          </h2>
           {listening.data && (
             <dl className="stats">
               <div className="stat">

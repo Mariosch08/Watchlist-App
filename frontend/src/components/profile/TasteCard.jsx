@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { SlidersHorizontal } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUser } from '../../auth/AuthContext.jsx';
 import { useWatchlist } from '../../hooks/useWatchlist.js';
@@ -63,7 +64,10 @@ export default function TasteCard() {
   return (
     <section className="card" aria-labelledby="taste-title">
       <div className="card-head">
-        <h2 id="taste-title">Mein Geschmack</h2>
+        <h2 id="taste-title">
+          <SlidersHorizontal size={18} aria-hidden="true" />
+          Mein Geschmack
+        </h2>
         <div className="segmented" role="group" aria-label="Typ">
           {[['movie', 'Filme'], ['tv', 'Serien']].map(([id, text]) => (
             <button key={id} type="button" className="segment" aria-pressed={kind === id} onClick={() => setKind(id)}>

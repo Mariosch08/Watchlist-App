@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { ListChecks } from 'lucide-react';
 import { useState } from 'react';
 import { useUser } from '../../auth/AuthContext.jsx';
 import { useEpisodeMutation, useSeriesProgress } from '../../hooks/useSeries.js';
@@ -67,7 +68,10 @@ export default function SeriesProgress({ details }) {
   return (
     <section className="card" aria-labelledby="progress-title">
       <div className="card-head">
-        <h2 id="progress-title">Dein Fortschritt</h2>
+        <h2 id="progress-title">
+          <ListChecks size={18} aria-hidden="true" />
+          Dein Fortschritt
+        </h2>
         <span className="caption">
           {TMDB_STATUS[details.tmdb_status] ?? details.tmdb_status}
           {upcoming?.air_date && ` · nächste Folge ${episodeCode(upcoming.season_number, upcoming.episode_number)} am ${formatDate(upcoming.air_date)}`}

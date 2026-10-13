@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { detailPath, POSTER_LARGE_BASE, STATUS_LABEL, titleKey } from '../../lib/labels.js';
 
@@ -5,7 +6,10 @@ import { detailPath, POSTER_LARGE_BASE, STATUS_LABEL, titleKey } from '../../lib
 export default function SimilarTitles({ titles, byKey }) {
   return (
     <section className="card" aria-labelledby="similar-title">
-      <h2 id="similar-title">Ähnliche Titel</h2>
+      <h2 id="similar-title">
+        <Sparkles size={18} aria-hidden="true" />
+        Ähnliche Titel
+      </h2>
       {titles?.length ? (
         <ul className="poster-grid">
           {titles.map((t) => {

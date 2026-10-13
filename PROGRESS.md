@@ -3,7 +3,7 @@
 > Gedächtnis zwischen Sessions. Neue Session: nur diese Datei + `DECISIONS.md` lesen, dann die nächste offene Phase umsetzen.
 
 ## Status
-- **Erledigt:** alle Phasen 0–13 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik, 12 Mails & App, 13 Abschluss), Design „Quiet Ink“, Sicherheits-Fix
+- **Erledigt:** alle Phasen 0–13 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik, 12 Mails & App, 13 Abschluss), Design „Reel“ (ersetzt „Quiet Ink“, D58), Sicherheits-Fix
 - **Aktuelle Phase:** – (Plan abgeschlossen, live seit Merge von PR #8; Nachtrag stats.fm in eigenem PR)
 - **Nächster konkreter Schritt:** Nach dem Merge Rückmeldungen aus dem echten Betrieb einarbeiten; offene Review-Befunde (`docs/reviews/`) prüfen; Ideen unten.
 
@@ -31,9 +31,9 @@ frontend/src/
   hooks/                         useWatchlist, useSeries, useFriends, useAlerts, useMusic, useTitleSearch, useUrlView, useImportRunner …
   lib/api/                       einziger Ort für Supabase-Aufrufe (watchlist, tmdb, friends, lists, diary, music, streaming, settings …)
   lib/                           reine Logik mit Tests: watchlistView/Rules, series, tonight, lists, diary, stats, share, spotify (PKCE)
-  styles/                        tokens.css, base.css, components.css, motion.css (Quiet Ink)
+  styles/                        tokens.css, base.css, layout.css (App-Rahmen), components.css, motion.css (Reel)
 frontend/public/                 manifest.webmanifest, sw.js (App-Shell), Icons
-docs/SETUP.md, docs/DESIGN.md    Einrichtung (nur Browser) · Design-System „Quiet Ink“ (vor UI-Arbeit lesen)
+docs/SETUP.md, docs/DESIGN.md    Einrichtung (nur Browser) · Design-System „Reel“ (vor UI-Arbeit lesen)
 ```
 
 ### Befehle

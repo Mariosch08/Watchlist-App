@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, WandSparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import FeedRow from '../components/discover/FeedRow.jsx';
 import TonightPicker from '../components/discover/TonightPicker.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -99,15 +100,18 @@ export default function DiscoverPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="discover-title" tabIndex={-1}>
+        <PageTitle area="discover" id="discover-title">
           Für dich
-        </h1>
+        </PageTitle>
         {updated && <span className="caption">Stand {updated}</span>}
       </div>
       <TonightPicker weights={weights} />
       <section className="card" aria-labelledby="feed-title">
         <div className="card-head">
-          <h2 id="feed-title">Vorschläge</h2>
+          <h2 id="feed-title">
+            <WandSparkles size={18} aria-hidden="true" />
+            Vorschläge
+          </h2>
           <button className="btn-compact" disabled={refresh.isPending} onClick={() => refresh.mutate()}>
             <RefreshCw size={16} aria-hidden="true" />
             {refresh.isPending ? 'Wird berechnet …' : 'Neu berechnen'}

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Share2 } from 'lucide-react';
+import { Database, Headphones, KeyRound, Send, Settings2, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
 import MusicSources from '../components/music/MusicSources.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import StreamingCard from '../components/profile/StreamingCard.jsx';
 import TasteCard from '../components/profile/TasteCard.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
@@ -60,9 +61,9 @@ function ProfileForm({ profile }) {
   const otherError = save.error && save.error.code !== '23505' ? errorMessage(save.error) : '';
   return (
     <form className="card" onSubmit={onSubmit} aria-labelledby="profile-title">
-      <h1 id="profile-title" tabIndex={-1}>
+      <PageTitle area="profile" id="profile-title">
         Profil
-      </h1>
+      </PageTitle>
       <p className="muted">Angemeldet als {profile.email}</p>
       <label>
         Anzeigename
@@ -131,7 +132,10 @@ function PasswordCard() {
   };
   return (
     <form className="card" onSubmit={onSubmit} aria-labelledby="password-title">
-      <h2 id="password-title">Passwort und Geräte</h2>
+      <h2 id="password-title">
+        <KeyRound size={18} aria-hidden="true" />
+        Passwort und Geräte
+      </h2>
       <label>
         Neues Passwort
         <input type="password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} required value={password} onChange={(e) => setPw(e.target.value)} />
@@ -262,7 +266,10 @@ function InvitesCard() {
   const sorted = [...(invites.data ?? [])].sort((a, b) => (inviteState(a) === 'active' ? 0 : 1) - (inviteState(b) === 'active' ? 0 : 1));
   return (
     <section className="card" aria-labelledby="invites-title">
-      <h2 id="invites-title">Freunde einladen</h2>
+      <h2 id="invites-title">
+        <Send size={18} aria-hidden="true" />
+        Freunde einladen
+      </h2>
       <p className="muted">Nur für Admins sichtbar. Jeder Code ist 14 Tage gültig.</p>
       <form
         className="inline-form"
@@ -322,7 +329,10 @@ function SettingsCard() {
   });
   return (
     <section className="card" aria-labelledby="settings-title">
-      <h2 id="settings-title">Einstellungen</h2>
+      <h2 id="settings-title">
+        <Settings2 size={18} aria-hidden="true" />
+        Einstellungen
+      </h2>
       {settings.isError ? (
         <LoadError error={settings.error} onRetry={() => settings.refetch()} />
       ) : (
@@ -390,7 +400,10 @@ function DataCard() {
   const deleting = useSubmit();
   return (
     <section className="card" aria-labelledby="data-title">
-      <h2 id="data-title">Meine Daten</h2>
+      <h2 id="data-title">
+        <Database size={18} aria-hidden="true" />
+        Meine Daten
+      </h2>
       <p className="muted">
         Lade alle deine Daten herunter. Für IMDb oder Letterboxd gibt es den Export unter <Link to="/import">Import / Export</Link>.
       </p>
@@ -434,7 +447,10 @@ export default function ProfilePage() {
       <StreamingCard />
       <TasteCard />
       <section className="card" aria-labelledby="music-sources-title">
-        <h2 id="music-sources-title">Musik verbinden</h2>
+        <h2 id="music-sources-title">
+          <Headphones size={18} aria-hidden="true" />
+          Musik verbinden
+        </h2>
         <MusicSources />
       </section>
       <SettingsCard />

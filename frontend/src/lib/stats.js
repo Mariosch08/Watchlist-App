@@ -134,16 +134,16 @@ export const MONTH_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// Shareable year-in-review card (1080×1350 SVG, Quiet Ink colours); turned into a PNG in the browser.
+// Shareable year-in-review card (1080×1350 SVG, "Reel" dark colours); turned into a PNG in the browser.
 export function reviewSvg(stats, { name } = {}) {
   const W = 1080;
   const H = 1350;
-  // Quiet Ink tokens (light theme): text, text-muted, accent, canvas, border-strong.
-  const ink = '#1f1e1c';
-  const muted = '#5f5b55';
-  const accent = '#2f5d8a';
-  const paper = '#fbfaf7';
-  const line = '#d3cec6';
+  // Reel tokens (dark theme): text, text-muted, accent, canvas, border-strong.
+  const ink = '#ececf1';
+  const muted = '#a3a3b0';
+  const accent = '#9488ff';
+  const paper = '#0b0b0f';
+  const line = '#363641';
   const max = Math.max(1, ...stats.months);
   const bars = stats.months
     .map((m, i) => {
@@ -157,7 +157,7 @@ export function reviewSvg(stats, { name } = {}) {
     [stats.hours, 'Stunden Film'],
     [stats.cinema, 'im Kino'],
   ]
-    .map(([n, label], i) => `<text x="${90 + i * 320}" y="470" font-size="120" font-weight="600" fill="${ink}">${esc(n)}</text><text x="${94 + i * 320}" y="520" font-size="30" fill="${muted}">${esc(label)}</text>`)
+    .map(([n, label], i) => `<text x="${90 + i * 320}" y="470" font-size="120" font-weight="700" fill="${ink}">${esc(n)}</text><text x="${94 + i * 320}" y="520" font-size="30" fill="${muted}">${esc(label)}</text>`)
     .join('');
   const fav = stats.favourites[0];
   const genre = stats.genres[0];
@@ -166,10 +166,10 @@ export function reviewSvg(stats, { name } = {}) {
     fav ? `Höchste Bewertung: ${fav.title} (${fav.rating}/10)` : null,
     stats.bestMonth != null ? `Stärkster Monat: ${MONTH_LONG[stats.bestMonth]}` : null,
   ].filter(Boolean);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Source Serif 4, Georgia, serif">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif">
 <rect width="${W}" height="${H}" fill="${paper}"/>
 <text x="90" y="170" font-size="34" fill="${muted}" letter-spacing="4">${esc(name ? `${name.toUpperCase()} · ` : '')}JAHRESRÜCKBLICK</text>
-<text x="90" y="290" font-size="110" font-weight="600" fill="${ink}">Mein Filmjahr ${esc(stats.year)}</text>
+<text x="90" y="290" font-size="110" font-weight="700" fill="${ink}">Mein Filmjahr ${esc(stats.year)}</text>
 <line x1="90" y1="340" x2="${W - 90}" y2="340" stroke="${line}" stroke-width="2"/>
 ${numbers}
 ${lines.map((l, i) => `<text x="90" y="${640 + i * 60}" font-size="38" fill="${ink}">${esc(l.length > 52 ? `${l.slice(0, 51)}…` : l)}</text>`).join('')}

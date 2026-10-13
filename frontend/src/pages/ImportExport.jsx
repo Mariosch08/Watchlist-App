@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CircleQuestionMark, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages, useSubmit } from '../components/Form.jsx';
 import ImportProgress from '../components/ImportProgress.jsx';
 import NotFoundResolver from '../components/NotFoundResolver.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -66,9 +68,9 @@ function ImportCard() {
 
   return (
     <section className="card" aria-labelledby="import-title">
-      <h1 id="import-title" tabIndex={-1}>
+      <PageTitle area="import" id="import-title">
         Importieren
-      </h1>
+      </PageTitle>
       <ul className="steps">
         <li>
           <strong>IMDb:</strong> Auf <a href="https://www.imdb.com" target="_blank" rel="noreferrer">imdb.com</a> „Your ratings“ oder „Your watchlist“ öffnen →
@@ -146,7 +148,10 @@ function UnresolvedCard() {
   return (
     <section className="card" aria-labelledby="unresolved-title">
       <div className="card-head">
-        <h2 id="unresolved-title">Noch zuzuordnen</h2>
+        <h2 id="unresolved-title">
+          <CircleQuestionMark size={18} aria-hidden="true" />
+          Noch zuzuordnen
+        </h2>
         <span className="caption">{rows.length} Titel</span>
       </div>
       <p className="muted">Diese Titel wurden nicht automatisch gefunden. Ordne sie zu, deine Bewertung wird dabei übernommen.</p>
@@ -171,7 +176,10 @@ function ExportCard() {
   const toast = useToast();
   return (
     <section className="card" aria-labelledby="export-title">
-      <h2 id="export-title">Exportieren</h2>
+      <h2 id="export-title">
+        <Download size={18} aria-hidden="true" />
+        Exportieren
+      </h2>
       <p className="muted">
         Die IMDb-CSV enthält die Spalten <code>Const</code>, <code>Your Rating</code> und <code>Date Rated</code> und funktioniert mit gängigen Import-Tools wie
         Letterboxd oder Trakt. Die JSON-Datei enthält alle deine Daten.

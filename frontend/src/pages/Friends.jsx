@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Plus, UserPlus, X } from 'lucide-react';
+import { Check, Gift, Inbox, Plus, Radio, UserPlus, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import TitleRow from '../components/TitleRow.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
@@ -48,7 +49,10 @@ function AddFriend() {
   });
   return (
     <section className="card" aria-labelledby="add-friend-title">
-      <h2 id="add-friend-title">Freund:in hinzufügen</h2>
+      <h2 id="add-friend-title">
+        <UserPlus size={18} aria-hidden="true" />
+        Freund:in hinzufügen
+      </h2>
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -129,7 +133,10 @@ function FriendRows() {
     <>
       {incoming.length > 0 && (
         <section className="card" aria-labelledby="requests-title">
-          <h2 id="requests-title">Anfragen</h2>
+          <h2 id="requests-title">
+            <Inbox size={18} aria-hidden="true" />
+            Anfragen
+          </h2>
           <ul className="list">
             {incoming.map((f) => (
               <li key={f.user_id} className="title-row">
@@ -151,7 +158,10 @@ function FriendRows() {
         </section>
       )}
       <section className="card" aria-labelledby="friends-title">
-        <h2 id="friends-title">Freunde</h2>
+        <h2 id="friends-title">
+          <Users size={18} aria-hidden="true" />
+          Freunde
+        </h2>
         {friends.accepted.length === 0 && outgoing.length === 0 ? (
           <p className="empty">Noch keine Freunde. Schick oben eine Anfrage – danach seht ihr eure Bewertungen, euren Geschmacks-Match und könnt gemeinsame Listen anlegen.</p>
         ) : (
@@ -224,7 +234,10 @@ function Recommendations() {
   const inList = new Set((watchlist.data ?? []).map(titleKey));
   return (
     <section className="card" aria-labelledby="recs-title">
-      <h2 id="recs-title">Von Freunden empfohlen</h2>
+      <h2 id="recs-title">
+        <Gift size={18} aria-hidden="true" />
+        Von Freunden empfohlen
+      </h2>
       <ul className="list">
         {recs.data.map((r) => (
           <TitleRow
@@ -267,7 +280,10 @@ function Activity() {
   const settings = useQuery({ queryKey: queryKeys.settings(user.id), queryFn: fetchSettings });
   return (
     <section className="card" aria-labelledby="activity-title">
-      <h2 id="activity-title">Was deine Freunde schauen</h2>
+      <h2 id="activity-title">
+        <Radio size={18} aria-hidden="true" />
+        Was deine Freunde schauen
+      </h2>
       {activity.isError ? (
         <Messages error={errorMessage(activity.error)} />
       ) : !activity.data ? (
@@ -304,9 +320,9 @@ export default function FriendsPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="friends-page-title" tabIndex={-1}>
+        <PageTitle area="friends" id="friends-page-title">
           Freunde
-        </h1>
+        </PageTitle>
         <Link className="button-link btn-compact" to="/lists">
           Listen & Sammlungen
         </Link>

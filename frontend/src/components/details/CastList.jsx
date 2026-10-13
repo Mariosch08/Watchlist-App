@@ -1,10 +1,14 @@
+import { Users } from 'lucide-react';
 import { PROFILE_BASE } from '../../lib/labels.js';
 
 export default function CastList({ cast, crew }) {
   if (!cast?.length && !crew?.length) return null;
   return (
     <section className="card" aria-labelledby="cast-title">
-      <h2 id="cast-title">Besetzung</h2>
+      <h2 id="cast-title">
+        <Users size={18} aria-hidden="true" />
+        Besetzung
+      </h2>
       {crew?.length > 0 && (
         <dl className="crew">
           {crew.map((g) => (
