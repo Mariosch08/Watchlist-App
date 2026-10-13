@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { BellRing, PiggyBank, RefreshCw, Tv } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import TitleRow from '../components/TitleRow.jsx';
 import { useAlerts } from '../hooks/useAlerts.js';
@@ -45,7 +46,10 @@ function AlertsCard() {
   if (!list.length) return null;
   return (
     <section className="card" aria-labelledby="alerts-title">
-      <h2 id="alerts-title">Verfügbarkeits-Alarme</h2>
+      <h2 id="alerts-title">
+        <BellRing size={18} aria-hidden="true" />
+        Verfügbarkeits-Alarme
+      </h2>
       <ul className="list">
         {list.map((a) => (
           <li key={`${a.media_type}-${a.tmdb_id}`} className="title-row">
@@ -80,9 +84,9 @@ export default function StreamingPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="streaming-page-title" tabIndex={-1}>
+        <PageTitle area="streaming" id="streaming-page-title">
           Streaming
-        </h1>
+        </PageTitle>
         <button className="btn-compact" disabled={scan.isFetching} onClick={() => scan.refetch()}>
           <RefreshCw size={16} aria-hidden="true" />
           {scan.isFetching ? 'Wird geprüft …' : 'Neu prüfen'}
@@ -98,7 +102,10 @@ export default function StreamingPage() {
       ) : (
         <>
           <section className="card" aria-labelledby="optimizer-title">
-            <h2 id="optimizer-title">Welches Abo lohnt sich?</h2>
+            <h2 id="optimizer-title">
+              <PiggyBank size={18} aria-hidden="true" />
+              Welches Abo lohnt sich?
+            </h2>
             <dl className="stats">
               <div className="stat">
                 <dt>Mit deinen Abos</dt>
@@ -136,7 +143,10 @@ export default function StreamingPage() {
             {scan.data.limited && <p className="caption">Geprüft wurden die 300 zuletzt hinzugefügten offenen Titel.</p>}
           </section>
           <section className="card" aria-labelledby="providers-title">
-            <h2 id="providers-title">Titel pro Dienst</h2>
+            <h2 id="providers-title">
+              <Tv size={18} aria-hidden="true" />
+              Titel pro Dienst
+            </h2>
             <ul className="provider-stats">
               {summary.providers.slice(0, 15).map((p) => (
                 <ProviderRow

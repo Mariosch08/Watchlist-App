@@ -1,3 +1,4 @@
+import { MonitorPlay } from 'lucide-react';
 import { LOGO_BASE } from '../../lib/labels.js';
 import AvailabilityAlert from './AvailabilityAlert.jsx';
 
@@ -13,7 +14,10 @@ export default function StreamingProviders({ providers, details }) {
   return (
     <section className="card" aria-labelledby="streaming-title">
       <div className="card-head">
-        <h2 id="streaming-title">Streaming in der Schweiz</h2>
+        <h2 id="streaming-title">
+          <MonitorPlay size={18} aria-hidden="true" />
+          Streaming in der Schweiz
+        </h2>
       </div>
       {groups.length === 0 ? (
         <p className="empty">In der Schweiz derzeit bei keinem Anbieter verfügbar.</p>

@@ -1,4 +1,4 @@
-import { Shuffle } from 'lucide-react';
+import { Popcorn, Shuffle } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWatchlist } from '../../hooks/useWatchlist.js';
@@ -25,7 +25,10 @@ export default function TonightPicker({ weights }) {
   };
   return (
     <section className="card" aria-labelledby="tonight-title">
-      <h2 id="tonight-title">Was schauen wir heute?</h2>
+      <h2 id="tonight-title">
+        <Popcorn size={18} aria-hidden="true" />
+        Was schauen wir heute?
+      </h2>
       <div className="tonight-options">
         <div className="segmented" role="group" aria-label="Typ">
           {[['any', 'Egal'], ['movie', 'Film'], ['tv', 'Serie']].map(([id, label]) => (

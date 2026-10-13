@@ -1,3 +1,4 @@
+import { Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSeriesOverview } from '../../hooks/useSeries.js';
 import { useUpdateItem } from '../../hooks/useWatchlist.js';
@@ -29,7 +30,10 @@ export default function ContinueWatching() {
   return (
     <section className="card" aria-labelledby="continue-title">
       <div className="card-head">
-        <h2 id="continue-title">Weiterschauen</h2>
+        <h2 id="continue-title">
+          <Play size={18} aria-hidden="true" />
+          Weiterschauen
+        </h2>
         <Link to="/calendar" className="caption">
           Kalender
         </Link>

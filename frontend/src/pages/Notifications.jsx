@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { deleteNotification, fetchNotifications, markAllRead } from '../lib/api/notifications.js';
@@ -39,9 +40,9 @@ export default function NotificationsPage() {
   return (
     <section className="card" aria-labelledby="notifications-title">
       <div className="card-head">
-        <h1 id="notifications-title" tabIndex={-1}>
+        <PageTitle area="notifications" id="notifications-title">
           Benachrichtigungen
-        </h1>
+        </PageTitle>
         {unread > 0 && (
           <button className="btn-compact" onClick={() => readAll.mutate()}>
             Alle als gelesen markieren

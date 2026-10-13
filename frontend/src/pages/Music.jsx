@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { Disc3, MicVocal, Plug, RefreshCw, Ticket } from 'lucide-react';
 import { useState } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
 import AlbumRow from '../components/music/AlbumRow.jsx';
 import MusicSources from '../components/music/MusicSources.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton, TitleRowSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -97,9 +98,9 @@ export default function MusicPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="music-title" tabIndex={-1}>
+        <PageTitle area="music" id="music-title">
           Musik
-        </h1>
+        </PageTitle>
         {connected && (
           <button className="btn-compact" disabled={refresh.isPending} onClick={() => refresh.mutate()}>
             <RefreshCw size={16} aria-hidden="true" />
@@ -109,7 +110,10 @@ export default function MusicPage() {
       </div>
       {!connected ? (
         <section className="card" aria-labelledby="connect-title">
-          <h2 id="connect-title">Verbinde deine Musik</h2>
+          <h2 id="connect-title">
+            <Plug size={18} aria-hidden="true" />
+            Verbinde deine Musik
+          </h2>
           <p className="muted">Mit deinem Last.fm- oder stats.fm-Namen findet die App jeden Tag neue Alben deiner Lieblings-Artists und ähnlicher Bands – und Konzerte in der Schweiz.</p>
           <MusicSources />
         </section>
@@ -117,7 +121,10 @@ export default function MusicPage() {
         <>
           <section className="card" aria-labelledby="releases-title">
             <div className="card-head">
-              <h2 id="releases-title">Neu erschienen für dich</h2>
+              <h2 id="releases-title">
+                <Disc3 size={18} aria-hidden="true" />
+                Neu erschienen für dich
+              </h2>
               {updated && <span className="caption">Stand {updated}</span>}
             </div>
             {feed.isError ? (
@@ -137,12 +144,18 @@ export default function MusicPage() {
             )}
           </section>
           <section className="card" aria-labelledby="concerts-title">
-            <h2 id="concerts-title">Konzerte in der Schweiz</h2>
+            <h2 id="concerts-title">
+              <Ticket size={18} aria-hidden="true" />
+              Konzerte in der Schweiz
+            </h2>
             {concerts.isError ? <Messages error={errorMessage(concerts.error)} /> : concerts.data ? <Concerts concerts={concerts.data} /> : <TitleRowSkeleton rows={2} />}
           </section>
           {artists.data?.length > 0 && (
             <section className="card" aria-labelledby="artists-title">
-              <h2 id="artists-title">Deine Top-Artists</h2>
+              <h2 id="artists-title">
+                <MicVocal size={18} aria-hidden="true" />
+                Deine Top-Artists
+              </h2>
               <ol className="chip-list">
                 {artists.data.slice(0, 20).map((a) => (
                   <li key={a.artist_key} className="chip">

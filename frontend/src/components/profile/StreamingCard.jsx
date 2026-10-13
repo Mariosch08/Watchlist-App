@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MonitorPlay } from 'lucide-react';
 import { useUser } from '../../auth/AuthContext.jsx';
 import { fetchProviders } from '../../lib/api/discovery.js';
 import { fetchSettings, updateSettings } from '../../lib/api/settings.js';
@@ -36,7 +37,10 @@ export default function StreamingCard() {
   const list = (providers.data ?? []).slice(0, SHOWN);
   return (
     <section className="card" aria-labelledby="streaming-title">
-      <h2 id="streaming-title">Meine Streaming-Dienste</h2>
+      <h2 id="streaming-title">
+        <MonitorPlay size={18} aria-hidden="true" />
+        Meine Streaming-Dienste
+      </h2>
       <p className="muted">Vorschläge und „Was schauen wir heute?“ bevorzugen Titel, die du mit deinen Abos in der Schweiz schauen kannst.</p>
       {providers.isError || settings.isError ? (
         <Messages error={errorMessage(providers.error ?? settings.error)} />

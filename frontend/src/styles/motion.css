@@ -1,4 +1,4 @@
-/* Motion explains change only (hover/press, progress). No load animations. */
+/* Motion explains change only (hover/press, progress, sheets and toasts appearing). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -7,7 +7,13 @@
     animation: none !important;
   }
 
-  button:active:not(:disabled) {
+  button:active:not(:disabled),
+  .tab:active .tab-icon,
+  .poster-card:hover .poster-large {
+    transform: none;
+  }
+
+  .swipe-card {
     transform: none;
   }
 }

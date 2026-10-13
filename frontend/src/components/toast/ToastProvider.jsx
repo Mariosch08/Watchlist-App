@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-// Toasts per DESIGN.md: bottom-right, auto-dismiss after 5 s, errors stay until dismissed.
+// Toasts per DESIGN.md: bottom-right (above the tab bar on phones), auto-dismiss after 5 s, errors stay until dismissed.
 const ToastContext = createContext(null);
 const DEFAULT_DURATION = 5000;
 const MAX_VISIBLE = 3;

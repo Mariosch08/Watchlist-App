@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Layers, Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
+import PageTitle from '../components/PageTitle.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { createList, fetchLists, listKeys } from '../lib/api/lists.js';
@@ -28,12 +29,15 @@ export default function ListsPage() {
   return (
     <>
       <div className="page-head">
-        <h1 id="lists-title" tabIndex={-1}>
+        <PageTitle area="lists" id="lists-title">
           Listen & Sammlungen
-        </h1>
+        </PageTitle>
       </div>
       <section className="card" aria-labelledby="new-list-title">
-        <h2 id="new-list-title">Neue Liste</h2>
+        <h2 id="new-list-title">
+          <Plus size={18} aria-hidden="true" />
+          Neue Liste
+        </h2>
         <form
           className="inline-form"
           onSubmit={(e) => {
@@ -57,7 +61,10 @@ export default function ListsPage() {
         </p>
       </section>
       <section className="card" aria-labelledby="my-lists-title">
-        <h2 id="my-lists-title">Meine Listen</h2>
+        <h2 id="my-lists-title">
+          <Layers size={18} aria-hidden="true" />
+          Meine Listen
+        </h2>
         {lists.isError ? (
           <Messages error={errorMessage(lists.error)} />
         ) : !lists.data ? (
@@ -68,6 +75,9 @@ export default function ListsPage() {
           <ul className="list">
             {lists.data.map((l) => (
               <li key={l.id} className="title-row">
+                <span className="row-icon" aria-hidden="true">
+                  {count(l.list_members) > 1 ? <Users size={20} /> : <Layers size={20} />}
+                </span>
                 <div className="title-main">
                   <Link className="title-name title-link" to={`/lists/${l.id}`}>
                     {l.name}

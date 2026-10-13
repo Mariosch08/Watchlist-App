@@ -77,7 +77,10 @@ export default function DiaryLog({ details, entry }) {
   return (
     <section className="card" aria-labelledby="diary-title">
       <div className="card-head">
-        <h2 id="diary-title">Tagebuch</h2>
+        <h2 id="diary-title">
+          <NotebookPen size={18} aria-hidden="true" />
+          Tagebuch
+        </h2>
         {!open && (
           <button className="btn-compact" onClick={start}>
             <NotebookPen size={16} aria-hidden="true" /> Gesehen am … eintragen
