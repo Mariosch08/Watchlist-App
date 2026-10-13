@@ -14,7 +14,7 @@ export async function fetchMusicFeed() {
 }
 
 export async function fetchArtists() {
-  return unwrap(await supabase.from('music_artists').select('artist_key, name, sources, rank, followed, image_url, updated_at').order('rank').limit(30));
+  return unwrap(await supabase.from('music_artists').select('artist_key, name, sources, rank, playcount, followed, image_url, updated_at').order('rank').limit(30));
 }
 
 export async function fetchConcerts() {
@@ -22,6 +22,10 @@ export async function fetchConcerts() {
   return unwrap(
     await supabase.from('concerts').select('event_id, artist, name, venue, city, local_date, starts_at, url, image_url').gte('local_date', today).order('local_date'),
   );
+}
+
+export async function fetchMusicStats() {
+  return unwrap(await supabase.from('music_stats').select('streams, minutes, tracks, artists, albums, updated_at').maybeSingle());
 }
 
 export async function fetchSpotifyConnection() {

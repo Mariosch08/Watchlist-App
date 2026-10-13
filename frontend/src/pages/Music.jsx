@@ -71,7 +71,7 @@ export default function MusicPage() {
   const concerts = useQuery({ queryKey: queryKeys.music(user.id, 'concerts'), queryFn: fetchConcerts });
   const [pending, setPending] = useState(null);
 
-  const connected = Boolean(settings.data?.lastfm_username || spotify.data);
+  const connected = Boolean(settings.data?.lastfm_username || settings.data?.statsfm_username || spotify.data);
   const loading = !settings.data || (spotifyClientId && spotify.isPending);
 
   const feedback = async (entry, action) => {
@@ -110,7 +110,7 @@ export default function MusicPage() {
       {!connected ? (
         <section className="card" aria-labelledby="connect-title">
           <h2 id="connect-title">Verbinde deine Musik</h2>
-          <p className="muted">Mit deinem Last.fm-Namen findet die App jeden Tag neue Alben deiner Lieblings-Artists und ähnlicher Bands – und Konzerte in der Schweiz.</p>
+          <p className="muted">Mit deinem Last.fm- oder stats.fm-Namen findet die App jeden Tag neue Alben deiner Lieblings-Artists und ähnlicher Bands – und Konzerte in der Schweiz.</p>
           <MusicSources />
         </section>
       ) : (
@@ -150,7 +150,7 @@ export default function MusicPage() {
                   </li>
                 ))}
               </ol>
-              <p className="caption">Aus {[...new Set(artists.data.flatMap((a) => a.sources))].map((s) => (s === 'lastfm' ? 'Last.fm' : 'Spotify')).join(' und ')}, letzte 6 Monate.</p>
+              <p className="caption">Aus {[...new Set(artists.data.flatMap((a) => a.sources))].map((s) => ({ lastfm: 'Last.fm', statsfm: 'stats.fm', spotify: 'Spotify' })[s]).join(' und ')}, letzte 6 Monate.</p>
             </section>
           )}
         </>

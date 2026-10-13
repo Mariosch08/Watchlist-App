@@ -65,16 +65,29 @@ describe('MusicPage', () => {
     musicApi.refreshMusic.mockResolvedValue({ artists: 40, albums: 6, concerts: 2 });
     renderPage();
     const input = await screen.findByLabelText('Last.fm-Benutzername');
+    const form = input.closest('form');
     await userEvent.type(input, '8bad');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await userEvent.click(within(form).getByRole('button', { name: 'Speichern' }));
     expect(screen.getByText(/beginnen mit einem Buchstaben/)).toBeInTheDocument();
     expect(settingsApi.updateSettings).not.toHaveBeenCalled();
     await userEvent.clear(input);
     await userEvent.type(input, 'mario_08');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await userEvent.click(within(form).getByRole('button', { name: 'Speichern' }));
     expect(settingsApi.updateSettings).toHaveBeenCalledWith({ lastfm_username: 'mario_08' });
     expect(await screen.findByText('6 Neuerscheinungen und 2 Konzerte für 40 Artists gefunden.')).toBeInTheDocument();
     expect(musicApi.refreshMusic).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a stats.fm profile link and saves just the name', async () => {
+    settingsApi.fetchSettings.mockResolvedValue({ lastfm_username: null, statsfm_username: null });
+    settingsApi.updateSettings.mockResolvedValue({ lastfm_username: null, statsfm_username: 'mario08' });
+    musicApi.refreshMusic.mockResolvedValue({ artists: 50, albums: 3, concerts: 0 });
+    renderPage();
+    const input = await screen.findByLabelText('stats.fm-Profilname');
+    await userEvent.type(input, 'https://stats.fm/mario08');
+    await userEvent.click(within(input.closest('form')).getByRole('button', { name: 'Speichern' }));
+    expect(settingsApi.updateSettings).toHaveBeenCalledWith({ statsfm_username: 'mario08' });
+    expect(await screen.findByText('3 Neuerscheinungen für 50 Artists gefunden.')).toBeInTheDocument();
   });
 
   it('shows releases with reason and links, concerts and top artists; 👎 removes a release', async () => {
