@@ -161,7 +161,7 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(9);
+    expect(data.version).toBe(10);
     expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
@@ -371,7 +371,7 @@ describe('music (phase 8)', () => {
       asUser(db, b, "insert into public.spotify_connections (user_id, spotify_user_id, refresh_token_enc) values ($1, 'x', 'y')", [b]),
     ).rejects.toThrow(/permission denied/);
     const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
-    expect(exported.version).toBe(9);
+    expect(exported.version).toBe(10);
     expect(exported.spotify).toMatchObject({ display_name: 'Mario' });
     expect(JSON.stringify(exported)).not.toContain('v1.secret');
     expect(exported.music_artists).toHaveLength(1);

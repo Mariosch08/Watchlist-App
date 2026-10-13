@@ -42,7 +42,7 @@ describe('rotation plan', () => {
     await expect(asUser(db, a, "select public.save_rotation_plan('{}')")).rejects.toThrow(/check constraint/);
     await expect(asUser(db, a, "select public.save_rotation_plan('[]')")).rejects.toThrow(/check constraint/);
     const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
-    expect(exported.version).toBe(9);
+    expect(exported.version).toBe(10);
     expect(exported.rotation_plan.months).toHaveLength(2);
   });
 });
@@ -177,4 +177,18 @@ describe('small artists (D68)', () => {
 });
 
 const rows_ = (user) => rows(user, 'select artist_key, popularity, niche from public.music_artists order by artist_key');
+
+describe('music per day (calendar)', () => {
+  it('is private, read-only for clients and exported', async () => {
+    await asAdmin(db, "insert into public.music_days (user_id, day, plays, minutes, top_artist, source) values ($1, '2026-10-10', 40, 140, 'Phoenix', 'lastfm')", [a]);
+    await expect(asAdmin(db, "insert into public.music_days (user_id, day, plays, source) values ($1, '2026-10-11', -1, 'lastfm')", [a])).rejects.toThrow(/check constraint/);
+    expect(await rows(a, 'select top_artist from public.music_days')).toEqual([{ top_artist: 'Phoenix' }]);
+    expect(await rows(b, 'select * from public.music_days')).toEqual([]);
+    await expect(asUser(db, a, 'update public.music_days set plays = 1')).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, "insert into public.music_days (user_id, day, plays, source) values ($1, '2026-10-12', 1, 'lastfm')", [a])).rejects.toThrow(/permission denied/);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.version).toBe(10);
+    expect(exported.music_days).toEqual([expect.objectContaining({ day: '2026-10-10', top_artist: 'Phoenix' })]);
+  });
+});
 

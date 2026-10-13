@@ -12,10 +12,15 @@ import {
   type Concert,
   isoDaysAgo,
   lastfmArtistInfo,
+  daysToFill,
+  lastfmDay,
   lastfmMonth,
   monthBounds,
   monthsToFill,
+  statsfmDay,
   statsfmMonth,
+  zurichDayBounds,
+  zurichToday,
   lastfmGet,
   lastfmLovedArtists,
   lastfmSimilar,
@@ -366,6 +371,38 @@ async function fillMusicMonths(db: Db, userId: string, src: { lastfm: string | n
   return filled;
 }
 
+// Calendar: listening per local day (today, yesterday and a few older days per run).
+async function fillMusicDays(db: Db, userId: string, src: { lastfm: string | null; statsfm: string | null }) {
+  if (!src.statsfm && !(src.lastfm && env.lastfm)) return 0;
+  const { data: stored } = await db.from('music_days').select('day').eq('user_id', userId);
+  let filled = 0;
+  for (const day of daysToFill((stored ?? []).map((r) => r.day), zurichToday(Date.now()))) {
+    const { from, to } = zurichDayBounds(day);
+    let row = null;
+    if (src.statsfm) {
+      const name = encodeURIComponent(src.statsfm);
+      const range = `after=${from}&before=${to}`;
+      const [stats, artists] = await Promise.all([
+        statsfmGet(`/users/${name}/streams/stats?${range}`).catch(() => null),
+        statsfmGet(`/users/${name}/top/artists?${range}&limit=1`).catch(() => null),
+      ]);
+      row = statsfmDay(stats, artists);
+    }
+    if ((!row || !row.plays) && src.lastfm && env.lastfm) {
+      const range = { user: src.lastfm, from: Math.floor(from / 1000), to: Math.floor(to / 1000) };
+      const [recent, artists] = await Promise.all([
+        lastfmGet('user.getrecenttracks', { ...range, limit: 1 }, env.lastfm).catch(() => null),
+        lastfmGet('user.getweeklyartistchart', range, env.lastfm).catch(() => null),
+      ]);
+      row = lastfmDay(recent, artists) ?? row;
+    }
+    if (!row) continue;
+    const { error } = await db.from('music_days').upsert({ user_id: userId, day, ...row, updated_at: new Date().toISOString() });
+    if (!error) filled++;
+  }
+  return filled;
+}
+
 async function buildMusic(db: Db, userId: string, run: RunCache) {
   const [{ data: settings }, { data: conn }, { data: taste }, { data: answered }] = await Promise.all([
     db.from('user_settings').select('lastfm_username, statsfm_username').eq('user_id', userId).maybeSingle(),
@@ -383,6 +420,9 @@ async function buildMusic(db: Db, userId: string, run: RunCache) {
   } else if (!settings?.statsfm_username) {
     await db.from('music_stats').delete().eq('user_id', userId);
   }
+  await fillMusicDays(db, userId, { lastfm: settings?.lastfm_username ?? null, statsfm: settings?.statsfm_username ?? null }).catch((err) =>
+    console.error('music days', err),
+  );
   await fillMusicMonths(db, userId, { lastfm: settings?.lastfm_username ?? null, statsfm: settings?.statsfm_username ?? null }).catch((err) =>
     console.error('music months', err),
   );

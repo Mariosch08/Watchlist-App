@@ -9,12 +9,17 @@ import {
   lastfmGet,
   lastfmLovedArtists,
   lastfmSimilar,
+  daysToFill,
+  lastfmDay,
   lastfmMonth,
   lastfmTopArtists,
   mergeArtists,
   monthBounds,
   monthsToFill,
+  statsfmDay,
   statsfmMonth,
+  zurichDayBounds,
+  zurichToday,
   mergeSimilar,
   musicBrainzClient,
   nicheOf,
@@ -564,3 +569,38 @@ describe('listening per month (Life Reel)', () => {
     expect(statsfmMonth({ items: {} }, null, null)).toBeNull();
   });
 });
+
+describe('listening per day (calendar)', () => {
+  it('uses local Zurich days, also when the clocks change', () => {
+    const h = (d: string) => {
+      const { from, to } = zurichDayBounds(d);
+      return (to + 1 - from) / 3_600_000;
+    };
+    expect(zurichDayBounds('2026-10-14').from).toBe(Date.parse('2026-10-13T22:00:00Z'));
+    expect(h('2026-10-14')).toBe(24);
+    expect(h('2026-10-25')).toBe(25);
+    expect(h('2026-03-29')).toBe(23);
+    expect(zurichToday(Date.parse('2026-10-13T22:30:00Z'))).toBe('2026-10-14');
+    expect(zurichToday(Date.parse('2026-10-13T21:30:00Z'))).toBe('2026-10-13');
+  });
+
+  it('refreshes today and yesterday and fills older days a few at a time', () => {
+    expect(daysToFill([], '2026-10-14', 2)).toEqual(['2026-10-14', '2026-10-13', '2026-10-12', '2026-10-11']);
+    expect(daysToFill(['2026-10-12'], '2026-10-14', 1)).toEqual(['2026-10-14', '2026-10-13', '2026-10-11']);
+  });
+
+  it('reads plays and the top artist of a day', () => {
+    expect(lastfmDay({ recenttracks: { '@attr': { total: '40' } } }, { weeklyartistchart: { artist: { name: 'Phoenix', playcount: '12' } } })).toEqual({
+      plays: 40,
+      minutes: 140,
+      minutes_estimated: true,
+      top_artist: 'Phoenix',
+      top_artist_plays: 12,
+      source: 'lastfm',
+    });
+    expect(lastfmDay(null, null)).toBeNull();
+    expect(statsfmDay({ items: { count: 30, durationMs: 5_400_000 } }, { items: [{ streams: 9, artist: { name: 'Big Thief' } }] })).toMatchObject({ plays: 30, minutes: 90, top_artist: 'Big Thief', top_artist_plays: 9 });
+    expect(statsfmDay({ items: {} }, null)).toBeNull();
+  });
+});
+

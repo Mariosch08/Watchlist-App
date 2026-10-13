@@ -714,3 +714,77 @@ export function statsfmMonth(stats: any, artists: any, tracks: any) {
     source: 'statsfm' as const,
   };
 }
+
+// ---- Listening per day (calendar) ---------------------------------------------------------------
+
+export const CALENDAR_DAYS = 35; // days are only looked up this far back
+
+// Days are local days in Zurich, so a late-evening session counts for the day it happened on.
+let zurichFormat: Intl.DateTimeFormat | undefined;
+const zurichParts = (ms: number) => {
+  zurichFormat ??= new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Zurich',
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const p = Object.fromEntries(zurichFormat.formatToParts(ms).map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, wall: Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) };
+};
+const zurichOffset = (ms: number) => zurichParts(ms).wall - Math.floor(ms / 1000) * 1000;
+// Local midnight: guess with the offset at UTC midnight, then correct with the offset at the guess (exact across DST).
+const zurichMidnight = (day: string) => {
+  const utc = Date.parse(`${day.slice(0, 10)}T00:00:00Z`);
+  return utc - zurichOffset(utc - zurichOffset(utc));
+};
+
+export const zurichToday = (nowMs: number) => zurichParts(nowMs).date;
+
+// Milliseconds of the local day (23 or 25 hours when the clocks change).
+export function zurichDayBounds(day: string) {
+  return { from: zurichMidnight(day), to: zurichMidnight(isoDaysAgo(day.slice(0, 10), -1)) - 1 };
+}
+
+// Today and yesterday are always refreshed; older days of the last weeks are filled in a few per run, newest first.
+export function daysToFill(stored: string[], today: string, perRun = 7, back = CALENDAR_DAYS) {
+  const have = new Set(stored.map((d) => d.slice(0, 10)));
+  const older = Array.from({ length: Math.max(0, back - 2) }, (_, i) => isoDaysAgo(today, i + 2)).filter((d) => !have.has(d));
+  return [today, isoDaysAgo(today, 1), ...older.slice(0, perRun)];
+}
+
+const count = (v: unknown) => (v === null || v === undefined || v === '' ? NaN : Number(v));
+
+// user.getrecenttracks (limit 1, total in @attr) and user.getweeklyartistchart for the day.
+export function lastfmDay(recent: any, artists: any) {
+  const plays = count(recent?.recenttracks?.['@attr']?.total);
+  if (!Number.isFinite(plays)) return null;
+  const artist = firstOf(artists?.weeklyartistchart?.artist);
+  const artistPlays = count(artist?.playcount);
+  return {
+    plays: Math.max(0, Math.round(plays)),
+    minutes: Math.max(0, Math.round(plays * MINUTES_PER_PLAY)),
+    minutes_estimated: true,
+    top_artist: typeof artist?.name === 'string' && artist.name.trim() ? artist.name.slice(0, 200) : null,
+    top_artist_plays: Number.isFinite(artistPlays) ? Math.max(0, Math.round(artistPlays)) : null,
+    source: 'lastfm' as const,
+  };
+}
+
+// stats.fm /streams/stats and /top/artists (limit 1) with after/before of the day.
+export function statsfmDay(stats: any, artists: any) {
+  const s = stats?.items;
+  if (!s || !Number.isFinite(s.count)) return null;
+  const artist = firstOf(artists?.items);
+  return {
+    plays: Math.max(0, Math.round(s.count)),
+    minutes: Number.isFinite(s.durationMs) ? Math.max(0, Math.round(s.durationMs / 60_000)) : null,
+    minutes_estimated: false,
+    top_artist: typeof artist?.artist?.name === 'string' && artist.artist.name.trim() ? artist.artist.name.slice(0, 200) : null,
+    top_artist_plays: Number.isFinite(artist?.streams) ? Math.max(0, Math.round(artist.streams)) : null,
+    source: 'statsfm' as const,
+  };
+}
