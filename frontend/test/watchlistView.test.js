@@ -11,12 +11,14 @@ const items = [
 
 describe('normalizeView / viewToParams', () => {
   it('falls back to defaults for unknown values', () => {
-    expect(normalizeView(new URLSearchParams('s=bogus&type=book&sort=x'))).toEqual({ segment: 'next', type: 'all', sort: 'added', q: '' });
+    expect(normalizeView(new URLSearchParams('s=bogus&type=book&sort=x'))).toEqual({ segment: 'next', type: 'all', sort: 'added', q: '', layout: 'grid' });
   });
   it('uses the segment default sort and leaves defaults out of the URL', () => {
     expect(normalizeView({ s: 'watched' }).sort).toBe('watched');
     expect(viewToParams({ segment: 'next', type: 'all', sort: 'added', q: '' })).toEqual({});
     expect(viewToParams({ segment: 'watched', type: 'tv', sort: 'title', q: 'lo' })).toEqual({ s: 'watched', type: 'tv', sort: 'title', q: 'lo' });
+    expect(viewToParams({ ...normalizeView({}), layout: 'list' })).toEqual({ ansicht: 'liste' });
+    expect(normalizeView(new URLSearchParams('ansicht=liste')).layout).toBe('list');
   });
 });
 

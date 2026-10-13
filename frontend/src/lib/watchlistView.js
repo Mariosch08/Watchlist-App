@@ -35,7 +35,8 @@ export function normalizeView(params) {
   const type = has(TYPES, get('type')) ? get('type') : 'all';
   const sort = has(SORTS, get('sort')) ? get('sort') : defaultSort(segment);
   const q = get('q').slice(0, 100);
-  return { segment, type, sort, q };
+  const layout = get('ansicht') === 'liste' ? 'list' : 'grid';
+  return { segment, type, sort, q, layout };
 }
 
 // URL parameters for a view, leaving out defaults so the plain URL stays "/".
@@ -45,6 +46,7 @@ export function viewToParams(view) {
   if (view.type !== 'all') params.type = view.type;
   if (view.sort !== defaultSort(view.segment)) params.sort = view.sort;
   if (view.q.trim()) params.q = view.q;
+  if (view.layout === 'list') params.ansicht = 'liste';
   return params;
 }
 

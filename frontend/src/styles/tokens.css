@@ -1,30 +1,31 @@
-/* Design tokens – "Reel": a clear, compact tool UI for films, series and music.
-   Components use these variables only. Light is the base; dark is a full set, not an inversion. */
+/* Design tokens – "Reel", clean edition: neutral surfaces, one typeface, ink instead of a brand colour.
+   Posters and images bring the colour. Components use these variables only.
+   Light is the base; dark is a full set, not an inversion. */
 :root {
   /* Surfaces */
-  --color-canvas: #f5f5f7;
+  --color-canvas: #ffffff;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-surface-sunken: #efeff3;
-  --color-surface-hover: #f1f1f5;
-  --color-field: #ffffff;
-  --color-bar: rgb(255 255 255 / 0.82);
-  --color-border: #e4e4ea;
-  --color-border-strong: #cfcfd8;
+  --color-surface-sunken: #f4f4f5;
+  --color-surface-hover: #f4f4f5;
+  --color-field: #f4f4f5;
+  --color-bar: rgb(255 255 255 / 0.86);
+  --color-border: #ebebee;
+  --color-border-strong: #d9d9de;
 
   /* Text */
-  --color-text: #15151a;
-  --color-text-muted: #5b5b68;
-  --color-text-subtle: #7e7e8c;
+  --color-text: #131316;
+  --color-text-muted: #62626b;
+  --color-text-subtle: #8b8b94;
 
-  /* Accent: electric violet. Star: rating gold. */
-  --color-accent: #5b4bf0;
-  --color-accent-hover: #4a3ad8;
-  --color-accent-soft: #eeecff;
-  --color-accent-line: #cbc5ff;
+  /* Accent = ink (text colour): primary buttons, active states, data. Links are underlined. */
+  --color-accent: #131316;
+  --color-accent-hover: #2b2b31;
+  --color-accent-soft: #f1f1f3;
+  --color-accent-line: #d9d9de;
   --color-on-accent: #ffffff;
-  --color-star: #d98a04;
-  --gradient-brand: linear-gradient(135deg, #7c5cff 0%, #5b4bf0 45%, #e0458f 100%);
+  --color-star: #131316;
+  --gradient-brand: #131316;
 
   /* Status */
   --color-success: #15803d;
@@ -39,10 +40,10 @@
   --shadow-lg: 0 16px 40px rgb(16 16 24 / 0.14), 0 2px 8px rgb(16 16 24 / 0.06);
   --overlay: rgb(10 10 16 / 0.45);
 
-  /* Type: Space Grotesk for headings and numbers, Inter for text, JetBrains Mono for data. */
-  --font-display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
+  /* Type: Inter for everything; numbers use tabular figures. */
+  --font-display: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --text-display: 36px;
   --text-h1: 28px;
   --text-h1-mobile: 24px;
@@ -105,27 +106,27 @@
   --provider-logo: 36px;
 }
 
-/* Dark set: deep blue-black, layered surfaces, brighter accent. */
+/* Dark set: neutral near-black, light ink. */
 :root[data-theme='dark'] {
-  --color-canvas: #0b0b0f;
-  --color-surface: #131318;
-  --color-surface-raised: #1a1a21;
-  --color-surface-sunken: #0f0f13;
-  --color-surface-hover: #1c1c24;
-  --color-field: #0e0e12;
-  --color-bar: rgb(15 15 20 / 0.78);
-  --color-border: #24242d;
-  --color-border-strong: #363641;
-  --color-text: #ececf1;
-  --color-text-muted: #a3a3b0;
-  --color-text-subtle: #7b7b89;
-  --color-accent: #9488ff;
-  --color-accent-hover: #ada3ff;
-  --color-accent-soft: #1f1c3a;
-  --color-accent-line: #3d3878;
-  --color-on-accent: #0b0b0f;
-  --color-star: #fbbf24;
-  --gradient-brand: linear-gradient(135deg, #8b6cff 0%, #6a5cff 45%, #ec5a9e 100%);
+  --color-canvas: #0c0c0e;
+  --color-surface: #0c0c0e;
+  --color-surface-raised: #17171a;
+  --color-surface-sunken: #1a1a1d;
+  --color-surface-hover: #1a1a1d;
+  --color-field: #1a1a1d;
+  --color-bar: rgb(12 12 14 / 0.84);
+  --color-border: #232327;
+  --color-border-strong: #34343a;
+  --color-text: #f2f2f4;
+  --color-text-muted: #a1a1aa;
+  --color-text-subtle: #76767f;
+  --color-accent: #f2f2f4;
+  --color-accent-hover: #ffffff;
+  --color-accent-soft: #1f1f23;
+  --color-accent-line: #34343a;
+  --color-on-accent: #0c0c0e;
+  --color-star: #f2f2f4;
+  --gradient-brand: #f2f2f4;
   --color-success: #4ade80;
   --color-success-soft: #0f2618;
   --color-warning: #fbbf24;
@@ -140,25 +141,25 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-canvas: #0b0b0f;
-    --color-surface: #131318;
-    --color-surface-raised: #1a1a21;
-    --color-surface-sunken: #0f0f13;
-    --color-surface-hover: #1c1c24;
-    --color-field: #0e0e12;
-    --color-bar: rgb(15 15 20 / 0.78);
-    --color-border: #24242d;
-    --color-border-strong: #363641;
-    --color-text: #ececf1;
-    --color-text-muted: #a3a3b0;
-    --color-text-subtle: #7b7b89;
-    --color-accent: #9488ff;
-    --color-accent-hover: #ada3ff;
-    --color-accent-soft: #1f1c3a;
-    --color-accent-line: #3d3878;
-    --color-on-accent: #0b0b0f;
-    --color-star: #fbbf24;
-    --gradient-brand: linear-gradient(135deg, #8b6cff 0%, #6a5cff 45%, #ec5a9e 100%);
+    --color-canvas: #0c0c0e;
+    --color-surface: #0c0c0e;
+    --color-surface-raised: #17171a;
+    --color-surface-sunken: #1a1a1d;
+    --color-surface-hover: #1a1a1d;
+    --color-field: #1a1a1d;
+    --color-bar: rgb(12 12 14 / 0.84);
+    --color-border: #232327;
+    --color-border-strong: #34343a;
+    --color-text: #f2f2f4;
+    --color-text-muted: #a1a1aa;
+    --color-text-subtle: #76767f;
+    --color-accent: #f2f2f4;
+    --color-accent-hover: #ffffff;
+    --color-accent-soft: #1f1f23;
+    --color-accent-line: #34343a;
+    --color-on-accent: #0c0c0e;
+    --color-star: #f2f2f4;
+    --gradient-brand: #f2f2f4;
     --color-success: #4ade80;
     --color-success-soft: #0f2618;
     --color-warning: #fbbf24;

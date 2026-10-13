@@ -60,7 +60,6 @@ function Subscribe() {
   return (
     <section className="card" aria-labelledby="subscribe-title">
       <h2 id="subscribe-title">
-        <CalendarPlus size={18} aria-hidden="true" />
         Im eigenen Kalender abonnieren
       </h2>
       <p className="muted">

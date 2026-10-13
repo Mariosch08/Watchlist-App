@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useRemoveItem } from '../../hooks/useWatchlist.js';
 import { titleKey } from '../../lib/labels.js';
 import { SEGMENTS } from '../../lib/watchlistView.js';
+import WatchlistCard from './WatchlistCard.jsx';
 import WatchlistRow from './WatchlistRow.jsx';
 
 const STEP = 60;
@@ -61,11 +62,19 @@ export default function WatchlistList({ items, total, view, counts, onResetFilte
   const shown = items.slice(0, limit);
   return (
     <>
-      <ul className="list">
-        {shown.map((item) => (
-          <WatchlistRow key={titleKey(item)} item={item} onRemove={onRemove} />
-        ))}
-      </ul>
+      {view.layout === 'grid' ? (
+        <ul className="poster-grid poster-grid--fill">
+          {shown.map((item) => (
+            <WatchlistCard key={titleKey(item)} item={item} />
+          ))}
+        </ul>
+      ) : (
+        <ul className="list">
+          {shown.map((item) => (
+            <WatchlistRow key={titleKey(item)} item={item} onRemove={onRemove} />
+          ))}
+        </ul>
+      )}
       {items.length > limit && (
         <div className="actions">
           <button type="button" onClick={() => setLimit((l) => l + STEP)}>

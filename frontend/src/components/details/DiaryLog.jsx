@@ -78,7 +78,6 @@ export default function DiaryLog({ details, entry }) {
     <section className="card" aria-labelledby="diary-title">
       <div className="card-head">
         <h2 id="diary-title">
-          <NotebookPen size={18} aria-hidden="true" />
           Tagebuch
         </h2>
         {!open && (

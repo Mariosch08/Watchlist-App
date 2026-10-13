@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { SlidersHorizontal } from 'lucide-react';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUser } from '../../auth/AuthContext.jsx';
 import { useWatchlist } from '../../hooks/useWatchlist.js';
@@ -65,7 +65,6 @@ export default function TasteCard() {
     <section className="card" aria-labelledby="taste-title">
       <div className="card-head">
         <h2 id="taste-title">
-          <SlidersHorizontal size={18} aria-hidden="true" />
           Mein Geschmack
         </h2>
         <div className="segmented" role="group" aria-label="Typ">

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2, TrendingUp } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -61,7 +61,6 @@ export default function DiaryPage() {
         <>
           <section className="card" aria-labelledby="diary-year-title">
             <h2 id="diary-year-title">
-              <TrendingUp size={18} aria-hidden="true" />
               {year} bisher
             </h2>
             <dl className="stats">

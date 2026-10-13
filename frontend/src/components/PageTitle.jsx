@@ -1,16 +1,8 @@
-import { AREA_ICON } from './navigation.js';
-
-// Page heading with the symbol of its area. Layout moves focus here after navigation.
-export default function PageTitle({ area, id, headingRef, children }) {
-  const Icon = AREA_ICON[area];
+// Page heading. Layout moves focus here after navigation. (`area` is kept for callers; titles stay text-only.)
+export default function PageTitle({ area: _area, id, headingRef, children }) {
   return (
     <h1 id={id} ref={headingRef} tabIndex={-1} className="page-title">
-      {Icon && (
-        <span className="page-icon" aria-hidden="true">
-          <Icon size={20} />
-        </span>
-      )}
-      <span>{children}</span>
+      {children}
     </h1>
   );
 }

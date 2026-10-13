@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleQuestionMark, Download } from 'lucide-react';
+
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -149,7 +149,6 @@ function UnresolvedCard() {
     <section className="card" aria-labelledby="unresolved-title">
       <div className="card-head">
         <h2 id="unresolved-title">
-          <CircleQuestionMark size={18} aria-hidden="true" />
           Noch zuzuordnen
         </h2>
         <span className="caption">{rows.length} Titel</span>
@@ -177,7 +176,6 @@ function ExportCard() {
   return (
     <section className="card" aria-labelledby="export-title">
       <h2 id="export-title">
-        <Download size={18} aria-hidden="true" />
         Exportieren
       </h2>
       <p className="muted">

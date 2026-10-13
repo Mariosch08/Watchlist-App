@@ -1,4 +1,4 @@
-import { Popcorn, Shuffle } from 'lucide-react';
+import { Shuffle } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWatchlist } from '../../hooks/useWatchlist.js';
@@ -26,7 +26,6 @@ export default function TonightPicker({ weights }) {
   return (
     <section className="card" aria-labelledby="tonight-title">
       <h2 id="tonight-title">
-        <Popcorn size={18} aria-hidden="true" />
         Was schauen wir heute?
       </h2>
       <div className="tonight-options">

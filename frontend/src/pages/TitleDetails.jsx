@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowLeft, Play, Star } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Star } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import CastList from '../components/details/CastList.jsx';
@@ -122,7 +122,6 @@ function Details({ details: d }) {
       {d.trailer && (
         <section className="card" aria-labelledby="trailer-title">
           <h2 id="trailer-title">
-            <Play size={18} aria-hidden="true" />
             Trailer
           </h2>
           <Trailer key={d.trailer.key} trailer={d.trailer} title={d.title} />

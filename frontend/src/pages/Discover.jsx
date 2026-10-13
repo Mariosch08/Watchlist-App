@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, WandSparkles } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -109,7 +109,6 @@ export default function DiscoverPage() {
       <section className="card" aria-labelledby="feed-title">
         <div className="card-head">
           <h2 id="feed-title">
-            <WandSparkles size={18} aria-hidden="true" />
             Vorschläge
           </h2>
           <button className="btn-compact" disabled={refresh.isPending} onClick={() => refresh.mutate()}>
@@ -163,7 +162,7 @@ export default function DiscoverPage() {
         ) : entries.length === 0 ? (
           <p className="empty">Keine Vorschläge passen zu diesen Filtern.</p>
         ) : (
-          <ul className="list">
+          <ul className="poster-grid poster-grid--fill">
             {entries.map((f) => (
               <FeedRow key={f.id} entry={f} inList={inList.has(titleKey(feedToTitle(f)))} pending={pending === f.id} onFeedback={feedback} onAdd={add} />
             ))}
