@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { BellRing, PiggyBank, RefreshCw, Tv } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -47,7 +47,6 @@ function AlertsCard() {
   return (
     <section className="card" aria-labelledby="alerts-title">
       <h2 id="alerts-title">
-        <BellRing size={18} aria-hidden="true" />
         Verfügbarkeits-Alarme
       </h2>
       <ul className="list">
@@ -103,7 +102,6 @@ export default function StreamingPage() {
         <>
           <section className="card" aria-labelledby="optimizer-title">
             <h2 id="optimizer-title">
-              <PiggyBank size={18} aria-hidden="true" />
               Welches Abo lohnt sich?
             </h2>
             <dl className="stats">
@@ -144,7 +142,6 @@ export default function StreamingPage() {
           </section>
           <section className="card" aria-labelledby="providers-title">
             <h2 id="providers-title">
-              <Tv size={18} aria-hidden="true" />
               Titel pro Dienst
             </h2>
             <ul className="provider-stats">

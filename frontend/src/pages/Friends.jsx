@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Gift, Inbox, Plus, Radio, UserPlus, Users, X } from 'lucide-react';
+import { Check, Plus, UserPlus, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -50,7 +50,6 @@ function AddFriend() {
   return (
     <section className="card" aria-labelledby="add-friend-title">
       <h2 id="add-friend-title">
-        <UserPlus size={18} aria-hidden="true" />
         Freund:in hinzufügen
       </h2>
       <form
@@ -134,7 +133,6 @@ function FriendRows() {
       {incoming.length > 0 && (
         <section className="card" aria-labelledby="requests-title">
           <h2 id="requests-title">
-            <Inbox size={18} aria-hidden="true" />
             Anfragen
           </h2>
           <ul className="list">
@@ -159,7 +157,6 @@ function FriendRows() {
       )}
       <section className="card" aria-labelledby="friends-title">
         <h2 id="friends-title">
-          <Users size={18} aria-hidden="true" />
           Freunde
         </h2>
         {friends.accepted.length === 0 && outgoing.length === 0 ? (
@@ -235,7 +232,6 @@ function Recommendations() {
   return (
     <section className="card" aria-labelledby="recs-title">
       <h2 id="recs-title">
-        <Gift size={18} aria-hidden="true" />
         Von Freunden empfohlen
       </h2>
       <ul className="list">
@@ -281,7 +277,6 @@ function Activity() {
   return (
     <section className="card" aria-labelledby="activity-title">
       <h2 id="activity-title">
-        <Radio size={18} aria-hidden="true" />
         Was deine Freunde schauen
       </h2>
       {activity.isError ? (

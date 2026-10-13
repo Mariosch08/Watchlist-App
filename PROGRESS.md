@@ -4,7 +4,7 @@
 
 ## Status
 - **Erledigt:** alle Phasen 0–13 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik, 12 Mails & App, 13 Abschluss), Design „Reel“ (ersetzt „Quiet Ink“, D58), Sicherheits-Fix
-- **Aktuelle Phase:** – (Plan abgeschlossen, live seit Merge von PR #8; Nachtrag stats.fm in eigenem PR)
+- **Aktuelle Phase:** – (Plan abgeschlossen und live; danach: stats.fm (D57), Design „Reel“ (D58) und „Reel clean“ (D59))
 - **Nächster konkreter Schritt:** Nach dem Merge Rückmeldungen aus dem echten Betrieb einarbeiten; offene Review-Befunde (`docs/reviews/`) prüfen; Ideen unten.
 
 ## Repo-Überblick

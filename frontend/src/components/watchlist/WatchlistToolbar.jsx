@@ -1,3 +1,4 @@
+import { LayoutGrid, List } from 'lucide-react';
 import { SEGMENTS, SORTS, TYPES } from '../../lib/watchlistView.js';
 
 // Segment tabs with counts, type filter and sort order. All state lives in the URL.
@@ -33,6 +34,14 @@ export default function WatchlistToolbar({ view, counts, onChange }) {
             </option>
           ))}
         </select>
+        <div className="segmented segmented--icons" role="group" aria-label="Ansicht">
+          <button type="button" className="segment btn-icon" aria-pressed={view.layout === 'grid'} aria-label="Raster" title="Raster" onClick={() => onChange({ layout: 'grid' })}>
+            <LayoutGrid size={16} aria-hidden="true" />
+          </button>
+          <button type="button" className="segment btn-icon" aria-pressed={view.layout === 'list'} aria-label="Liste" title="Liste" onClick={() => onChange({ layout: 'list' })}>
+            <List size={16} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );

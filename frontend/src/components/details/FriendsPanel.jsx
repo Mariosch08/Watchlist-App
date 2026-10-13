@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Send, UsersRound } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../auth/AuthContext.jsx';
@@ -44,7 +44,6 @@ export default function FriendsPanel({ details }) {
   return (
     <section className="card" aria-labelledby="friends-panel-title">
       <h2 id="friends-panel-title">
-        <UsersRound size={18} aria-hidden="true" />
         Mit Freunden
       </h2>
       {hasFriends && (

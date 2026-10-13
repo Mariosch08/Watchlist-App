@@ -16,7 +16,7 @@
   padding: var(--space-6) var(--space-6) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-7);
   min-width: 0;
 }
 
@@ -64,7 +64,6 @@
   border-radius: 10px;
   background: var(--gradient-brand);
   color: #fff;
-  box-shadow: 0 4px 14px rgb(91 75 240 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.25);
 }
 
 /* ---- Sidebar -------------------------------------------------------------------------------- */
@@ -105,11 +104,8 @@
 
 .nav-group-label {
   padding: 0 var(--space-3) var(--space-1);
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
+  font-size: var(--text-caption);
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--color-text-subtle);
 }
 
@@ -162,17 +158,6 @@
   color: var(--color-accent);
 }
 
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: calc(-1 * var(--space-3));
-  top: var(--space-2);
-  bottom: var(--space-2);
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--color-accent);
-}
-
 .nav-count {
   display: inline-grid;
   place-items: center;
@@ -183,7 +168,7 @@
   border-radius: var(--radius-full);
   background: var(--color-accent);
   color: var(--color-on-accent);
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-micro);
   font-weight: 600;
 }
@@ -261,7 +246,7 @@
   border: 2px solid var(--color-surface);
   background: var(--color-accent);
   color: var(--color-on-accent);
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
   font-weight: 700;
   line-height: 14px;

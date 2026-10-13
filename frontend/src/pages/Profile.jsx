@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Database, Headphones, KeyRound, Send, Settings2, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -133,7 +133,6 @@ function PasswordCard() {
   return (
     <form className="card" onSubmit={onSubmit} aria-labelledby="password-title">
       <h2 id="password-title">
-        <KeyRound size={18} aria-hidden="true" />
         Passwort und Geräte
       </h2>
       <label>
@@ -267,7 +266,6 @@ function InvitesCard() {
   return (
     <section className="card" aria-labelledby="invites-title">
       <h2 id="invites-title">
-        <Send size={18} aria-hidden="true" />
         Freunde einladen
       </h2>
       <p className="muted">Nur für Admins sichtbar. Jeder Code ist 14 Tage gültig.</p>
@@ -330,7 +328,6 @@ function SettingsCard() {
   return (
     <section className="card" aria-labelledby="settings-title">
       <h2 id="settings-title">
-        <Settings2 size={18} aria-hidden="true" />
         Einstellungen
       </h2>
       {settings.isError ? (
@@ -401,7 +398,6 @@ function DataCard() {
   return (
     <section className="card" aria-labelledby="data-title">
       <h2 id="data-title">
-        <Database size={18} aria-hidden="true" />
         Meine Daten
       </h2>
       <p className="muted">
@@ -448,7 +444,6 @@ export default function ProfilePage() {
       <TasteCard />
       <section className="card" aria-labelledby="music-sources-title">
         <h2 id="music-sources-title">
-          <Headphones size={18} aria-hidden="true" />
           Musik verbinden
         </h2>
         <MusicSources />

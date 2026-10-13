@@ -34,7 +34,7 @@ const row = (over) => ({
 });
 const LIST = [row(), row({ tmdb_id: 2, media_type: 'tv', title: 'Severance', original_title: 'Severance', status: 'watching', added_at: '2026-09-01T00:00:00Z' })];
 
-function renderPage(path = '/') {
+function renderPage(path = '/?ansicht=liste') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -71,7 +71,7 @@ describe('WatchlistPage', () => {
     api.fetchWatchlist.mockResolvedValue(LIST);
     let reject;
     api.updateItem.mockImplementation(() => new Promise((_, r) => (reject = r)));
-    renderPage('/?s=all');
+    renderPage('/?s=all&ansicht=liste');
     const select = await screen.findByLabelText('Status von Dune');
     await userEvent.selectOptions(select, 'completed');
     expect(screen.getByLabelText('Status von Dune')).toHaveValue('completed');
@@ -109,5 +109,15 @@ describe('WatchlistPage', () => {
     expect(await screen.findByText('Seven')).toBeInTheDocument();
     expect(await screen.findByText(/In deiner Liste · Am Schauen/)).toBeInTheDocument();
     expect(tmdb.searchTitles).toHaveBeenCalledWith('sev', 1);
+  });
+
+  it('shows posters by default and switches to the list view', async () => {
+    api.fetchWatchlist.mockResolvedValue(LIST);
+    renderPage('/');
+    const grid = await screen.findByRole('link', { name: /Dune/ });
+    expect(grid).toHaveClass('poster-card');
+    expect(screen.queryByLabelText('Status von Dune')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Liste' }));
+    expect(await screen.findByLabelText('Status von Dune')).toBeInTheDocument();
   });
 });

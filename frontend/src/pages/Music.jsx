@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Disc3, MicVocal, Plug, RefreshCw, Ticket } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
@@ -111,7 +111,6 @@ export default function MusicPage() {
       {!connected ? (
         <section className="card" aria-labelledby="connect-title">
           <h2 id="connect-title">
-            <Plug size={18} aria-hidden="true" />
             Verbinde deine Musik
           </h2>
           <p className="muted">Mit deinem Last.fm- oder stats.fm-Namen findet die App jeden Tag neue Alben deiner Lieblings-Artists und ähnlicher Bands – und Konzerte in der Schweiz.</p>
@@ -122,7 +121,6 @@ export default function MusicPage() {
           <section className="card" aria-labelledby="releases-title">
             <div className="card-head">
               <h2 id="releases-title">
-                <Disc3 size={18} aria-hidden="true" />
                 Neu erschienen für dich
               </h2>
               {updated && <span className="caption">Stand {updated}</span>}
@@ -145,7 +143,6 @@ export default function MusicPage() {
           </section>
           <section className="card" aria-labelledby="concerts-title">
             <h2 id="concerts-title">
-              <Ticket size={18} aria-hidden="true" />
               Konzerte in der Schweiz
             </h2>
             {concerts.isError ? <Messages error={errorMessage(concerts.error)} /> : concerts.data ? <Concerts concerts={concerts.data} /> : <TitleRowSkeleton rows={2} />}
@@ -153,7 +150,6 @@ export default function MusicPage() {
           {artists.data?.length > 0 && (
             <section className="card" aria-labelledby="artists-title">
               <h2 id="artists-title">
-                <MicVocal size={18} aria-hidden="true" />
                 Deine Top-Artists
               </h2>
               <ol className="chip-list">

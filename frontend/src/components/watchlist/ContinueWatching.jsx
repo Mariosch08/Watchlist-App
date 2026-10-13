@@ -1,8 +1,7 @@
-import { Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSeriesOverview } from '../../hooks/useSeries.js';
 import { useUpdateItem } from '../../hooks/useWatchlist.js';
-import { formatDate, POSTER_BASE } from '../../lib/labels.js';
+import { formatDate, POSTER_LARGE_BASE } from '../../lib/labels.js';
 import { daysSince, episodeCode, isForgotten } from '../../lib/series.js';
 
 function ForgottenActions({ row }) {
@@ -30,33 +29,36 @@ export default function ContinueWatching() {
   return (
     <section className="card" aria-labelledby="continue-title">
       <div className="card-head">
-        <h2 id="continue-title">
-          <Play size={18} aria-hidden="true" />
-          Weiterschauen
-        </h2>
-        <Link to="/calendar" className="caption">
+        <h2 id="continue-title">Weiterschauen</h2>
+        <Link to="/calendar" className="head-link">
           Kalender
         </Link>
       </div>
-      <ul className="list">
+      <ul className="rail">
         {rows.map((r) => {
           const forgotten = isForgotten(r);
           const next = r.next_up_season ? episodeCode(r.next_up_season, r.next_up_episode) : null;
           const upcoming = r.next_episode_to_air;
+          const progress = r.number_of_episodes ? Math.min(1, r.watched_count / r.number_of_episodes) : 0;
           return (
-            <li key={r.tmdb_id} className="title-row">
-              {r.poster_path ? <img className="poster" src={POSTER_BASE + r.poster_path} alt="" loading="lazy" /> : <span className="poster" aria-hidden="true" />}
-              <div className="title-main">
-                <Link className="title-name title-link" to={`/title/tv/${r.tmdb_id}`}>
-                  {r.title}
-                </Link>
-                <div className="meta">
-                  {next ? <span>Als Nächstes {next}</span> : <span>Alles Erschienene gesehen</span>}
-                  {upcoming?.air_date && <span>neue Folge am {formatDate(upcoming.air_date)}</span>}
-                  {forgotten && <span className="badge">Seit {daysSince(r.last_watched_at ?? r.started_at)} Tagen nicht weitergeschaut</span>}
-                </div>
-              </div>
-              {forgotten && <ForgottenActions row={r} />}
+            <li key={r.tmdb_id} className="rail-item">
+              <Link className="poster-card" to={`/title/tv/${r.tmdb_id}`}>
+                {r.poster_path ? <img className="poster-large" src={POSTER_LARGE_BASE + r.poster_path} alt="" loading="lazy" /> : <span className="poster-large poster-fallback" aria-hidden="true">{r.title}</span>}
+                <span className="rail-progress" aria-hidden="true">
+                  <span style={{ '--progress': progress }} />
+                </span>
+                <span className="poster-card-title">{r.title}</span>
+                <span className="poster-card-meta">
+                  {next ? `Weiter mit ${next}` : 'Alles gesehen'}
+                  {upcoming?.air_date && !next ? ` · neu am ${formatDate(upcoming.air_date)}` : ''}
+                </span>
+              </Link>
+              {forgotten && (
+                <>
+                  <span className="caption">Seit {daysSince(r.last_watched_at ?? r.started_at)} Tagen pausiert?</span>
+                  <ForgottenActions row={r} />
+                </>
+              )}
             </li>
           );
         })}

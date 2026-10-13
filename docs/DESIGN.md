@@ -1,7 +1,7 @@
 ---
 name: Reel
-version: 2.0
-description: Clear, compact tool UI for films, series and music. Simple on the surface, well structured, symbols everywhere, dark-first with a full light set.
+version: 2.1 (clean)
+description: Clear, compact tool UI for films, series and music. Clean edition: neutral colours, one typeface, symbols only in navigation, posters carry the colour.
 colors:
   canvas: "#F5F5F7"        # page background
   surface: "#FFFFFF"       # cards, sidebar, sheets
@@ -73,6 +73,17 @@ breakpoints:
 ---
 
 # DESIGN.md: Reel
+
+> **Version 2.1 „clean“ (Oktober 2026) – gilt vor allem Folgenden.** Wunsch: „weniger Vibe-Code-Design-Sprache, mehr einfach schöne, cleane Darstellung“.
+> - **Neutral statt Violett:** Weiss bzw. Fast-Schwarz, Grautöne ohne Farbstich. Akzent = Tinte (Textfarbe) für Primärknöpfe, aktive Zustände, Diagramme, Sterne. Kein Verlaufs-Logo, keine farbigen Schatten.
+> - **Eine Schrift:** Inter für alles (keine Space Grotesk, keine JetBrains Mono, keine Grossbuchstaben-Labels); Zahlen mit Tabellenziffern.
+> - **Symbole nur noch in der Navigation:** Seitentitel und Abschnitts-Überschriften sind reiner Text.
+> - **Keine Kästen:** Abschnitte (`.card`) sind Überschrift + Inhalt mit Abstand. Kacheln (Statistik-Zahlen, leere Zustände) bleiben als ruhige graue Flächen.
+> - **Weiche Bedienelemente:** Felder und Sekundärknöpfe mit grauer Fläche statt Rahmen und Schatten.
+> - **Poster zuerst:** Watchlist als Poster-Raster (Liste umschaltbar, `?ansicht=liste`), „Weiterschauen“ als horizontale Leiste mit Fortschritt, „Für dich“ als Poster-Karten.
+> - Struktur von Reel bleibt: Seitenleiste / Icon-Leiste / Tab-Leiste mit „Mehr“, Hell/Dunkel-Umschalter.
+>
+> Wo die Abschnitte unten etwas anderes sagen (Violett, Verlauf, Space Grotesk/JetBrains Mono, Symbole an Überschriften, umrandete Karten), gilt Version 2.1.
 
 Read this file before writing or changing UI. Tokens live in `frontend/src/styles/tokens.css`; components use variables only.
 

@@ -1,4 +1,3 @@
-import { Users } from 'lucide-react';
 import { PROFILE_BASE } from '../../lib/labels.js';
 
 export default function CastList({ cast, crew }) {
@@ -6,7 +5,6 @@ export default function CastList({ cast, crew }) {
   return (
     <section className="card" aria-labelledby="cast-title">
       <h2 id="cast-title">
-        <Users size={18} aria-hidden="true" />
         Besetzung
       </h2>
       {crew?.length > 0 && (

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Headphones, Heart, Hourglass, Shapes, Share2, Sparkles, Star, Trophy } from 'lucide-react';
+import { Share2, Trophy } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
@@ -133,7 +133,6 @@ export default function StatsPage() {
       <section className="card review" aria-labelledby="review-title">
         <div className="card-head">
           <h2 id="review-title">
-            <Sparkles size={18} aria-hidden="true" />
             Mein Filmjahr {year}
           </h2>
           <button className="btn-compact" disabled={sharing || stats.total === 0} onClick={share}>
@@ -182,7 +181,6 @@ export default function StatsPage() {
         <div className="grid-2">
           <section className="card" aria-labelledby="genres-title">
             <h2 id="genres-title">
-              <Shapes size={18} aria-hidden="true" />
               Genres
             </h2>
             <BarList
@@ -191,7 +189,6 @@ export default function StatsPage() {
           </section>
           <section className="card" aria-labelledby="ratings-title">
             <h2 id="ratings-title">
-              <Star size={18} aria-hidden="true" />
               Meine Bewertungen
             </h2>
             <RatingBars values={stats.ratings} />
@@ -199,7 +196,6 @@ export default function StatsPage() {
           {stats.decades.length > 0 && (
             <section className="card" aria-labelledby="decades-title">
               <h2 id="decades-title">
-                <Hourglass size={18} aria-hidden="true" />
                 Filme nach Jahrzehnt
               </h2>
               <BarList items={stats.decades.map((d) => ({ key: d.decade, label: `${d.decade}er`, value: d.count }))} />
@@ -208,7 +204,6 @@ export default function StatsPage() {
           {stats.favourites.length > 0 && (
             <section className="card" aria-labelledby="favourites-title">
               <h2 id="favourites-title">
-                <Heart size={18} aria-hidden="true" />
                 Lieblinge {year}
               </h2>
               <ol className="favourites">
@@ -225,7 +220,6 @@ export default function StatsPage() {
 
       <section className="card" aria-labelledby="challenges-title">
         <h2 id="challenges-title">
-          <Trophy size={18} aria-hidden="true" />
           Herausforderungen
         </h2>
         <Challenges list={goals} />
@@ -234,7 +228,6 @@ export default function StatsPage() {
       {artists.data?.length > 0 && (
         <section className="card" aria-labelledby="music-stats-title">
           <h2 id="music-stats-title">
-            <Headphones size={18} aria-hidden="true" />
             Musik: meistgehört
           </h2>
           {listening.data && (

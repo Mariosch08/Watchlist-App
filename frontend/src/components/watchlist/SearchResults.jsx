@@ -1,4 +1,4 @@
-import { Check, Plus, Search } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { memo } from 'react';
 import { useAddTitle } from '../../hooks/useWatchlist.js';
 import { errorMessage } from '../../lib/errors.js';
@@ -43,7 +43,6 @@ export default function SearchResults({ search, byKey, expanded, onExpand }) {
     <section className="card" aria-labelledby="tmdb-results-title">
       <div className="card-head">
         <h2 id="tmdb-results-title">
-          <Search size={18} aria-hidden="true" />
           Neu hinzufügen
         </h2>
         <span className="caption" aria-live="polite">

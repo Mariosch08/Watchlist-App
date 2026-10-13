@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ListChecks } from 'lucide-react';
+
 import { useState } from 'react';
 import { useUser } from '../../auth/AuthContext.jsx';
 import { useEpisodeMutation, useSeriesProgress } from '../../hooks/useSeries.js';
@@ -69,7 +69,6 @@ export default function SeriesProgress({ details }) {
     <section className="card" aria-labelledby="progress-title">
       <div className="card-head">
         <h2 id="progress-title">
-          <ListChecks size={18} aria-hidden="true" />
           Dein Fortschritt
         </h2>
         <span className="caption">

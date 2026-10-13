@@ -35,7 +35,6 @@ export default function ListsPage() {
       </div>
       <section className="card" aria-labelledby="new-list-title">
         <h2 id="new-list-title">
-          <Plus size={18} aria-hidden="true" />
           Neue Liste
         </h2>
         <form
@@ -62,7 +61,6 @@ export default function ListsPage() {
       </section>
       <section className="card" aria-labelledby="my-lists-title">
         <h2 id="my-lists-title">
-          <Layers size={18} aria-hidden="true" />
           Meine Listen
         </h2>
         {lists.isError ? (

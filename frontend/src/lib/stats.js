@@ -138,12 +138,12 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 export function reviewSvg(stats, { name } = {}) {
   const W = 1080;
   const H = 1350;
-  // Reel tokens (dark theme): text, text-muted, accent, canvas, border-strong.
-  const ink = '#ececf1';
-  const muted = '#a3a3b0';
-  const accent = '#9488ff';
-  const paper = '#0b0b0f';
-  const line = '#363641';
+  // Dark theme tokens: text, text-muted, highlight (ink), canvas, border-strong.
+  const ink = '#f2f2f4';
+  const muted = '#a1a1aa';
+  const accent = '#f2f2f4';
+  const paper = '#0c0c0e';
+  const line = '#34343a';
   const max = Math.max(1, ...stats.months);
   const bars = stats.months
     .map((m, i) => {
@@ -166,7 +166,7 @@ export function reviewSvg(stats, { name } = {}) {
     fav ? `Höchste Bewertung: ${fav.title} (${fav.rating}/10)` : null,
     stats.bestMonth != null ? `Stärkster Monat: ${MONTH_LONG[stats.bestMonth]}` : null,
   ].filter(Boolean);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Space Grotesk, Inter, Helvetica Neue, Arial, sans-serif">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, Helvetica Neue, Arial, sans-serif">
 <rect width="${W}" height="${H}" fill="${paper}"/>
 <text x="90" y="170" font-size="34" fill="${muted}" letter-spacing="4">${esc(name ? `${name.toUpperCase()} · ` : '')}JAHRESRÜCKBLICK</text>
 <text x="90" y="290" font-size="110" font-weight="700" fill="${ink}">Mein Filmjahr ${esc(stats.year)}</text>

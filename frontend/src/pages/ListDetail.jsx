@@ -247,7 +247,6 @@ export default function ListDetailPage() {
         <section className="card tonight-group" aria-labelledby="group-pick-title">
           <div className="card-head">
             <h2 id="group-pick-title">
-              <Dices size={18} aria-hidden="true" />
               Was schauen wir?
             </h2>
             <button className="btn-compact" onClick={() => setTonight(groupPick(ranked) ?? 'none')}>

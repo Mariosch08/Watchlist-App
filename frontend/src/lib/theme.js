@@ -6,7 +6,7 @@ export const THEMES = ['system', 'light', 'dark'];
 export const THEME_LABEL = { system: 'System', light: 'Hell', dark: 'Dunkel' };
 const KEY = 'theme';
 // Browser bar colours, matching --color-canvas of each theme (tokens.css).
-const BAR_COLOR = { light: '#f5f5f7', dark: '#0b0b0f' };
+const BAR_COLOR = { light: '#ffffff', dark: '#0c0c0e' };
 const listeners = new Set();
 
 function read() {
