@@ -8,3 +8,18 @@ update public.music_artists
      when listeners > 0 then round(least(1, greatest(0, log(2000000.0 / listeners) / 2)), 3)
      when popularity > 0 then round(least(1, greatest(0, (65 - popularity) / 40.0)), 3)
    end;
+
+-- Releases already stored with the wrong "Geheimtipp" label (also liked ones, which are never rebuilt).
+update public.feed f
+   set data = f.data - 'small',
+       reason = split_part(f.reason, ' – Geheimtipp', 1)
+ where f.type = 'album'
+   and f.data->>'small' = 'true'
+   and exists (
+     select 1 from public.music_artists m
+      where m.user_id = f.user_id
+        and coalesce(m.niche, 0) < 0.5
+        and position(' von ' || m.name || ' – Geheimtipp' in f.reason) > 0);
+
+-- stats.fm months stored with 0 plays (no data) are fetched again, with the Last.fm fallback.
+delete from public.music_months where source = 'statsfm' and plays = 0;

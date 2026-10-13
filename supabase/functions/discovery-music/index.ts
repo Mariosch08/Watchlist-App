@@ -349,14 +349,15 @@ async function fillMusicMonths(db: Db, userId: string, src: { lastfm: string | n
       ]);
       row = statsfmMonth(stats, artists, tracks);
     }
-    if (!row && src.lastfm && env.lastfm) {
+    // stats.fm answers 0 plays when it has no history for the month: then Last.fm, if it knows more.
+    if ((!row || !row.plays) && src.lastfm && env.lastfm) {
       const range = { user: src.lastfm, from: Math.floor(from / 1000), to: Math.floor(to / 1000) };
       const [recent, artists, tracks] = await Promise.all([
         lastfmGet('user.getrecenttracks', { ...range, limit: 1 }, env.lastfm).catch(() => null),
         lastfmGet('user.getweeklyartistchart', range, env.lastfm).catch(() => null),
         lastfmGet('user.getweeklytrackchart', range, env.lastfm).catch(() => null),
       ]);
-      row = lastfmMonth(recent, artists, tracks);
+      row = lastfmMonth(recent, artists, tracks) ?? row;
     }
     if (!row) continue;
     const { error } = await db.from('music_months').upsert({ user_id: userId, month, ...row, updated_at: new Date().toISOString() });
