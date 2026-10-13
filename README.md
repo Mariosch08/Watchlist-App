@@ -13,7 +13,7 @@ Filme, Serien und Musik entdecken – für mich und meine Freunde. Eine private 
 | **Serien** | Folgen abhaken, „Als Nächstes“, Spoiler-Schutz, neue Staffeln/Folgen als Benachrichtigung, Kalender-Abo (ICS) |
 | **Für dich** | Tägliche Vorschläge mit Begründung, 👍/👎 lernt mit, Genre-Regler, „Was schauen wir heute?“ |
 | **Streaming** | Welches Abo lohnt sich? Kaum genutzte Dienste, beste Zweier-Kombination, Alarm „jetzt auf meinen Diensten“ |
-| **Musik** | Neue Alben der Lieblings-Artists und ähnlicher Bands (Last.fm, stats.fm, MusicBrainz, optional Spotify), Hör-Statistik, Konzerte in der Schweiz |
+| **Musik** | Hörprofil aus bis zu 300 Artists über Wochen, Monate und Jahre (Dauerbrenner, Im Kommen, Geheimtipps, Wiederentdecken); neue und angekündigte Releases mit Vorrang für kleine Artists; ähnliche Bands; Konzerte in der Schweiz (Last.fm, stats.fm, MusicBrainz, optional Spotify) |
 | **Freunde** | Freundschaften, Geschmacks-Match in %, „Wer hat es gesehen?“, „Schau das!“, Aktivität (freiwillig) |
 | **Listen & Sammlungen** | Private Sammlungen oder gemeinsame Listen mit Rollen, Abstimmen, Swipen bis zum Match, Filmabend-Planer mit Terminumfrage |
 | **Tagebuch & Statistik** | Wann, wo, mit wem; Jahresstatistik, teilbarer Jahresrückblick, Herausforderungen |

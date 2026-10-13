@@ -106,10 +106,44 @@ describe('MusicPage', () => {
     const concerts = screen.getByRole('region', { name: 'Konzerte in der Schweiz' });
     expect(await within(concerts).findByText('Hallenstadion, Zürich')).toBeInTheDocument();
     expect(within(concerts).getByRole('link', { name: 'Tickets' })).toHaveAttribute('href', 'https://www.ticketmaster.ch/e/1');
-    expect(screen.getByRole('region', { name: 'Deine Top-Artists' })).toHaveTextContent('Radiohead');
+    expect(screen.getByRole('region', { name: 'Dein Musikprofil' })).toHaveTextContent('Alle 1 Artists');
+    expect(screen.queryByRole('region', { name: 'Demnächst' })).not.toBeInTheDocument();
 
     await userEvent.click(within(releases).getByRole('button', { name: 'In Rainbows von Radiohead: nicht mein Ding' }));
     expect(discoveryApi.sendFeedback).toHaveBeenCalledWith('f1', 'dislike');
     expect(within(releases).queryByText('In Rainbows')).not.toBeInTheDocument();
+  });
+
+  it('lists announced releases separately and explains the music profile', async () => {
+    settingsApi.fetchSettings.mockResolvedValue({ lastfm_username: 'mario_08' });
+    const soon = new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10);
+    musicApi.fetchMusicFeed.mockResolvedValue([
+      ALBUM,
+      { ...ALBUM, id: 'f2', title: 'Next One', release_date: soon, reason: 'Neue Single von Tiny – Geheimtipp aus deiner Sammlung', data: { artist: 'Tiny', kind: 'Single', upcoming: true, small: true } },
+    ]);
+    const a = (name, extra) => ({ artist_key: name.toLowerCase(), name, sources: ['lastfm', 'statsfm'], rank: 1, affinity: 0.5, genres: [], loved: 0, niche: 0.1, updated_at: '2026-10-12T05:00:00Z', ...extra });
+    musicApi.fetchArtists.mockResolvedValue([
+      a('Radiohead', { affinity: 0.9, trend: 'core', genres: ['art rock'], loved: 3 }),
+      a('Tiny', { rank: 2, trend: 'rising', niche: 0.8, listeners: 18000, genres: ['dream pop'] }),
+      a('Muse', { rank: 3, trend: 'fading', genres: ['art rock'] }),
+      a('Keane', { rank: 4, trend: 'steady' }),
+      a('Coldplay', { rank: 5, trend: 'steady' }),
+    ]);
+    renderPage();
+    const upcoming = await screen.findByRole('region', { name: 'Demnächst' });
+    expect(within(upcoming).getByText('Next One')).toBeInTheDocument();
+    expect(within(upcoming).getByText(/^erscheint /)).toBeInTheDocument();
+    expect(within(upcoming).getByText('Geheimtipp')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Neu erschienen für dich' })).queryByText('Next One')).not.toBeInTheDocument();
+
+    const profile = screen.getByRole('region', { name: 'Dein Musikprofil' });
+    expect(within(profile).getByText('Artists ausgewertet').nextSibling).toHaveTextContent('5');
+    expect(within(profile).getByText('Kleine Artists').nextSibling).toHaveTextContent('1');
+    expect(within(profile).getByText('Lieblingssongs').nextSibling).toHaveTextContent('3');
+    expect(within(profile).getByRole('group', { name: 'Dauerbrenner' })).toHaveTextContent('Radiohead');
+    expect(within(profile).getByRole('group', { name: 'Im Kommen' })).toHaveTextContent('Tiny');
+    expect(within(profile).getByRole('group', { name: 'Geheimtipps' })).toHaveTextContent('Tiny');
+    expect(within(profile).getByRole('group', { name: 'Wiederentdecken' })).toHaveTextContent('Muse');
+    expect(profile).toHaveTextContent('Aus Last.fm und stats.fm: letzte 4 Wochen, 6 Monate und alle Jahre, dazu deine Lieblingssongs.');
   });
 });

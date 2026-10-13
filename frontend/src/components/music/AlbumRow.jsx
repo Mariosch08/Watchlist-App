@@ -8,6 +8,7 @@ const lastfmUrl = (artist, title) => `https://www.last.fm/music/${encodeURICompo
 function AlbumRow({ entry, pending, onFeedback }) {
   const [broken, setBroken] = useState(false);
   const liked = entry.status === 'liked';
+  const upcoming = entry.data?.upcoming;
   const artist = entry.data?.artist ?? entry.subtitle ?? '';
   const label = `${entry.title} von ${artist}`;
   return (
@@ -22,8 +23,9 @@ function AlbumRow({ entry, pending, onFeedback }) {
         <div className="meta">
           <span>{artist}</span>
           {entry.data?.kind && <span>{entry.data.kind}</span>}
-          {entry.release_date && <span>{formatDate(entry.release_date)}</span>}
+          {entry.release_date && <span>{upcoming ? `erscheint ${formatDate(entry.release_date)}` : formatDate(entry.release_date)}</span>}
           {entry.data?.fresh && <span className="badge">Neu</span>}
+          {entry.data?.small && <span className="badge">Geheimtipp</span>}
         </div>
         {entry.reason && <span className="reason">{entry.reason}</span>}
       </div>

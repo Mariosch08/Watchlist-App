@@ -1,16 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 import { decryptText, deriveKey, encryptText } from '../supabase/functions/_shared/crypto.ts';
 import {
+  affinityOf,
   type Artist,
   artistKey,
+  blankArtist,
+  lastfmArtistInfo,
   lastfmGet,
+  lastfmLovedArtists,
   lastfmSimilar,
   lastfmTopArtists,
   mergeArtists,
   mergeSimilar,
   musicBrainzClient,
+  nicheOf,
   normalizeEvents,
   normalizeReleaseGroups,
+  notifyWorthy,
+  pickConcertArtists,
+  pickSeeds,
   rankAlbums,
   releaseQuery,
   spotifyAlbums,
@@ -18,25 +26,15 @@ import {
   statsfmGet,
   statsfmStreamStats,
   statsfmTopArtists,
+  trendOf,
+  weighList,
 } from '../supabase/functions/_shared/music.ts';
 
 const RH = '0383dadf-2a4e-4d10-a46a-e9e041da8eb3';
 const PJ = '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11';
 const MBX = 'a74b1b7f-71a5-4011-9441-d0b5e4122711';
 
-const artist = (name: string, rank: number, extra: Partial<Artist> = {}): Artist => ({
-  key: artistKey(name),
-  name,
-  mbid: null,
-  spotify_id: null,
-  sources: ['lastfm'],
-  rank,
-  playcount: null,
-  followed: false,
-  image_url: null,
-  genres: [],
-  ...extra,
-});
+const artist = (name: string, rank: number, extra: Partial<Artist> = {}): Artist => ({ ...blankArtist(name, 'lastfm', rank), ...extra });
 
 const rg = (id: string, title: string, artistName: string, artistId: string, date: string, extra: Record<string, unknown> = {}) => ({
   id,
@@ -66,25 +64,48 @@ describe('Last.fm', () => {
     ]);
     expect(lastfmTopArtists({ topartists: { artist: { name: 'Solo' } } })).toHaveLength(1);
     expect(lastfmTopArtists(null)).toEqual([]);
-    const similar = lastfmSimilar({ similarartists: { artist: [{ name: 'Thom Yorke', match: '0.9', mbid: PJ }, { name: 'Muse', match: 'x' }] } }, 'Radiohead');
+    const similar = lastfmSimilar({ similarartists: { artist: [{ name: 'Thom Yorke', match: '0.9', mbid: PJ }, { name: 'Muse', match: 'x' }] } });
     expect(similar).toEqual([
-      { key: 'thom yorke', name: 'Thom Yorke', mbid: PJ, match: 0.9, because: 'Radiohead' },
-      { key: 'muse', name: 'Muse', mbid: null, match: 0, because: 'Radiohead' },
+      { key: 'thom yorke', name: 'Thom Yorke', mbid: PJ, match: 0.9 },
+      { key: 'muse', name: 'Muse', mbid: null, match: 0 },
+    ]);
+    expect(lastfmSimilar(null)).toEqual([]);
+  });
+
+  it('counts loved tracks per artist', () => {
+    const loved = lastfmLovedArtists({
+      lovedtracks: { track: [{ artist: { name: 'Radiohead', mbid: RH } }, { artist: { name: 'radiohead' } }, { artist: { '#text': 'Björk' } }, { artist: {} }] },
+    });
+    expect(loved.map((a) => [a.key, a.loved, a.mbid])).toEqual([
+      ['radiohead', 2, RH],
+      ['bjork', 1, null],
     ]);
   });
 
-  it('keeps the best match and drops artists I already know', () => {
+  it('reads id, size and genre tags of an artist, without noise tags', () => {
+    expect(
+      lastfmArtistInfo({ artist: { mbid: RH, stats: { listeners: '5123456' }, tags: { tag: [{ name: 'Seen live' }, { name: 'Alternative' }, { name: 'rock' }, { name: 'britpop' }, { name: 'x' }] } } }),
+    ).toEqual({ mbid: RH, listeners: 5123456, tags: ['alternative', 'rock', 'britpop'] });
+    expect(lastfmArtistInfo(null)).toEqual({ mbid: null, listeners: null, tags: [] });
+  });
+
+  it('adds up evidence from several seeds and explains with the strongest ones', () => {
+    const hit = (name: string, match: number) => ({ key: artistKey(name), name, mbid: null, match });
     const merged = mergeSimilar(
       [
-        [{ key: 'muse', name: 'Muse', mbid: null, match: 0.4, because: 'Radiohead' }],
-        [
-          { key: 'muse', name: 'Muse', mbid: null, match: 0.7, because: 'Coldplay' },
-          { key: 'radiohead', name: 'Radiohead', mbid: null, match: 1, because: 'Coldplay' },
-        ],
+        { seed: { name: 'Radiohead', affinity: 1 }, similar: [hit('Muse', 0.4), hit('Portishead', 0.9)] },
+        { seed: { name: 'Coldplay', affinity: 0.5 }, similar: [hit('Muse', 0.7), hit('Radiohead', 1)] },
+        { seed: { name: 'Keane', affinity: 0.4 }, similar: [hit('Muse', 0.5)] },
       ],
       new Set(['radiohead']),
     );
-    expect(merged).toEqual([{ key: 'muse', name: 'Muse', mbid: null, match: 0.7, because: 'Coldplay' }]);
+    expect(merged.map((s) => [s.name, s.because])).toEqual([
+      ['Muse', ['Radiohead', 'Coldplay']],
+      ['Portishead', ['Radiohead']],
+    ]);
+    // Muse: 0.4 + 0.35 + 0.2 = 0.95 → 1 - e^-1.9; Portishead: 0.9 → 1 - e^-1.8
+    expect(merged[0].match).toBeCloseTo(1 - Math.exp(-1.9), 3);
+    expect(merged[1].match).toBeCloseTo(1 - Math.exp(-1.8), 3);
   });
 
   it('maps "user not found" to a clear code and sends the API key only to Last.fm', async () => {
@@ -100,7 +121,7 @@ describe('Last.fm', () => {
 describe('MusicBrainz', () => {
   it('builds one query for many artists', () => {
     expect(releaseQuery([RH, PJ], '2026-09-12', '2026-10-12')).toBe(
-      `(arid:${RH} OR arid:${PJ}) AND firstreleasedate:[2026-09-12 TO 2026-10-12] AND (primarytype:album OR primarytype:ep)`,
+      `(arid:${RH} OR arid:${PJ}) AND firstreleasedate:[2026-09-12 TO 2026-10-12] AND (primarytype:album OR primarytype:ep OR primarytype:single)`,
     );
   });
 
@@ -113,9 +134,11 @@ describe('MusicBrainz', () => {
     };
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ 'release-groups': [] })));
     const mb = musicBrainzClient(fetchImpl, sleep, () => t, 1000);
-    await Promise.all([mb('a'), mb('b'), mb('c')]);
+    await Promise.all([mb('a'), mb('b'), mb('c', 100)]);
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(waits).toEqual([1000, 1000]);
+    expect(fetchImpl.mock.calls[0][0]).not.toContain('offset');
+    expect(fetchImpl.mock.calls[2][0]).toContain('&offset=100&');
     expect((fetchImpl.mock.calls[0][1] as RequestInit).headers).toMatchObject({ 'User-Agent': expect.stringContaining('WatchlistApp') });
   });
 
@@ -126,7 +149,7 @@ describe('MusicBrainz', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
-  it('keeps recent studio albums and EPs, skips live, compilations and vague dates', () => {
+  it('keeps recent studio albums, EPs and singles, skips live, compilations and vague dates', () => {
     const albums = normalizeReleaseGroups(
       {
         'release-groups': [
@@ -136,6 +159,13 @@ describe('MusicBrainz', () => {
           rg('44444444-4444-4444-8444-444444444444', 'Year only', 'Radiohead', RH, '2026'),
           rg('55555555-5555-4555-8555-555555555555', 'Small', 'Radiohead', RH, '2026-10-05', { 'primary-type': 'EP' }),
           rg('66666666-6666-4666-8666-666666666666', 'Single', 'Radiohead', RH, '2026-10-05', { 'primary-type': 'Single' }),
+          rg('77777777-7777-4777-8777-777777777777', 'Other', 'Radiohead', RH, '2026-10-05', { 'primary-type': 'Broadcast' }),
+          rg('88888888-8888-4888-8888-888888888888', 'Duet', 'Radiohead', RH, '2026-10-06', {
+            'artist-credit': [
+              { name: 'Radiohead', joinphrase: ' & ', artist: { id: RH, name: 'Radiohead' } },
+              { name: 'Portishead', artist: { id: PJ, name: 'Portishead' } },
+            ],
+          }),
         ],
       },
       '2026-09-12',
@@ -143,7 +173,10 @@ describe('MusicBrainz', () => {
     expect(albums.map((a) => [a.title, a.kind])).toEqual([
       ['New Album', 'Album'],
       ['Small', 'EP'],
+      ['Single', 'Single'],
+      ['Duet', 'Album'],
     ]);
+    expect(albums[3]).toMatchObject({ artist: 'Radiohead & Portishead', artist_key: 'radiohead', credit_mbids: [RH, PJ] });
     expect(albums[0]).toMatchObject({
       artist_key: 'radiohead',
       artist_mbid: RH,
@@ -156,8 +189,11 @@ describe('MusicBrainz', () => {
 
 describe('Spotify', () => {
   it('parses top and followed artists and recent releases', () => {
-    const top = spotifyArtists({ items: [{ id: 'abc123', name: 'Radiohead', genres: ['Art Rock'], images: [{ url: 'https://i/1', width: 640 }, { url: 'https://i/2', width: 160 }] }, { id: 'bad id!', name: 'X' }] });
-    expect(top).toEqual([expect.objectContaining({ spotify_id: 'abc123', image_url: 'https://i/2', genres: ['art rock'], sources: ['spotify'] })]);
+    const top = spotifyArtists({
+      items: [{ id: 'abc123', name: 'Radiohead', popularity: 78, genres: ['Art Rock'], images: [{ url: 'https://i/1', width: 640 }, { url: 'https://i/2', width: 160 }] }, { id: 'bad id!', name: 'X' }],
+    });
+    expect(top).toEqual([expect.objectContaining({ spotify_id: 'abc123', image_url: 'https://i/2', genres: ['art rock'], sources: ['spotify'], popularity: 78 })]);
+    expect(spotifyArtists({ items: [{ id: 'z', name: 'Z', popularity: 'high' }] }, { offset: 50 })[0]).toMatchObject({ rank: 51, popularity: null });
     expect(spotifyArtists({ artists: { items: [{ id: 'f1', name: 'Muse' }] } }, { followed: true })[0].followed).toBe(true);
 
     const albums = spotifyAlbums(
@@ -179,17 +215,19 @@ describe('Spotify', () => {
     ]);
   });
 
-  it('merges the same artist from Last.fm and Spotify', () => {
+  it('merges the same artist from Last.fm and Spotify and ranks by affinity', () => {
     const merged = mergeArtists([
-      [artist('Radiohead', 1, { mbid: RH }), artist('Muse', 2)],
-      [artist('radiohead', 3, { sources: ['spotify'], spotify_id: 'abc', genres: ['art rock'] }), artist('Björk', 1, { sources: ['spotify'], followed: true })],
+      weighList([artist('Radiohead', 1, { mbid: RH }), artist('Muse', 2)], 'mid'),
+      weighList([artist('radiohead', 3, { sources: ['spotify'], spotify_id: 'abc', genres: ['art rock'] })], 'mid'),
+      [artist('Björk', 1, { sources: ['spotify'], followed: true })],
     ]);
     expect(merged.map((a) => [a.name, a.rank])).toEqual([
       ['Radiohead', 1],
-      ['Björk', 2],
-      ['Muse', 3],
+      ['Muse', 2],
+      ['Björk', 3],
     ]);
-    expect(merged[0]).toMatchObject({ mbid: RH, spotify_id: 'abc', sources: ['lastfm', 'spotify'], genres: ['art rock'] });
+    expect(merged[0]).toMatchObject({ mbid: RH, spotify_id: 'abc', sources: ['lastfm', 'spotify'], genres: ['art rock'], affinity: 1 });
+    expect(merged[2].affinity).toBe(0.1); // followed only
   });
 });
 
@@ -210,8 +248,8 @@ describe('rankAlbums', () => {
     ...extra,
   });
   const ctx = {
-    artists: [artist('Radiohead', 1), artist('Muse', 10)],
-    similar: [{ key: 'thom yorke', name: 'Thom Yorke', mbid: MBX, match: 0.9, because: 'Radiohead' }],
+    artists: [artist('Radiohead', 1, { affinity: 0.9, signals: { mid: { share: 0.2, w: 1 } } }), artist('Muse', 10, { affinity: 0.4, signals: { mid: { share: 0.01, w: 0.4 } } })],
+    similar: [{ key: 'thom yorke', name: 'Thom Yorke', mbid: MBX, match: 0.9, because: ['Radiohead', 'Muse'] }],
     weights: {},
     excluded: new Set<string>(),
     today,
@@ -225,12 +263,64 @@ describe('rankAlbums', () => {
         album('c', 'Radiohead Album', 'Radiohead', '2026-10-08'),
         album('d', 'Unknown', 'Nobody', '2026-10-10'),
         album('e', 'Future', 'Radiohead', '2026-12-01'),
+        album('f', 'Far future', 'Radiohead', '2027-06-01'),
       ],
       ctx,
     );
-    expect(ranked.map((r) => r.album.key)).toEqual(['c', 'a', 'b']);
-    expect(ranked[0]).toMatchObject({ reason: 'Neues Album von Radiohead – du hörst Radiohead oft', fresh: true, own: true, rank: 1 });
-    expect(ranked[2].reason).toBe('Weil du Radiohead hörst – ähnlicher Sound');
+    expect(ranked.map((r) => r.album.key)).toEqual(['c', 'e', 'a', 'b']);
+    expect(ranked[0]).toMatchObject({ reason: 'Neues Album von Radiohead – du hörst Radiohead oft', fresh: true, upcoming: false, own: true, rank: 1 });
+    expect(ranked[1]).toMatchObject({ upcoming: true, fresh: false });
+    expect(ranked[2].reason).toBe('Neues Album von Muse – Muse hörst du ab und zu');
+    expect(ranked[3].reason).toBe('Weil du Radiohead und Muse hörst – ähnlicher Sound');
+  });
+
+  it('finds my artist in any credit, e.g. a duet', () => {
+    const muse = { ...ctx.artists[1], mbid: PJ };
+    const [r] = rankAlbums([album('d', 'Duet', 'Nobody & Muse', '2026-10-01', { artist_key: 'nobody', artist_mbid: MBX, credit_mbids: [MBX, PJ] })], {
+      ...ctx,
+      artists: [ctx.artists[0], muse],
+      similar: [],
+    });
+    expect(r).toMatchObject({ own: true, reason: 'Neues Album von Muse – Muse hörst du ab und zu' });
+  });
+
+  it('shows singles and announcements only from favourites and small artists, never from similar ones', () => {
+    const casual = artist('Casual', 3, { affinity: 0.2, niche: 0.1 });
+    const small = artist('Tiny Band', 4, { affinity: 0.2, niche: 0.8, listeners: 18000 });
+    const ranked = rankAlbums(
+      [
+        album('s1', 'Hit', 'Radiohead', '2026-10-10', { kind: 'Single' }),
+        album('s2', 'Meh', 'Casual', '2026-10-10', { kind: 'Single' }),
+        album('s3', 'Gem', 'Tiny Band', '2026-10-10', { kind: 'Single' }),
+        album('s4', 'Soon', 'Casual', '2026-11-01'),
+        album('s5', 'Sim single', 'Thom Yorke', '2026-10-10', { kind: 'Single', artist_mbid: MBX }),
+        album('s6', 'Sim soon', 'Thom Yorke', '2026-11-01', { artist_mbid: MBX }),
+      ],
+      { ...ctx, artists: [...ctx.artists, casual, small] },
+    );
+    expect(ranked.map((r) => r.album.key).sort()).toEqual(['s1', 's3']);
+    expect(ranked.find((r) => r.album.key === 's3')).toMatchObject({ small: true, reason: 'Neue Single von Tiny Band – Geheimtipp aus deiner Sammlung, nur 18’000 Hörer auf Last.fm' });
+  });
+
+  it('lifts small artists and explains trends', () => {
+    const big = artist('Big', 2, { affinity: 0.5, niche: 0 });
+    const tiny = artist('Tiny', 3, { affinity: 0.5, niche: 1 });
+    const score = (a: Artist) => rankAlbums([album('x', 'X', a.name, '2026-09-20')], { ...ctx, artists: [a] })[0];
+    expect(score(tiny).score - score(big).score).toBe(10);
+    expect(score({ ...big, trend: 'rising' }).reason).toBe('Neues Album von Big – läuft bei dir gerade oft');
+    expect(score({ ...big, trend: 'core' }).reason).toBe('Neues Album von Big – seit Langem einer deiner Favoriten');
+    expect(score({ ...big, trend: 'fading' }).reason).toBe('Neues Album von Big – früher oft gehört, Zeit fürs Wiederhören');
+    expect(score({ ...big, loved: 4 }).reason).toBe('Neues Album von Big – 4 Lieblingssongs von Big auf Last.fm');
+    expect(score({ ...big, followed: true, sources: ['spotify'], signals: {} }).reason).toBe('Neues Album – du folgst Big auf Spotify');
+  });
+
+  it('notifies about fresh releases of favourites and of small artists I like', () => {
+    const base = { own: true, fresh: true, small: false, affinity: 0.6 } as Parameters<typeof notifyWorthy>[0];
+    expect(notifyWorthy(base)).toBe(true);
+    expect(notifyWorthy({ ...base, affinity: 0.4 })).toBe(false);
+    expect(notifyWorthy({ ...base, affinity: 0.4, small: true })).toBe(true);
+    expect(notifyWorthy({ ...base, fresh: false })).toBe(false);
+    expect(notifyWorthy({ ...base, own: false })).toBe(false);
   });
 
   it('merges MusicBrainz and Spotify copies, honours rejections and limits per artist', () => {
@@ -254,6 +344,89 @@ describe('rankAlbums', () => {
     const liked = rankAlbums([album('x', 'X', 'Muse', '2026-09-20', { tags: ['jazz'] })], { ...ctx, weights: { jazz: 1 } })[0].score;
     const disliked = rankAlbums([album('x', 'X', 'Muse', '2026-09-20', { tags: ['jazz'] })], { ...ctx, weights: { jazz: -1 } })[0].score;
     expect(liked - disliked).toBe(30);
+  });
+});
+
+describe('listening profile', () => {
+  it('weighs play counts on a log scale, so the long tail still counts', () => {
+    const list = weighList([artist('A', 1, { playcount: 900 }), artist('B', 2, { playcount: 90 }), artist('C', 3, { playcount: 3 })], 'mid');
+    expect(list.map((a) => a.signals.mid!.w)).toEqual([1, 0.66, 0.158]); // a tenth of the plays → 0.66
+    expect(list[0].signals.mid!.share).toBeCloseTo(900 / 993, 4);
+    expect(list[0].playcount).toBe(900);
+    expect(weighList([artist('A', 1, { playcount: 900 })], 'short')[0].playcount).toBeNull();
+  });
+
+  it('falls back to Zipf shares when only ranks are known', () => {
+    const list = weighList([artist('A', 1), artist('B', 10)], 'long');
+    expect(list[1].signals.long!.share / list[0].signals.long!.share).toBeCloseTo(0.1, 3);
+    expect(list[1].signals.long!.w).toBe(0.66);
+    expect(weighList([], 'mid')).toEqual([]);
+  });
+
+  it('combines periods, loved tracks and following into an affinity', () => {
+    const sig = (w: number) => ({ share: 0.01, w });
+    expect(affinityOf({ signals: { short: sig(1), mid: sig(1), long: sig(1) }, loved: 0, followed: false })).toBe(1);
+    expect(affinityOf({ signals: { long: sig(1) }, loved: 0, followed: false })).toBe(0.3);
+    expect(affinityOf({ signals: { mid: sig(0.5) }, loved: 2, followed: true }, ['mid'])).toBe(0.66);
+    expect(affinityOf({ signals: {}, loved: 20, followed: false })).toBe(0.15);
+  });
+
+  it('tells rising, constant and fading artists apart', () => {
+    const sig = (short: number, mid: number, long: number) => ({
+      signals: Object.fromEntries(Object.entries({ short, mid, long }).filter(([, v]) => v > 0).map(([k, v]) => [k, { share: v, w: 0.5 }])),
+    });
+    expect(trendOf(sig(0.05, 0.02, 0))).toBe('rising');
+    expect(trendOf(sig(0.05, 0.03, 0.01))).toBe('rising');
+    expect(trendOf(sig(0, 0.005, 0.04))).toBe('fading');
+    expect(trendOf(sig(0.02, 0.02, 0.03))).toBe('core');
+    expect(trendOf(sig(0.002, 0.003, 0.002))).toBe('steady');
+    expect(trendOf(sig(0.05, 0.02, 0), ['mid'])).toBeNull();
+  });
+
+  it('measures how small an artist is from listeners and popularity', () => {
+    expect(nicheOf({ listeners: 2_000_000, popularity: null })).toBe(0);
+    expect(nicheOf({ listeners: 200_000, popularity: null })).toBe(0.5);
+    expect(nicheOf({ listeners: 5_000, popularity: null })).toBe(1);
+    expect(nicheOf({ listeners: null, popularity: 45 })).toBe(0.5);
+    expect(nicheOf({ listeners: 20_000, popularity: 65 })).toBe(0.5);
+    expect(nicheOf({ listeners: null, popularity: null })).toBeNull();
+  });
+
+  it('builds a profile from several sources and periods', () => {
+    const merged = mergeArtists([
+      weighList([artist('Old Love', 1, { playcount: 500 }), artist('Steady', 2, { playcount: 400 })], 'long'),
+      weighList([artist('Steady', 1, { playcount: 50 }), artist('New Thing', 2, { playcount: 45 })], 'short'),
+      weighList([artist('Steady', 1, { playcount: 200 }), artist('New Thing', 2, { playcount: 100 })], 'mid'),
+      lastfmLovedArtists({ lovedtracks: { track: [{ artist: { name: 'Old Love' } }] } }),
+    ]);
+    expect(merged.map((a) => [a.name, a.trend])).toEqual([
+      ['Steady', 'core'],
+      ['New Thing', 'rising'],
+      ['Old Love', 'fading'],
+    ]);
+    expect(merged.find((a) => a.name === 'Old Love')).toMatchObject({ loved: 1, playcount: null });
+    expect(merged[0].playcount).toBe(200);
+  });
+
+  it('picks diverse seeds: favourites, rising and small artists', () => {
+    const list = Array.from({ length: 20 }, (_, i) => artist(`A${i}`, i + 1, { affinity: 1 - i / 20 }));
+    list[15].trend = 'rising';
+    list[18].niche = 0.9;
+    const seeds = pickSeeds(list, 8).map((a) => a.name);
+    expect(seeds).toHaveLength(8);
+    expect(seeds.slice(0, 4)).toEqual(['A0', 'A1', 'A2', 'A3']);
+    expect(seeds).toContain('A15');
+    expect(seeds).toContain('A18');
+  });
+
+  it('checks concerts for favourites and small artists', () => {
+    const list = Array.from({ length: 30 }, (_, i) => artist(`A${i}`, i + 1, { affinity: 0.9 - i / 50 }));
+    list[25].niche = 0.7;
+    const picked = pickConcertArtists(list, 10).map((a) => a.name);
+    expect(picked).toHaveLength(10);
+    expect(picked.slice(0, 7)).toEqual(['A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6']);
+    expect(picked[7]).toBe('A25');
+    expect(pickConcertArtists(list.slice(0, 3), 10)).toHaveLength(3);
   });
 });
 
@@ -342,8 +515,12 @@ describe('stats.fm', () => {
   it('merges stats.fm with Last.fm into one artist with both sources', () => {
     const merged = mergeArtists([
       lastfmTopArtists({ topartists: { artist: [{ name: 'Radiohead', mbid: RH, '@attr': { rank: '2' } }] } }),
-      statsfmTopArtists({ items: [{ position: 1, streams: 10, artist: { name: 'Radiohead', externalIds: { spotify: ['abc'] }, genres: [] } }] }),
+      statsfmTopArtists({ items: [{ position: 1, streams: 10, artist: { name: 'Radiohead', externalIds: { spotify: ['abc'] }, genres: [], spotifyPopularity: 80 } }] }),
     ]);
-    expect(merged).toEqual([expect.objectContaining({ mbid: RH, spotify_id: 'abc', sources: ['lastfm', 'statsfm'], rank: 1 })]);
+    expect(merged).toEqual([expect.objectContaining({ mbid: RH, spotify_id: 'abc', sources: ['lastfm', 'statsfm'], rank: 1, popularity: 80, niche: 0 })]);
+  });
+
+  it('numbers a second page after the first', () => {
+    expect(statsfmTopArtists({ items: [{ streams: 3, artist: { name: 'Deep Cut' } }] }, 50)[0].rank).toBe(51);
   });
 });

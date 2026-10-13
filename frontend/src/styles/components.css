@@ -2264,3 +2264,25 @@ button.provider-stat-head:hover:not(:disabled) {
     grid-auto-columns: 128px;
   }
 }
+
+/* ---- Music profile ----------------------------------------------------------------------------- */
+.profile-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.profile-block h3 {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.profile-block .caption {
+  margin: 0;
+}
+
+.profile-groups {
+  gap: var(--space-6) var(--space-5);
+}
