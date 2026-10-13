@@ -313,7 +313,8 @@ const pickImage = (images: any, min = 200) => {
   return (list.filter((i: any) => (i.width ?? 0) >= min).sort((a: any, b: any) => (a.width ?? 0) - (b.width ?? 0))[0] ?? list[0])?.url ?? null;
 };
 
-const popularityOf = (v: unknown) => (Number.isFinite(v) && (v as number) >= 0 && (v as number) <= 100 ? Math.round(v as number) : null);
+// Spotify popularity 1..100. stats.fm reports 0 when it has no value, so 0 counts as unknown.
+const popularityOf = (v: unknown) => (Number.isFinite(v) && (v as number) > 0 && (v as number) <= 100 ? Math.round(v as number) : null);
 const genresOf = (list: unknown) => asList(list).map((g: any) => String(g).toLowerCase().slice(0, 40)).filter(Boolean).slice(0, 3);
 
 export function spotifyArtists(json: any, opts: { followed?: boolean; offset?: number } = {}): Artist[] {
@@ -402,13 +403,13 @@ export function trendOf(a: Pick<Artist, 'signals'>, present: Period[] = PERIODS)
   return 'steady';
 }
 
-// 0 = mainstream .. 1 = small. Last.fm listeners on a log scale (2 M → 0, 200 k → 0.5, 20 k → 1)
-// and Spotify popularity (65 → 0, 45 → 0.5, 25 → 1); the average if both are known.
+// 0 = mainstream .. 1 = small. Last.fm listeners decide (a real count, log scale: 2 M → 0, 200 k → 0.5,
+// 20 k → 1). Spotify popularity is only the fallback without listeners (65 → 0, 45 → 0.5, 25 → 1);
+// averaging both let a missing popularity (0) turn Kendrick Lamar into a "small artist".
 export function nicheOf(a: Pick<Artist, 'listeners' | 'popularity'>): number | null {
-  const parts: number[] = [];
-  if (a.listeners != null && a.listeners > 0) parts.push(clamp01(Math.log10(2_000_000 / a.listeners) / 2));
-  if (a.popularity != null) parts.push(clamp01((65 - a.popularity) / 40));
-  return parts.length ? round(parts.reduce((x, y) => x + y, 0) / parts.length) : null;
+  if (a.listeners != null && a.listeners > 0) return round(clamp01(Math.log10(2_000_000 / a.listeners) / 2));
+  if (a.popularity != null && a.popularity > 0) return round(clamp01((65 - a.popularity) / 40));
+  return null;
 }
 
 // The same artist from every source and period → one profile, ranked by affinity.

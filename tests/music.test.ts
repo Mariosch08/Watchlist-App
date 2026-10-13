@@ -392,8 +392,16 @@ describe('listening profile', () => {
     expect(nicheOf({ listeners: 200_000, popularity: null })).toBe(0.5);
     expect(nicheOf({ listeners: 5_000, popularity: null })).toBe(1);
     expect(nicheOf({ listeners: null, popularity: 45 })).toBe(0.5);
-    expect(nicheOf({ listeners: 20_000, popularity: 65 })).toBe(0.5);
     expect(nicheOf({ listeners: null, popularity: null })).toBeNull();
+  });
+
+  it('trusts Last.fm listeners over popularity and ignores a missing popularity (0)', () => {
+    // Kendrick Lamar: millions of listeners, stats.fm says popularity 0 – never a small artist.
+    expect(nicheOf({ listeners: 5_600_000, popularity: 0 })).toBe(0);
+    expect(nicheOf({ listeners: 20_000, popularity: 65 })).toBe(1);
+    expect(nicheOf({ listeners: null, popularity: 0 })).toBeNull();
+    expect(statsfmTopArtists({ items: [{ position: 1, artist: { name: 'Kendrick Lamar', spotifyPopularity: 0 } }] })[0].popularity).toBeNull();
+    expect(spotifyArtists({ items: [{ id: 'k', name: 'Kendrick Lamar', popularity: 0 }] })[0].popularity).toBeNull();
   });
 
   it('builds a profile from several sources and periods', () => {
