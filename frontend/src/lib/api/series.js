@@ -5,6 +5,20 @@ export async function fetchSeriesOverview() {
   return unwrap(await supabase.rpc('series_overview'));
 }
 
+// Catch-up plans before a season premiere (created by the daily series check).
+export async function fetchCatchups() {
+  return unwrap(await supabase.from('catchup_plans').select('tmdb_id, season_number, premiere, behind_at_start, per_week, started_on, dismissed'));
+}
+
+export async function dismissCatchup(tmdbId, seasonNumber) {
+  unwrap(await supabase.from('catchup_plans').update({ dismissed: true }).match({ tmdb_id: tmdbId, season_number: seasonNumber }));
+}
+
+// Episodes marked as watched since a date (for the viewing pace).
+export async function fetchRecentEpisodes(since) {
+  return unwrap(await supabase.from('watched_episodes').select('tmdb_id, watched_at').gte('watched_at', since).order('watched_at').limit(3000));
+}
+
 export async function fetchProgress(tmdbId) {
   const [progress, episodes] = await Promise.all([
     supabase.from('series_progress').select('tmdb_id, next_up_season, next_up_episode, created_at').eq('tmdb_id', tmdbId).maybeSingle(),

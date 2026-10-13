@@ -12,6 +12,10 @@ import {
   type Concert,
   isoDaysAgo,
   lastfmArtistInfo,
+  lastfmMonth,
+  monthBounds,
+  monthsToFill,
+  statsfmMonth,
   lastfmGet,
   lastfmLovedArtists,
   lastfmSimilar,
@@ -32,6 +36,7 @@ import {
   spotifyAlbums,
   spotifyArtists,
   SPOTIFY_SCOPES,
+  spotifySearchUrl,
   statsfmGet,
   statsfmStreamStats,
   statsfmTopArtists,
@@ -39,7 +44,9 @@ import {
   weighList,
 } from '../_shared/music.ts';
 import { mapLimited } from '../_shared/importJob.ts';
-import { HttpError } from '../_shared/tmdb.ts';
+import { HttpError, normalizeComposers, tmdbGet } from '../_shared/tmdb.ts';
+import { BRIDGE, composersToDiscover, type FavouriteFilm, pickComposerAlbums } from '../_shared/bridge.ts';
+import { lastfmRecentArtists, MOOD_WINDOW_HOURS, moodFromListening, type RecentArtist, statsfmRecentArtists } from '../_shared/mood.ts';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'content-type': 'application/json' } });
@@ -50,12 +57,14 @@ const CACHE_TTL_MS = 30 * 86_400_000;
 const SIMILAR_TTL_MS = 7 * 86_400_000;
 const RUN_BUDGET_MS = 100_000; // Edge Functions stop after 150 s: no new user after this
 const DAY_MS = 86_400_000;
+const COMPOSERS_TTL_MS = 90 * DAY_MS;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 type Db = ReturnType<typeof adminClient>;
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const env = {
   lastfm: Deno.env.get('LASTFM_API_KEY') ?? '',
+  tmdb: Deno.env.get('TMDB_API_KEY') ?? '',
   spotifyClient: Deno.env.get('SPOTIFY_CLIENT_ID') ?? '',
   ticketmaster: Deno.env.get('TICKETMASTER_API_KEY') ?? '',
 };
@@ -280,6 +289,82 @@ async function releasesFor(run: RunCache, mbids: string[], from: string, to: str
   return [...new Map(mbids.flatMap((id) => run.releases.get(id) ?? []).map((a) => [a.key, a])).values()];
 }
 
+// Score Bridge, the other way: the music of films I rated 9 or 10 (TMDb credits, then Last.fm top albums).
+async function favouriteFilmMusic(db: Db, userId: string, artists: Artist[], excluded: Set<string>) {
+  if (!env.tmdb || !env.lastfm) return [];
+  const { data: films } = await db
+    .from('watchlist')
+    .select('media_type, tmdb_id, title, my_rating')
+    .eq('user_id', userId)
+    .gte('my_rating', BRIDGE.favouriteRating)
+    .order('rated_at', { ascending: false })
+    .limit(BRIDGE.favourites);
+  if (!films?.length) return [];
+  const withComposers: FavouriteFilm[] = await mapLimited(films, 4, async (f) => {
+    const key = `composers:${f.media_type}:${f.tmdb_id}`;
+    const { data: hit } = await db.from('tmdb_cache').select('data, expires_at').eq('cache_key', key).maybeSingle();
+    let composers = hit && (!hit.expires_at || new Date(hit.expires_at) > new Date()) ? hit.data?.composers : null;
+    if (!composers) {
+      const path = f.media_type === 'tv' ? `/tv/${f.tmdb_id}/aggregate_credits` : `/movie/${f.tmdb_id}/credits`;
+      const res = await tmdbGet(path, {}, env.tmdb, fetch).catch(() => null);
+      composers = res ? normalizeComposers(f.media_type === 'tv' ? { aggregate_credits: res } : { credits: res }, f.media_type) : [];
+      if (res) {
+        await db.from('tmdb_cache').upsert({ cache_key: key, kind: 'other', data: { composers }, fetched_at: new Date().toISOString(), expires_at: new Date(Date.now() + COMPOSERS_TTL_MS).toISOString() });
+      }
+    }
+    return { ...f, composers };
+  });
+  const known = new Set(artists.filter((a) => a.affinity >= 0.5).map((a) => a.key));
+  const picks = composersToDiscover(withComposers, known);
+  const rows = await mapLimited(picks, 3, async ({ name, film, known: isKnown }) => {
+    const res = await lastfmGet('artist.gettopalbums', { artist: name, limit: 10, autocorrect: 1 }, env.lastfm).catch(() => null);
+    return pickComposerAlbums(res, name, film.title)
+      .filter((album) => !excluded.has(album.key))
+      .map((album, i) => ({
+        album,
+        film,
+        score: 30 + film.my_rating - i * 2,
+        reason: `Du hast „${film.title}“ mit ${film.my_rating} bewertet – die Musik ist von ${name}${isKnown ? ', auch in deiner Sammlung' : ''}`.slice(0, 300),
+      }));
+  });
+  return rows.flat();
+}
+
+// Life Reel: listening per month – stats.fm with real minutes if connected, otherwise Last.fm plays.
+async function fillMusicMonths(db: Db, userId: string, src: { lastfm: string | null; statsfm: string | null }) {
+  if (!src.statsfm && !(src.lastfm && env.lastfm)) return 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: stored } = await db.from('music_months').select('month').eq('user_id', userId);
+  let filled = 0;
+  for (const month of monthsToFill((stored ?? []).map((r) => r.month), today)) {
+    const { from, to } = monthBounds(month);
+    let row = null;
+    if (src.statsfm) {
+      const name = encodeURIComponent(src.statsfm);
+      const range = `after=${from}&before=${to}`;
+      const [stats, artists, tracks] = await Promise.all([
+        statsfmGet(`/users/${name}/streams/stats?${range}`).catch(() => null),
+        statsfmGet(`/users/${name}/top/artists?${range}&limit=1`).catch(() => null),
+        statsfmGet(`/users/${name}/top/tracks?${range}&limit=1`).catch(() => null),
+      ]);
+      row = statsfmMonth(stats, artists, tracks);
+    }
+    if (!row && src.lastfm && env.lastfm) {
+      const range = { user: src.lastfm, from: Math.floor(from / 1000), to: Math.floor(to / 1000) };
+      const [recent, artists, tracks] = await Promise.all([
+        lastfmGet('user.getrecenttracks', { ...range, limit: 1 }, env.lastfm).catch(() => null),
+        lastfmGet('user.getweeklyartistchart', range, env.lastfm).catch(() => null),
+        lastfmGet('user.getweeklytrackchart', range, env.lastfm).catch(() => null),
+      ]);
+      row = lastfmMonth(recent, artists, tracks);
+    }
+    if (!row) continue;
+    const { error } = await db.from('music_months').upsert({ user_id: userId, month, ...row, updated_at: new Date().toISOString() });
+    if (!error) filled++;
+  }
+  return filled;
+}
+
 async function buildMusic(db: Db, userId: string, run: RunCache) {
   const [{ data: settings }, { data: conn }, { data: taste }, { data: answered }] = await Promise.all([
     db.from('user_settings').select('lastfm_username, statsfm_username').eq('user_id', userId).maybeSingle(),
@@ -297,6 +382,9 @@ async function buildMusic(db: Db, userId: string, run: RunCache) {
   } else if (!settings?.statsfm_username) {
     await db.from('music_stats').delete().eq('user_id', userId);
   }
+  await fillMusicMonths(db, userId, { lastfm: settings?.lastfm_username ?? null, statsfm: settings?.statsfm_username ?? null }).catch((err) =>
+    console.error('music months', err),
+  );
   if (!artists.length) return { artists: 0, albums: 0, concerts: 0 };
   await enrichArtists(db, artists);
   const today = new Date().toISOString().slice(0, 10);
@@ -349,7 +437,38 @@ async function buildMusic(db: Db, userId: string, run: RunCache) {
     today,
   });
 
+  const excludedIds = new Set([...rejected, ...(answered ?? []).map((r) => r.external_id), ...ranked.map((r) => r.album.key)]);
+  const bridge = await favouriteFilmMusic(db, userId, artists, excludedIds).catch((err) => (console.error('film music', err), []));
+
   await db.from('feed').delete().eq('user_id', userId).eq('type', 'album').eq('status', 'new');
+  if (bridge.length) {
+    const expires = new Date(Date.now() + FEED_TTL_MS).toISOString();
+    const { error } = await db.from('feed').upsert(
+      bridge.map(({ album: a, film, score, reason }) => ({
+        user_id: userId,
+        type: 'album',
+        external_id: a.key,
+        title: a.title,
+        subtitle: a.artist,
+        image_url: a.image_url,
+        release_date: null,
+        source: 'score_bridge',
+        score,
+        reason,
+        data: {
+          artist: a.artist,
+          kind: 'Album',
+          genre_ids: [],
+          spotify_url: spotifySearchUrl(`${a.artist} ${a.title}`),
+          lastfm_url: a.url,
+          bridge: { media_type: film.media_type, tmdb_id: film.tmdb_id, title: film.title, rating: film.my_rating },
+        },
+        expires_at: expires,
+      })),
+      { onConflict: 'user_id,type,external_id', ignoreDuplicates: true },
+    );
+    if (error) throw error;
+  }
   if (ranked.length) {
     const expires = new Date(Date.now() + FEED_TTL_MS).toISOString();
     const { error } = await db.from('feed').upsert(
@@ -418,8 +537,93 @@ async function findConcerts(db: Db, userId: string, artists: Artist[], today: st
       })),
       { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true },
     );
+    await notifyConcertBuddies(db, userId, unique);
   }
   return unique.length;
+}
+
+// Concert buddies: friends who also listen to the artist a lot. Only when both share their music.
+async function notifyConcertBuddies(db: Db, userId: string, concerts: Concert[]) {
+  const { data: me } = await db.from('user_settings').select('share_music_with_friends').eq('user_id', userId).maybeSingle();
+  if (!me?.share_music_with_friends) return;
+  const { data: links } = await db.from('friendships').select('requester_id, addressee_id').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+  const friends = (links ?? []).map((f) => (f.requester_id === userId ? f.addressee_id : f.requester_id));
+  if (!friends.length) return;
+  const [{ data: sharing }, { data: profiles }] = await Promise.all([
+    db.from('user_settings').select('user_id').in('user_id', friends).eq('share_music_with_friends', true),
+    db.from('profiles').select('id, display_name').in('id', friends),
+  ]);
+  const ids = (sharing ?? []).map((s) => s.user_id);
+  if (!ids.length) return;
+  const { data: overlap } = await db
+    .from('music_artists')
+    .select('user_id, artist_key')
+    .in('user_id', ids)
+    .in('artist_key', [...new Set(concerts.map((c) => c.artist_key))])
+    .gte('affinity', 0.25);
+  const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? 'Jemand']));
+  const rows = concerts.flatMap((c) =>
+    (overlap ?? [])
+      .filter((o) => o.artist_key === c.artist_key)
+      .map((o) => ({
+        user_id: userId,
+        type: 'concert',
+        title: `Konzert-Buddy: ${nameOf.get(o.user_id)} hört ${c.artist} auch oft`.slice(0, 200),
+        body: `${c.artist} spielt am ${c.local_date.split('-').reverse().join('.')} in ${c.city ?? 'der Schweiz'}.`,
+        data: { path: '/music', url: c.url, friend_id: o.user_id },
+        dedupe_key: `concert-buddy:${c.event_id}:${o.user_id}`,
+      })),
+  );
+  if (rows.length) await db.from('notifications').upsert(rows.slice(0, 5), { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true });
+}
+
+// ---- Tonight's mood from the last hours of listening ---------------------------------------------
+
+const MOOD_TTL_MS = 15 * 60_000;
+
+async function listeningMood(db: Db, userId: string) {
+  const { data: settings } = await db.from('user_settings').select('lastfm_username, statsfm_username, music_mood').eq('user_id', userId).maybeSingle();
+  if (!settings?.music_mood) return { mood: null, off: true };
+  if (!settings.lastfm_username && !settings.statsfm_username) return { mood: null, reason: 'NO_SOURCE' };
+  const cacheKey = `mood:${userId}`;
+  const { data: hit } = await db.from('tmdb_cache').select('data, expires_at').eq('cache_key', cacheKey).maybeSingle();
+  if (hit && hit.expires_at && new Date(hit.expires_at) > new Date()) return hit.data;
+
+  const now = Date.now();
+  const since = now - MOOD_WINDOW_HOURS * 3_600_000;
+  let recent: RecentArtist[] = [];
+  if (settings.lastfm_username && env.lastfm) {
+    const res = await lastfmGet('user.getrecenttracks', { user: settings.lastfm_username, from: Math.floor(since / 1000), limit: 200 }, env.lastfm).catch(() => null);
+    recent = lastfmRecentArtists(res, now);
+  }
+  if (!recent.length && settings.statsfm_username) {
+    const res = await statsfmGet(`/users/${encodeURIComponent(settings.statsfm_username)}/streams/recent?limit=100`).catch(() => null);
+    recent = statsfmRecentArtists(res, since);
+  }
+  // Tags: my stored genres first (Spotify/stats.fm/Last.fm), then the shared Last.fm cache, then a few lookups.
+  const top = recent.slice(0, 8);
+  const tags = new Map<string, string[]>();
+  if (top.length) {
+    const { data: mine } = await db.from('music_artists').select('artist_key, genres').eq('user_id', userId).in('artist_key', top.map((a) => a.key));
+    for (const m of mine ?? []) if (m.genres?.length) tags.set(m.artist_key, m.genres);
+    const missing = top.filter((a) => !tags.has(a.key));
+    const { data: cached } = missing.length
+      ? await db.from('tmdb_cache').select('cache_key, data').in('cache_key', missing.map((a) => `lfm:${a.key}`.slice(0, 200)))
+      : { data: [] as any[] };
+    for (const c of cached ?? []) if (c.data?.tags?.length) tags.set(c.cache_key.slice(4), c.data.tags);
+    if (env.lastfm) {
+      await mapLimited(missing.filter((a) => !tags.has(a.key)).slice(0, 4), 4, async (a) => {
+        const res = await lastfmGet('artist.getinfo', { artist: a.name, autocorrect: 1 }, env.lastfm).catch(() => null);
+        if (!res) return;
+        const info = lastfmArtistInfo(res);
+        tags.set(a.key, info.tags);
+        await db.from('tmdb_cache').upsert({ cache_key: `lfm:${a.key}`.slice(0, 200), kind: 'mapping', data: info, fetched_at: new Date().toISOString(), expires_at: new Date(now + CACHE_TTL_MS).toISOString() });
+      });
+    }
+  }
+  const result = { mood: moodFromListening(recent, (a) => tags.get(a.key) ?? []), plays: recent.reduce((n, a) => n + a.plays, 0) };
+  await db.from('tmdb_cache').upsert({ cache_key: cacheKey, kind: 'other', data: result, fetched_at: new Date().toISOString(), expires_at: new Date(now + MOOD_TTL_MS).toISOString() });
+  return result;
 }
 
 // ---- Entry --------------------------------------------------------------------------------------
@@ -444,6 +648,7 @@ Deno.serve(async (req) => {
       if (!user) return json(401, { error: 'Unauthorized', code: 'UNAUTHORIZED' });
       const body = await req.json().catch(() => ({}));
       if (body?.action === 'spotify-connect') return await connectSpotify(db, user.id, body);
+      if (body?.action === 'mood') return json(200, await listeningMood(db, user.id));
       if (body?.action !== 'refresh') return json(400, { error: 'Unknown action', code: 'INVALID_INPUT' });
       const [{ data: settings }, { data: conn }, { data: latest }] = await Promise.all([
         db.from('user_settings').select('lastfm_username, statsfm_username').eq('user_id', user.id).maybeSingle(),

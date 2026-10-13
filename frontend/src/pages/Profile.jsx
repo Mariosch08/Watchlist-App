@@ -346,11 +346,21 @@ function SettingsCard() {
           <label className="check-row">
             <input
               type="checkbox"
+              checked={settings.data?.music_mood ?? true}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ music_mood: e.target.checked })}
+            />
+            „Was schauen wir heute?“ berücksichtigt, was ich die letzten Stunden gehört habe
+          </label>
+          <h3 className="subheading">Mit Freunden teilen</h3>
+          <label className="check-row">
+            <input
+              type="checkbox"
               checked={settings.data?.share_ratings_with_friends ?? true}
               disabled={!settings.data}
               onChange={(e) => save.mutate({ share_ratings_with_friends: e.target.checked })}
             />
-            Freunde sehen meine Bewertungen (für „Wer hat es gesehen?“ und den Geschmacks-Match)
+            Bewertungen und Gesehenes (für „Wer hat es gesehen?“, den Geschmacks-Match und Filmabende)
           </label>
           <label className="check-row">
             <input
@@ -359,7 +369,25 @@ function SettingsCard() {
               disabled={!settings.data}
               onChange={(e) => save.mutate({ share_activity: e.target.checked })}
             />
-            Freunde sehen, was ich hinzufüge, schaue und bewerte (Aktivität)
+            Was ich hinzufüge, schaue und bewerte (Aktivität)
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.share_music_with_friends ?? false}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ share_music_with_friends: e.target.checked })}
+            />
+            Meine Lieblings-Artists für Konzert-Buddys (nur wenn auch die Freunde ihre teilen)
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.data?.share_services_with_friends ?? false}
+              disabled={!settings.data}
+              onChange={(e) => save.mutate({ share_services_with_friends: e.target.checked })}
+            />
+            Meine Streaming-Abos beim Filmabend („Läuft auf Laras MUBI“)
           </label>
           <h3 className="subheading">E-Mails</h3>
           <label className="check-row">

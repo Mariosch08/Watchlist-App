@@ -1,14 +1,35 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Shuffle } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '../../auth/AuthContext.jsx';
 import { useWatchlist } from '../../hooks/useWatchlist.js';
+import { fetchListeningMood } from '../../lib/api/music.js';
+import { fetchSettings, updateSettings } from '../../lib/api/settings.js';
+import { queryKeys } from '../../lib/queryClient.js';
 import { formatRuntime, STATUS_LABEL } from '../../lib/labels.js';
 import { DURATIONS, MOODS, pickTonight } from '../../lib/tonight.js';
 import TitleRow from '../TitleRow.jsx';
 
 // "Was schauen wir heute?" – one suggestion from the own watchlist.
+// Tonight's mood from the last hours of listening: one visible line, one tap turns it off.
+function useMusicMood() {
+  const user = useUser();
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: queryKeys.settings(user.id), queryFn: fetchSettings });
+  const hasSource = Boolean(settings.data?.lastfm_username || settings.data?.statsfm_username);
+  const on = hasSource && settings.data?.music_mood !== false;
+  const mood = useQuery({ queryKey: queryKeys.music(user.id, 'mood'), queryFn: fetchListeningMood, enabled: on, staleTime: 15 * 60_000, retry: false });
+  const toggle = useMutation({
+    mutationFn: (value) => updateSettings({ music_mood: value }),
+    onSuccess: (row) => queryClient.setQueryData(queryKeys.settings(user.id), (old) => ({ ...old, music_mood: row.music_mood })),
+  });
+  return { hasSource, on, music: on ? (mood.data?.mood ?? null) : null, toggle };
+}
+
 export default function TonightPicker({ weights }) {
   const watchlist = useWatchlist();
+  const { hasSource, on, music, toggle } = useMusicMood();
   const [options, setOptions] = useState({ kind: 'any', duration: 'any', mood: null });
   const [shown, setShown] = useState([]);
   const [pick, setPick] = useState(undefined);
@@ -19,7 +40,7 @@ export default function TonightPicker({ weights }) {
   };
   const roll = () => {
     const maxMinutes = DURATIONS.find((d) => d.id === options.duration)?.minutes ?? null;
-    const next = pickTonight(watchlist.data, { kind: options.kind, maxMinutes, mood: options.mood }, { shown, weights });
+    const next = pickTonight(watchlist.data, { kind: options.kind, maxMinutes, mood: options.mood, music }, { shown, weights });
     setPick(next);
     if (next) setShown((s) => [...s, `${next.media_type}:${next.tmdb_id}`]);
   };
@@ -51,6 +72,22 @@ export default function TonightPicker({ weights }) {
           ))}
         </select>
       </div>
+      {music && (
+        <p className="mood-line">
+          <span>{music.line}</span>
+          <button type="button" className="btn-ghost btn-compact" disabled={toggle.isPending} onClick={() => toggle.mutate(false)}>
+            Aus
+          </button>
+        </p>
+      )}
+      {hasSource && !on && (
+        <p className="caption">
+          Die Stimmung aus deiner Musik ist aus.{' '}
+          <button type="button" className="link" disabled={toggle.isPending} onClick={() => toggle.mutate(true)}>
+            Einschalten
+          </button>
+        </p>
+      )}
       <div className="actions">
         <button className="btn-primary" onClick={roll} disabled={!watchlist.data}>
           <Shuffle size={16} aria-hidden="true" />

@@ -7,33 +7,15 @@ import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
-import { useSeriesOverview } from '../hooks/useSeries.js';
-import { useWatchlist } from '../hooks/useWatchlist.js';
+import { KIND_LABEL } from '../../../supabase/functions/_shared/agenda.ts';
+import { CatchUpList } from '../components/series/CatchUp.jsx';
+import { useAgenda } from '../hooks/useAgenda.js';
 import { calendarUrl, fetchSettings, regenerateCalendarToken, webcalUrl } from '../lib/api/settings.js';
 import { errorMessage } from '../lib/errors.js';
-import { episodeCode } from '../lib/series.js';
 import { queryKeys } from '../lib/queryClient.js';
 
 const DAYS = 30;
 const dayLabel = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' });
-
-export function upcomingEvents(series, watchlist, today = new Date()) {
-  const from = today.toISOString().slice(0, 10);
-  const to = new Date(today.getTime() + DAYS * 86_400_000).toISOString().slice(0, 10);
-  const events = [];
-  for (const s of series ?? []) {
-    const ep = s.next_episode_to_air;
-    if (ep?.air_date && ep.air_date >= from && ep.air_date <= to && s.watch_status !== 'dropped') {
-      events.push({ date: ep.air_date, key: `tv-${s.tmdb_id}`, to: `/title/tv/${s.tmdb_id}`, title: s.title ?? 'Serie', detail: `${episodeCode(ep.season_number, ep.episode_number)}${ep.name ? ` · ${ep.name}` : ''}` });
-    }
-  }
-  for (const m of watchlist ?? []) {
-    if (m.media_type === 'movie' && m.status === 'planned' && m.release_date >= from && m.release_date <= to) {
-      events.push({ date: m.release_date, key: `movie-${m.tmdb_id}`, to: `/title/movie/${m.tmdb_id}`, title: m.title, detail: 'Filmstart' });
-    }
-  }
-  return events.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
-}
 
 function Subscribe() {
   const user = useUser();
@@ -63,8 +45,8 @@ function Subscribe() {
         Im eigenen Kalender abonnieren
       </h2>
       <p className="muted">
-        Neue Folgen deiner Serien und Filmstarts aus deiner Watchlist erscheinen automatisch in Google Kalender, Apple Kalender oder Outlook. Der Link ist
-        privat – teile ihn nicht.
+        Alles von dieser Seite – neue Folgen, Filmstarts, Konzerte, Alben, Aufhol-Termine und Abo-Erinnerungen – erscheint automatisch in Google
+        Kalender, Apple Kalender oder Outlook. Der Link ist privat – teile ihn nicht.
       </p>
       {settings.isError && <Messages error={errorMessage(settings.error)} />}
       {token && (
@@ -87,25 +69,22 @@ function Subscribe() {
 
 export default function CalendarPage() {
   useDocumentTitle('Kalender');
-  const series = useSeriesOverview();
-  const watchlist = useWatchlist();
-  const loading = !series.data || !watchlist.data;
-  const events = loading ? [] : upcomingEvents(series.data, watchlist.data);
-  const byDay = events.reduce((acc, e) => acc.set(e.date, [...(acc.get(e.date) ?? []), e]), new Map());
+  const { items, error } = useAgenda(DAYS);
+  const byDay = (items ?? []).reduce((acc, e) => acc.set(e.date, [...(acc.get(e.date) ?? []), e]), new Map());
   return (
     <>
       <section className="card" aria-labelledby="calendar-title">
         <PageTitle area="calendar" id="calendar-title">
           Kalender
         </PageTitle>
-        <p className="muted">Die nächsten {DAYS} Tage: neue Folgen deiner Serien und Filmstarts aus deiner Watchlist.</p>
-        {series.isError || watchlist.isError ? (
-          <Messages error={errorMessage(series.error ?? watchlist.error)} />
-        ) : loading ? (
+        <p className="muted">Die nächsten {DAYS} Tage: Folgen, Filmstarts, Konzerte, Alben, Aufhol-Termine und Abo-Erinnerungen.</p>
+        {error ? (
+          <Messages error={errorMessage(error)} />
+        ) : !items ? (
           <CardSkeleton />
-        ) : events.length === 0 ? (
+        ) : items.length === 0 ? (
           <p className="empty">
-            In den nächsten {DAYS} Tagen erscheint nichts. Verfolge Serien, indem du auf ihrer Detailseite Folgen abhakst – zum Beispiel über die{' '}
+            In den nächsten {DAYS} Tagen steht nichts an. Verfolge Serien, indem du auf ihrer Detailseite Folgen abhakst – zum Beispiel über die{' '}
             <Link to="/">Watchlist</Link>.
           </p>
         ) : (
@@ -115,13 +94,25 @@ export default function CalendarPage() {
                 <h3>{dayLabel(date)}</h3>
                 <ul className="list">
                   {list.map((e) => (
-                    <li key={e.key} className="title-row">
+                    <li key={e.uid} className="title-row">
                       <div className="title-main">
-                        <Link className="title-name title-link" to={e.to}>
-                          {e.title}
-                        </Link>
-                        <span className="meta">{e.detail}</span>
+                        {e.path ? (
+                          <Link className="title-name title-link" to={e.path}>
+                            {e.title}
+                          </Link>
+                        ) : (
+                          <span className="title-name">{e.title}</span>
+                        )}
+                        <span className="meta">
+                          <span className="badge">{KIND_LABEL[e.kind]}</span>
+                          {e.detail && <span>{e.detail.split('\n')[0]}</span>}
+                        </span>
                       </div>
+                      {e.url && (
+                        <a className="button-link btn-compact" href={e.url} target="_blank" rel="noopener noreferrer">
+                          Tickets
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -130,6 +121,7 @@ export default function CalendarPage() {
           </div>
         )}
       </section>
+      <CatchUpList />
       <Subscribe />
     </>
   );

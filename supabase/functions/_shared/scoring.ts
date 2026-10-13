@@ -1,4 +1,5 @@
 // Taste profile and recommendation scoring (pure, testable). Weights range from -1 (avoid) to +1 (love).
+import { scoreReason } from './bridge.ts';
 
 export type Kind = 'movie' | 'tv';
 
@@ -83,6 +84,7 @@ export interface ScoreContext {
   providerNames: string[];
   genreNames: Record<Kind, Record<string, string>>;
   today: string; // YYYY-MM-DD
+  composers?: Map<string, { name: string; plays: number | null }>; // 'score:<person id>' -> an artist I listen to
 }
 
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(a) - Date.parse(b)) / 86_400_000);
@@ -104,9 +106,12 @@ export function scoreCandidate(c: Candidate, ctx: ScoreContext) {
   }
   const because = c.sources.map((s) => ctx.becauseTitles.get(s)).find(Boolean);
   const onMyServices = c.sources.includes('providers');
-  const score = genreScore * 40 + ratingScore + recency + (because ? 15 : 0) + (onMyServices ? 12 : 0) + Math.min(5, (c.popularity ?? 0) / 40);
+  const composer = c.sources.map((s) => ctx.composers?.get(s)).find(Boolean) ?? null;
+  const score =
+    genreScore * 40 + ratingScore + recency + (because ? 15 : 0) + (onMyServices ? 12 : 0) + (composer ? 14 : 0) + Math.min(5, (c.popularity ?? 0) / 40);
 
   const reasons: string[] = [];
+  if (composer) reasons.push(scoreReason(composer));
   if (because) reasons.push(`Weil du „${because.title}“ mit ${because.rating} bewertet hast`);
   if (onMyServices && ctx.providerNames.length) reasons.push(`Auf deinen Streaming-Diensten (${ctx.providerNames.slice(0, 2).join(', ')})`);
   if (fresh) reasons.push(c.release_date! > ctx.today ? 'Erscheint bald' : 'Neu erschienen');
@@ -116,7 +121,7 @@ export function scoreCandidate(c: Candidate, ctx: ScoreContext) {
     .filter(Boolean)
     .slice(0, 2);
   if (!because && liked.length) reasons.push(`Passt zu deinen Lieblingsgenres: ${liked.join(', ')}`);
-  return { score: Math.round(score * 10) / 10, reason: reasons[0] ?? 'Beliebt gerade', reasons, fresh };
+  return { score: Math.round(score * 10) / 10, reason: reasons[0] ?? 'Beliebt gerade', reasons, fresh, composer };
 }
 
 // Scores, removes excluded titles and keeps genre variety in the top list.

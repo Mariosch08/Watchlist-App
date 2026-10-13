@@ -617,6 +617,7 @@ export function ticketmasterUrl(artist: string, key: string, today: string) {
 export interface Concert {
   event_id: string;
   artist: string;
+  artist_key: string;
   name: string;
   venue: string | null;
   city: string | null;
@@ -638,6 +639,7 @@ export function normalizeEvents(json: any, artist: Artist): Concert[] {
       return {
         event_id: e.id.slice(0, 100),
         artist: artist.name,
+        artist_key: artist.key,
         name: String(e.name ?? artist.name).slice(0, 300),
         venue: venue?.name ? String(venue.name).slice(0, 200) : null,
         city: venue?.city?.name ? String(venue.city.name).slice(0, 100) : null,
@@ -647,4 +649,67 @@ export function normalizeEvents(json: any, artist: Artist): Concert[] {
         image_url: pickImage(e.images, 300),
       };
     });
+}
+
+// ---- Listening per month (Life Reel) ------------------------------------------------------------
+
+export const MINUTES_PER_PLAY = 3.5; // Last.fm counts plays, not time
+export const REEL_MONTHS = 12;
+
+export const monthStart = (iso: string) => `${iso.slice(0, 7)}-01`;
+const shiftMonth = (month: string, n: number) => {
+  const d = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1 + n, 1));
+  return d.toISOString().slice(0, 10);
+};
+
+// Milliseconds of the month (UTC).
+export function monthBounds(month: string) {
+  const from = Date.parse(`${monthStart(month)}T00:00:00Z`);
+  return { from, to: Date.parse(`${shiftMonth(month, 1)}T00:00:00Z`) - 1 };
+}
+
+// This and last month are always refreshed; older months of the last year are filled in a few per run.
+export function monthsToFill(stored: string[], today: string, perRun = 2) {
+  const current = monthStart(today);
+  const have = new Set(stored.map(monthStart));
+  const older = Array.from({ length: REEL_MONTHS - 2 }, (_, i) => shiftMonth(current, -(i + 2))).filter((m) => !have.has(m));
+  return [current, shiftMonth(current, -1), ...older.slice(0, perRun)];
+}
+
+const firstOf = (x: unknown) => (Array.isArray(x) ? x[0] : x ?? null);
+
+// user.getrecenttracks (limit 1, total in @attr), user.getweeklyartistchart and user.getweeklytrackchart.
+export function lastfmMonth(recent: any, artists: any, tracks: any) {
+  const plays = Number(recent?.recenttracks?.['@attr']?.total);
+  if (!Number.isFinite(plays)) return null;
+  const artist = firstOf(artists?.weeklyartistchart?.artist);
+  const track = firstOf(tracks?.weeklytrackchart?.track);
+  return {
+    plays,
+    minutes: Math.round(plays * MINUTES_PER_PLAY),
+    minutes_estimated: true,
+    top_artist: typeof artist?.name === 'string' ? artist.name.slice(0, 200) : null,
+    top_artist_plays: Number(artist?.playcount) || null,
+    top_track: typeof track?.name === 'string' ? track.name.slice(0, 300) : null,
+    top_track_artist: typeof track?.artist?.['#text'] === 'string' ? track.artist['#text'].slice(0, 200) : null,
+    source: 'lastfm' as const,
+  };
+}
+
+// stats.fm /streams/stats, /top/artists and /top/tracks with after/before.
+export function statsfmMonth(stats: any, artists: any, tracks: any) {
+  const s = stats?.items;
+  if (!s || !Number.isFinite(s.count)) return null;
+  const artist = firstOf(artists?.items);
+  const track = firstOf(tracks?.items);
+  return {
+    plays: Math.max(0, Math.round(s.count)),
+    minutes: Number.isFinite(s.durationMs) ? Math.round(s.durationMs / 60_000) : null,
+    minutes_estimated: false,
+    top_artist: typeof artist?.artist?.name === 'string' ? artist.artist.name.slice(0, 200) : null,
+    top_artist_plays: Number.isFinite(artist?.streams) ? artist.streams : null,
+    top_track: typeof track?.track?.name === 'string' ? track.track.name.slice(0, 300) : null,
+    top_track_artist: typeof track?.track?.artists?.[0]?.name === 'string' ? track.track.artists[0].name.slice(0, 200) : null,
+    source: 'statsfm' as const,
+  };
 }

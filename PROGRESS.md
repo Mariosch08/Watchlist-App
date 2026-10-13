@@ -4,7 +4,7 @@
 
 ## Status
 - **Erledigt:** alle Phasen 0–13 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik, 12 Mails & App, 13 Abschluss), Design „Reel“ (ersetzt „Quiet Ink“, D58), Sicherheits-Fix
-- **Aktuelle Phase:** – (Plan abgeschlossen und live; danach: stats.fm (D57), Design „Reel“ (D58), „Reel clean“ (D59) und Musik-Tracker mit Hörprofil (D60))
+- **Aktuelle Phase:** – (Plan abgeschlossen und live; danach: stats.fm (D57), Design „Reel“ (D58), „Reel clean“ (D59) und Musik-Tracker mit Hörprofil (D60) und sechs medienübergreifende Funktionen samt einheitlicher Agenda (D61–D67))
 - **Nächster konkreter Schritt:** Nach dem Merge Rückmeldungen aus dem echten Betrieb einarbeiten; offene Review-Befunde (`docs/reviews/`) prüfen; Ideen unten.
 
 ## Repo-Überblick
@@ -151,6 +151,16 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [ ] Web-Push: bewusst weggelassen (siehe D55)
   - [x] Tests: Root 172, Frontend 77 grün
 - [x] Phase 13 – Abschluss: README mit Funktionsübersicht, Mermaid-Architektur und Sicherheitsprinzipien; PROGRESS-Übersicht aktualisiert; alles grün
+- [x] Über alle Medien (D61–D67)
+  - [x] Score Bridge in beide Richtungen
+  - [x] Abendstimmung aus den Scrobbles
+  - [x] Abo-Rotation mit Kalender-Erinnerungen
+  - [x] Aufhol-Countdown mit sanften Erinnerungen
+  - [x] Life Reel im „Rückblick“
+  - [x] Konzert-Buddys und gemeinsamer Bildschirm
+  - [x] Eine Agenda für Kalender, ICS, Wochen-Mail und „Für dich“
+  - [x] Teilen-Schalter im Profil gebündelt
+  - [x] Tests: Root 236, Frontend 92 grün
 
 ## Offene Befunde (aus den Reviews)
 - `docs/reviews/backend-findings-partial.md`: 23 ungeprüfte Befunde (Sicherheit, Datenmodell), u. a. Erst-Admin-Bootstrap absichern, gemeinsamer Titel-Katalog, Bewertungs-Datum beim Import (erledigt).

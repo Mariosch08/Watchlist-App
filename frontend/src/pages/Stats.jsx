@@ -7,17 +7,19 @@ import { Messages } from '../components/Form.jsx';
 import PageTitle from '../components/PageTitle.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { BarList, MonthBars, RatingBars } from '../components/stats/Charts.jsx';
+import LifeReel from '../components/stats/LifeReel.jsx';
 import { useToast } from '../components/toast/ToastProvider.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { useWatchlist } from '../hooks/useWatchlist.js';
 import { diaryKeys, fetchDiary } from '../lib/api/diary.js';
 import { fetchGenres } from '../lib/api/discovery.js';
-import { fetchArtists, fetchMusicStats } from '../lib/api/music.js';
+import { fetchArtists, fetchConcertLog, fetchMusicMonths, fetchMusicStats } from '../lib/api/music.js';
 import { fetchProfile } from '../lib/api/profile.js';
 import { fetchTopRated } from '../lib/api/tmdb.js';
 import { errorMessage } from '../lib/errors.js';
 import { detailPath } from '../lib/labels.js';
 import { queryKeys } from '../lib/queryClient.js';
+import { yearMusic } from '../lib/reel.js';
 import { availableYears, challenges, MONTH_LONG, reviewSvg, viewings, yearStats } from '../lib/stats.js';
 
 async function shareReview(svg, year) {
@@ -75,7 +77,7 @@ function Challenges({ list }) {
 }
 
 export default function StatsPage() {
-  useDocumentTitle('Statistik');
+  useDocumentTitle('Rückblick');
   const user = useUser();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -86,6 +88,18 @@ export default function StatsPage() {
   const artists = useQuery({ queryKey: queryKeys.music(user.id, 'artists'), queryFn: fetchArtists });
   const listening = useQuery({ queryKey: queryKeys.music(user.id, 'stats'), queryFn: fetchMusicStats });
   const profile = useQuery({ queryKey: queryKeys.profile(user.id), queryFn: () => fetchProfile(user.id) });
+  const musicMonths = useQuery({ queryKey: queryKeys.music(user.id, 'months'), queryFn: fetchMusicMonths });
+  const going = useQuery({ queryKey: queryKeys.music(user.id, 'going'), queryFn: fetchConcertLog });
+  const timeline = params.get('ansicht') === 'zeitleiste';
+  const today = new Date().toISOString().slice(0, 10);
+  const go = (patch) => {
+    const next = Object.fromEntries(params);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null) delete next[k];
+      else next[k] = v;
+    }
+    setParams(next, { replace: true });
+  };
   const [sharing, setSharing] = useState(false);
 
   const views = useMemo(() => (watchlist.data && diary.data ? viewings(watchlist.data, diary.data) : null), [watchlist.data, diary.data]);
@@ -93,6 +107,7 @@ export default function StatsPage() {
   const year = years.includes(Number(params.get('jahr'))) ? Number(params.get('jahr')) : years[0];
   const genreNames = useMemo(() => new Map([...(genres.data?.movie ?? []), ...(genres.data?.tv ?? [])].map((g) => [g.id, g.name])), [genres.data]);
   const stats = useMemo(() => (views ? yearStats(views, year, genreNames) : null), [views, year, genreNames]);
+  const music = useMemo(() => yearMusic({ musicMonths: musicMonths.data ?? [], concerts: going.data ?? [], year, today }), [musicMonths.data, going.data, year, today]);
   const goals = useMemo(
     () => (views ? challenges({ views, watchlist: watchlist.data, topRated: topRated.data ?? (topRated.isError ? [] : null), year }) : []),
     [views, watchlist.data, topRated.data, topRated.isError, year],
@@ -104,7 +119,7 @@ export default function StatsPage() {
   const share = async () => {
     setSharing(true);
     try {
-      const result = await shareReview(reviewSvg(stats, { name: profile.data?.display_name }), year);
+      const result = await shareReview(reviewSvg(stats, { name: profile.data?.display_name, music }), year);
       if (result === 'downloaded') toast.success('Bild gespeichert – bereit zum Teilen.');
     } catch (err) {
       if (err?.name !== 'AbortError') toast.error('Das Bild konnte nicht erstellt werden.');
@@ -117,23 +132,37 @@ export default function StatsPage() {
     <>
       <div className="page-head">
         <PageTitle area="stats" id="stats-title">
-          Statistik
+          Rückblick
         </PageTitle>
-        {years.length > 1 && (
-          <div className="segmented" role="group" aria-label="Jahr">
-            {years.slice(0, 6).map((y) => (
-              <button key={y} type="button" className="segment" aria-pressed={y === year} onClick={() => setParams(y === years[0] ? {} : { jahr: String(y) }, { replace: true })}>
-                {y}
-              </button>
-            ))}
+        <div className="toolbar-group">
+          <div className="segmented" role="group" aria-label="Ansicht">
+            <button type="button" className="segment" aria-pressed={!timeline} onClick={() => go({ ansicht: null })}>
+              Jahr
+            </button>
+            <button type="button" className="segment" aria-pressed={timeline} onClick={() => go({ ansicht: 'zeitleiste' })}>
+              Zeitleiste
+            </button>
           </div>
-        )}
+          {years.length > 1 && (
+            <div className="segmented" role="group" aria-label="Jahr">
+              {years.slice(0, 6).map((y) => (
+                <button key={y} type="button" className="segment" aria-pressed={y === year} onClick={() => go({ jahr: y === years[0] ? null : String(y) })}>
+                  {y}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {timeline && <LifeReel views={views} musicMonths={musicMonths.data ?? []} concerts={going.data ?? []} year={year} today={today} />}
+      {!timeline && (
+      <>
 
       <section className="card review" aria-labelledby="review-title">
         <div className="card-head">
           <h2 id="review-title">
-            Mein Filmjahr {year}
+            {music ? 'Mein Jahr' : 'Mein Filmjahr'} {year}
           </h2>
           <button className="btn-compact" disabled={sharing || stats.total === 0} onClick={share}>
             <Share2 size={16} aria-hidden="true" /> {sharing ? 'Wird erstellt …' : 'Als Bild teilen'}
@@ -168,6 +197,18 @@ export default function StatsPage() {
                 <div className="stat">
                   <dt>Im Kino</dt>
                   <dd>{stats.cinema}</dd>
+                </div>
+              )}
+              {music && (
+                <div className="stat">
+                  <dt>{music.estimated ? 'Stunden Musik (ca.)' : 'Stunden Musik'}</dt>
+                  <dd>{music.hours.toLocaleString('de-CH')}</dd>
+                </div>
+              )}
+              {music?.concerts > 0 && (
+                <div className="stat">
+                  <dt>Konzerte</dt>
+                  <dd>{music.concerts}</dd>
                 </div>
               )}
             </dl>
@@ -260,6 +301,8 @@ export default function StatsPage() {
             Aus deinen Hördaten der letzten 6 Monate{listening.data ? ' (Summen von stats.fm)' : ''} – mehr auf <Link to="/music">Musik</Link>.
           </p>
         </section>
+      )}
+      </>
       )}
     </>
   );

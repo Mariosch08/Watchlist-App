@@ -135,7 +135,8 @@ export const MONTH_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // Shareable year-in-review card (1080×1350 SVG, "Reel" dark colours); turned into a PNG in the browser.
-export function reviewSvg(stats, { name } = {}) {
+// Year in review as an image: films and series, and – if there is listening data – music and concerts.
+export function reviewSvg(stats, { name, music = null } = {}) {
   const W = 1080;
   const H = 1350;
   // Dark theme tokens: text, text-muted, highlight (ink), canvas, border-strong.
@@ -145,9 +146,10 @@ export function reviewSvg(stats, { name } = {}) {
   const paper = '#0c0c0e';
   const line = '#34343a';
   const max = Math.max(1, ...stats.months);
+  const barHeight = music ? 150 : 220;
   const bars = stats.months
     .map((m, i) => {
-      const h = Math.round((m / max) * 220);
+      const h = Math.round((m / max) * barHeight);
       const x = 90 + i * 76;
       return `<rect x="${x}" y="${1080 - h}" width="52" height="${h}" rx="6" fill="${i === stats.bestMonth ? accent : line}"/><text x="${x + 26}" y="1120" font-size="22" text-anchor="middle" fill="${muted}">${MONTH_SHORT[i]}</text>`;
     })
@@ -159,21 +161,32 @@ export function reviewSvg(stats, { name } = {}) {
   ]
     .map(([n, label], i) => `<text x="${90 + i * 320}" y="470" font-size="120" font-weight="700" fill="${ink}">${esc(n)}</text><text x="${94 + i * 320}" y="520" font-size="30" fill="${muted}">${esc(label)}</text>`)
     .join('');
+  const musicNumbers = music
+    ? [
+        [music.hours, music.estimated ? 'Stunden Musik (ca.)' : 'Stunden Musik'],
+        [music.concerts, music.concerts === 1 ? 'Konzert' : 'Konzerte'],
+      ]
+        .map(([n, label], i) => `<text x="${90 + i * 320}" y="680" font-size="96" font-weight="700" fill="${ink}">${esc(n)}</text><text x="${94 + i * 320}" y="724" font-size="30" fill="${muted}">${esc(label)}</text>`)
+        .join('')
+    : '';
   const fav = stats.favourites[0];
   const genre = stats.genres[0];
   const lines = [
     genre ? `Lieblingsgenre: ${genre.name}` : null,
     fav ? `Höchste Bewertung: ${fav.title} (${fav.rating}/10)` : null,
-    stats.bestMonth != null ? `Stärkster Monat: ${MONTH_LONG[stats.bestMonth]}` : null,
+    music?.topArtist ? `Meistgehört: ${music.topArtist}` : null,
+    stats.bestMonth != null && !music ? `Stärkster Monat: ${MONTH_LONG[stats.bestMonth]}` : null,
   ].filter(Boolean);
+  const linesTop = music ? 800 : 640;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, Helvetica Neue, Arial, sans-serif">
 <rect width="${W}" height="${H}" fill="${paper}"/>
 <text x="90" y="170" font-size="34" fill="${muted}" letter-spacing="4">${esc(name ? `${name.toUpperCase()} · ` : '')}JAHRESRÜCKBLICK</text>
-<text x="90" y="290" font-size="110" font-weight="700" fill="${ink}">Mein Filmjahr ${esc(stats.year)}</text>
+<text x="90" y="290" font-size="110" font-weight="700" fill="${ink}">${music ? 'Mein Jahr' : 'Mein Filmjahr'} ${esc(stats.year)}</text>
 <line x1="90" y1="340" x2="${W - 90}" y2="340" stroke="${line}" stroke-width="2"/>
 ${numbers}
-${lines.map((l, i) => `<text x="90" y="${640 + i * 60}" font-size="38" fill="${ink}">${esc(l.length > 52 ? `${l.slice(0, 51)}…` : l)}</text>`).join('')}
+${musicNumbers}
+${lines.map((l, i) => `<text x="90" y="${linesTop + i * 56}" font-size="36" fill="${ink}">${esc(l.length > 52 ? `${l.slice(0, 51)}…` : l)}</text>`).join('')}
 ${bars}
-<text x="90" y="${H - 80}" font-size="24" fill="${muted}">Watchlist · Daten von TMDb</text>
+<text x="90" y="${H - 80}" font-size="24" fill="${muted}">Watchlist · Daten von TMDb${music ? ', Last.fm und stats.fm' : ''}</text>
 </svg>`;
 }

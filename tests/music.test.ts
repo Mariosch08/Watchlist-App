@@ -9,8 +9,12 @@ import {
   lastfmGet,
   lastfmLovedArtists,
   lastfmSimilar,
+  lastfmMonth,
   lastfmTopArtists,
   mergeArtists,
+  monthBounds,
+  monthsToFill,
+  statsfmMonth,
   mergeSimilar,
   musicBrainzClient,
   nicheOf,
@@ -522,5 +526,33 @@ describe('stats.fm', () => {
 
   it('numbers a second page after the first', () => {
     expect(statsfmTopArtists({ items: [{ streams: 3, artist: { name: 'Deep Cut' } }] }, 50)[0].rank).toBe(51);
+  });
+});
+
+describe('listening per month (Life Reel)', () => {
+  it('refreshes this and last month and fills older months a few at a time', () => {
+    expect(monthsToFill([], '2026-10-14')).toEqual(['2026-10-01', '2026-09-01', '2026-08-01', '2026-07-01']);
+    expect(monthsToFill(['2026-08-01', '2026-07-01'], '2026-10-14', 1)).toEqual(['2026-10-01', '2026-09-01', '2026-06-01']);
+    expect(monthBounds('2026-02-01')).toEqual({ from: Date.parse('2026-02-01T00:00:00Z'), to: Date.parse('2026-03-01T00:00:00Z') - 1 });
+  });
+
+  it('reads plays and favourites of a month from Last.fm, with estimated minutes', () => {
+    const row = lastfmMonth(
+      { recenttracks: { '@attr': { total: '812' } } },
+      { weeklyartistchart: { artist: [{ name: 'Phoenix', playcount: '96' }] } },
+      { weeklytrackchart: { track: { name: 'Lisztomania', artist: { '#text': 'Phoenix' } } } },
+    );
+    expect(row).toEqual({ plays: 812, minutes: 2842, minutes_estimated: true, top_artist: 'Phoenix', top_artist_plays: 96, top_track: 'Lisztomania', top_track_artist: 'Phoenix', source: 'lastfm' });
+    expect(lastfmMonth(null, null, null)).toBeNull();
+  });
+
+  it('reads real minutes from stats.fm', () => {
+    const row = statsfmMonth(
+      { items: { count: 500, durationMs: 6_000_000 } },
+      { items: [{ streams: 80, artist: { name: 'Phoenix' } }] },
+      { items: [{ streams: 20, track: { name: '1901', artists: [{ name: 'Phoenix' }] } }] },
+    );
+    expect(row).toMatchObject({ plays: 500, minutes: 100, minutes_estimated: false, top_artist: 'Phoenix', top_track: '1901', top_track_artist: 'Phoenix' });
+    expect(statsfmMonth({ items: {} }, null, null)).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import FeedRow from '../components/discover/FeedRow.jsx';
 import TonightPicker from '../components/discover/TonightPicker.jsx';
+import WeekAhead from '../components/discover/WeekAhead.jsx';
 import { Messages } from '../components/Form.jsx';
 import PageTitle from '../components/PageTitle.jsx';
 import { TitleRowSkeleton } from '../components/Skeleton.jsx';
@@ -106,6 +107,7 @@ export default function DiscoverPage() {
         {updated && <span className="caption">Stand {updated}</span>}
       </div>
       <TonightPicker weights={weights} />
+      <WeekAhead />
       <section className="card" aria-labelledby="feed-title">
         <div className="card-head">
           <h2 id="feed-title">

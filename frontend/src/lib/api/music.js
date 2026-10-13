@@ -30,12 +30,38 @@ export async function fetchConcerts() {
   );
 }
 
+// Concerts I go to or went to (Life Reel, calendar).
+export async function fetchConcertLog() {
+  return unwrap(await supabase.from('concert_log').select('id, event_id, artist, local_date, venue, city, note, created_at').order('local_date', { ascending: false }));
+}
+
+export async function logConcert({ event_id = null, artist, local_date, venue = null, city = null, note = null }) {
+  return unwrap(await supabase.from('concert_log').insert({ event_id, artist, local_date, venue, city, note }).select('id, event_id, artist, local_date, venue, city, note, created_at').single());
+}
+
+export async function unlogConcert(id) {
+  unwrap(await supabase.from('concert_log').delete().eq('id', id));
+}
+
+export async function fetchConcertBuddies() {
+  return unwrap(await supabase.rpc('concert_buddies'));
+}
+
+export async function fetchMusicMonths() {
+  return unwrap(await supabase.from('music_months').select('month, plays, minutes, minutes_estimated, top_artist, top_artist_plays, top_track, top_track_artist, source').order('month'));
+}
+
 export async function fetchMusicStats() {
   return unwrap(await supabase.from('music_stats').select('streams, minutes, tracks, artists, albums, updated_at').maybeSingle());
 }
 
 export async function fetchSpotifyConnection() {
   return unwrap(await supabase.from('spotify_connections').select('display_name, connected_at').maybeSingle());
+}
+
+// Tonight's mood from the last hours of listening ({ mood: null } if there is too little or it is switched off).
+export async function fetchListeningMood() {
+  return invokeFunction('discovery-music', { action: 'mood' });
 }
 
 export async function refreshMusic() {

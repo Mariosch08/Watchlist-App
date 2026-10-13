@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useUser } from '../auth/AuthContext.jsx';
 import { Messages } from '../components/Form.jsx';
 import PageTitle from '../components/PageTitle.jsx';
+import RotationCard from '../components/streaming/RotationCard.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import TitleRow from '../components/TitleRow.jsx';
 import { useAlerts } from '../hooks/useAlerts.js';
@@ -140,6 +141,7 @@ export default function StreamingPage() {
             </ul>
             {scan.data.limited && <p className="caption">Geprüft wurden die 300 zuletzt hinzugefügten offenen Titel.</p>}
           </section>
+          {settings.data && <RotationCard items={scan.data.items} providers={summary.providers} settings={settings.data} />}
           <section className="card" aria-labelledby="providers-title">
             <h2 id="providers-title">
               Titel pro Dienst

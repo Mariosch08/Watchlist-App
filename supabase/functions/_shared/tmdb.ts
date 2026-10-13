@@ -149,17 +149,33 @@ function normalizeCast(raw: Record<string, any>, mediaType: MediaType) {
   }));
 }
 
-// Key people: creators/directors first, then writers. Names only, deduplicated.
+// Crew jobs that mean "wrote the music" (TMDb department Sound).
+export const COMPOSER_JOBS = ['Original Music Composer', 'Music', 'Main Title Theme Composer'];
+
+// Composers with their TMDb person id (TV: aggregate credits list several jobs per person).
+export function normalizeComposers(raw: Record<string, any>, mediaType: MediaType) {
+  const crew: any[] = (mediaType === 'tv' ? (raw.aggregate_credits ?? raw.credits) : raw.credits)?.crew ?? [];
+  const byId = new Map<number, { id: number; name: string }>();
+  for (const c of crew) {
+    const jobs = [c.job, ...(c.jobs ?? []).map((j: any) => j?.job)];
+    if (Number.isInteger(c.id) && typeof c.name === 'string' && jobs.some((j) => COMPOSER_JOBS.includes(j))) byId.set(c.id, { id: c.id, name: c.name });
+  }
+  return [...byId.values()].slice(0, 4);
+}
+
+// Key people: creators/directors first, then writers and the music. Names only, deduplicated.
 function normalizeCrew(raw: Record<string, any>, mediaType: MediaType) {
   const crew: any[] = raw.credits?.crew ?? [];
   const names = (jobs: string[]) => [...new Set(crew.filter((c) => jobs.includes(c.job)).map((c) => c.name as string))].slice(0, 3);
+  const music = { job: 'Musik', names: normalizeComposers(raw, mediaType).map((c) => c.name).slice(0, 3) };
   if (mediaType === 'tv') {
     const creators = (raw.created_by ?? []).map((c: any) => c.name as string).slice(0, 3);
-    return creators.length ? [{ job: 'Idee', names: creators }] : [];
+    return [{ job: 'Idee', names: creators }, music].filter((g) => g.names.length > 0);
   }
   return [
     { job: 'Regie', names: names(['Director']) },
     { job: 'Drehbuch', names: names(['Screenplay', 'Writer']) },
+    music,
   ].filter((g) => g.names.length > 0);
 }
 
@@ -188,6 +204,7 @@ export function normalizeDetails(raw: Record<string, any>, mediaType: MediaType,
     imdb_id: raw.imdb_id ?? raw.external_ids?.imdb_id ?? null,
     cast: normalizeCast(raw, mediaType),
     crew: normalizeCrew(raw, mediaType),
+    composers: normalizeComposers(raw, mediaType),
     trailer: pickTrailer(raw.videos?.results),
     providers: normalizeProviders(raw['watch/providers']),
     similar: normalizeSimilar(raw, mediaType),
@@ -277,7 +294,8 @@ export type DetailsCache = {
   set: (key: string, data: unknown, ttlMs: number) => Promise<void>;
 };
 
-export const detailsCacheKey = (mediaType: MediaType, id: number) => `details:${mediaType}:${id}:${TMDB_LANGUAGE}`;
+// v2: with composers (Score Bridge).
+export const detailsCacheKey = (mediaType: MediaType, id: number) => `details2:${mediaType}:${id}:${TMDB_LANGUAGE}`;
 
 function intParam(value: unknown, name: string, min: number, max: number, fallback?: number): number {
   if (value === undefined && fallback !== undefined) return fallback;

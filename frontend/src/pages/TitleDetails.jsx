@@ -6,8 +6,10 @@ import DetailActions from '../components/details/DetailActions.jsx';
 import SimilarTitles from '../components/details/SimilarTitles.jsx';
 import DiaryLog from '../components/details/DiaryLog.jsx';
 import FriendsPanel from '../components/details/FriendsPanel.jsx';
+import ScoreBridgeBadge from '../components/details/ScoreBridgeBadge.jsx';
 import StreamingProviders from '../components/details/StreamingProviders.jsx';
 import Trailer from '../components/details/Trailer.jsx';
+import { CatchUpNotice } from '../components/series/CatchUp.jsx';
 import SeriesProgress from '../components/series/SeriesProgress.jsx';
 import { CardSkeleton } from '../components/Skeleton.jsx';
 import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
@@ -99,6 +101,7 @@ function Details({ details: d }) {
                 ))}
               </ul>
             )}
+            <ScoreBridgeBadge composers={d.composers} />
           </div>
         </div>
         <DetailActions details={d} entry={entry} loading={watchlist.isPending && !watchlist.isError} />
@@ -115,6 +118,7 @@ function Details({ details: d }) {
           </a>
         </p>
       </section>
+      {d.media_type === 'tv' && <CatchUpNotice details={d} />}
       {d.media_type === 'tv' && <SeriesProgress details={d} />}
       <DiaryLog details={d} entry={entry} />
       <FriendsPanel details={d} />

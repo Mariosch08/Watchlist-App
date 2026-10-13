@@ -13,6 +13,10 @@ vi.mock('../src/lib/api/music.js', () => ({
   fetchArtists: vi.fn(),
   fetchConcerts: vi.fn(),
   fetchSpotifyConnection: vi.fn(),
+  fetchConcertLog: vi.fn(),
+  fetchConcertBuddies: vi.fn(),
+  logConcert: vi.fn(),
+  unlogConcert: vi.fn(),
   refreshMusic: vi.fn(),
   disconnectSpotify: vi.fn(),
 }));
@@ -56,6 +60,8 @@ beforeEach(() => {
   musicApi.fetchArtists.mockResolvedValue([]);
   musicApi.fetchConcerts.mockResolvedValue([]);
   musicApi.fetchSpotifyConnection.mockResolvedValue(null);
+  musicApi.fetchConcertLog.mockResolvedValue([]);
+  musicApi.fetchConcertBuddies.mockResolvedValue([]);
 });
 
 describe('MusicPage', () => {

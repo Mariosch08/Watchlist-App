@@ -10,13 +10,16 @@ Filme, Serien und Musik entdecken – für mich und meine Freunde. Eine private 
 | --- | --- |
 | **Watchlist** | Suche (Deutsch und Originaltitel), Status, Bewertung 1–10, Filter, Sortierung, Rückgängig |
 | **Detailseite** | Trailer (lädt erst nach Klick), Besetzung, ähnliche Titel, Streaming in der Schweiz, Soundtrack-Link, „Gesehen am …“ |
-| **Serien** | Folgen abhaken, „Als Nächstes“, Spoiler-Schutz, neue Staffeln/Folgen als Benachrichtigung, Kalender-Abo (ICS) |
-| **Für dich** | Tägliche Vorschläge mit Begründung, 👍/👎 lernt mit, Genre-Regler, „Was schauen wir heute?“ |
-| **Streaming** | Welches Abo lohnt sich? Kaum genutzte Dienste, beste Zweier-Kombination, Alarm „jetzt auf meinen Diensten“ |
+| **Serien** | Folgen abhaken, „Als Nächstes“, Spoiler-Schutz, neue Staffeln/Folgen als Benachrichtigung, Aufhol-Countdown bis zur nächsten Staffel |
+| **Kalender** | Eine Agenda für Folgen, Filmstarts, Konzerte, Alben, Aufhol-Termine und Abo-Erinnerungen – in der App, als Kalender-Abo (ICS) und im Wochenrückblick |
+| **Für dich** | Tägliche Vorschläge mit Begründung, 👍/👎 lernt mit, Genre-Regler, „Diese Woche“ auf einen Blick |
+| **Was schauen wir heute?** | Vorschlag aus der Watchlist, auf Wunsch passend zur Musik der letzten Stunden („Heute Nachmittag lief Phoebe Bridgers → ruhige Dramen unter 2 h“) |
+| **Score Bridge** | Filme und Serien mit Musik von Artists, die du hörst, und umgekehrt die Alben der Komponisten deiner Lieblingsfilme |
+| **Streaming** | Welches Abo lohnt sich? Abo-Rotation für 3 Monate nach deinem echten Schautempo, mit Ersparnis und Kündigungs-Erinnerung; Alarm „jetzt auf meinen Diensten“ |
 | **Musik** | Hörprofil aus bis zu 300 Artists über Wochen, Monate und Jahre (Dauerbrenner, Im Kommen, Geheimtipps, Wiederentdecken); neue und angekündigte Releases mit Vorrang für kleine Artists; ähnliche Bands; Konzerte in der Schweiz (Last.fm, stats.fm, MusicBrainz, optional Spotify) |
-| **Freunde** | Freundschaften, Geschmacks-Match in %, „Wer hat es gesehen?“, „Schau das!“, Aktivität (freiwillig) |
-| **Listen & Sammlungen** | Private Sammlungen oder gemeinsame Listen mit Rollen, Abstimmen, Swipen bis zum Match, Filmabend-Planer mit Terminumfrage |
-| **Tagebuch & Statistik** | Wann, wo, mit wem; Jahresstatistik, teilbarer Jahresrückblick, Herausforderungen |
+| **Freunde** | Freundschaften, Geschmacks-Match in %, „Wer hat es gesehen?“, „Schau das!“, Aktivität und Konzert-Buddys (freiwillig) |
+| **Listen & Sammlungen** | Private Sammlungen oder gemeinsame Listen mit Rollen, Abstimmen, Swipen bis zum Match, Filmabend-Planer mit Terminumfrage und gemeinsamem Bildschirm („Läuft auf Laras MUBI“) |
+| **Tagebuch & Rückblick** | Wann, wo, mit wem; Jahresstatistik, Zeitleiste über Filme, Musik und Konzerte, „An diesem Tag“, teilbares Jahresbild, Herausforderungen |
 | **Import/Export** | IMDb, Letterboxd, Trakt; IMDb-CSV- und JSON-Export, Konto löschen |
 | **Benachrichtigungen** | In der App, Sofort-Mails und Wochenrückblick (Brevo), Abmelden mit einem Klick |
 | **App** | Installierbar (PWA), offline startbar, „Teilen → Watchlist“ aus anderen Apps |

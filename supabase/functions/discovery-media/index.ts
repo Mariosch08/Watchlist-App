@@ -3,6 +3,7 @@ import { adminClient } from '../_shared/admin.ts';
 import { requireUser } from '../_shared/auth.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { isCronRequest } from '../_shared/cron.ts';
+import { BRIDGE, type Composer, composerCandidates, pickComposer, scoreSource } from '../_shared/bridge.ts';
 import { mapLimited } from '../_shared/importJob.ts';
 import { type Candidate, deriveWeights, effectiveWeights, type Kind, rankCandidates, type RatedItem, topGenres } from '../_shared/scoring.ts';
 import { genreIds, tmdbGet, TMDB_LANGUAGE, WATCH_REGION } from '../_shared/tmdb.ts';
@@ -13,6 +14,8 @@ const json = (status: number, body: unknown) =>
 const REFRESH_COOLDOWN_MS = 10 * 60_000;
 const FEED_TTL_MS = 14 * 86_400_000;
 const BACKFILL_PER_RUN = 30;
+const COMPOSER_TTL_MS = 60 * 86_400_000;
+const COMPOSER_MISS_TTL_MS = 30 * 86_400_000;
 type Db = ReturnType<typeof adminClient>;
 
 // Memoizes TMDb list requests within one run (shared by all users).
@@ -69,6 +72,41 @@ async function backfillGenres(db: Db, userId: string, rows: any[], token: string
     r.genre_ids = genreIds(raw);
     await db.from('watchlist').update({ genre_ids: r.genre_ids }).match({ user_id: userId, media_type: r.media_type, tmdb_id: r.tmdb_id });
   });
+}
+
+// Score Bridge: which of my artists also write film music? (TMDb person search, cached for everybody.)
+async function myComposers(db: Db, userId: string, p: ReturnType<typeof pools>): Promise<Composer[]> {
+  const { data: artists } = await db
+    .from('music_artists')
+    .select('artist_key, name, playcount, affinity')
+    .eq('user_id', userId)
+    .gte('affinity', BRIDGE.minAffinity)
+    .order('affinity', { ascending: false })
+    .limit(BRIDGE.artists);
+  if (!artists?.length) return [];
+  const keys = artists.map((a) => `composer:${a.artist_key}`.slice(0, 200));
+  const { data: cached } = await db.from('tmdb_cache').select('cache_key, data, expires_at').in('cache_key', keys);
+  const hit = new Map((cached ?? []).filter((c) => !c.expires_at || new Date(c.expires_at) > new Date()).map((c) => [c.cache_key, c.data]));
+  const found: Composer[] = [];
+  await mapLimited(artists, 4, async (a) => {
+    const key = `composer:${a.artist_key}`.slice(0, 200);
+    let person = hit.get(key) as { id: number | null; name?: string } | undefined;
+    if (!person) {
+      const res = await p.get('/search/person', { query: a.name, include_adult: false });
+      if (res == null) return; // TMDb hiccup: try again next run
+      const match = pickComposer(res, { key: a.artist_key });
+      person = { id: match?.id ?? null, name: match?.name };
+      await db.from('tmdb_cache').upsert({
+        cache_key: key,
+        kind: 'mapping',
+        data: person,
+        fetched_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + (match ? COMPOSER_TTL_MS : COMPOSER_MISS_TTL_MS)).toISOString(),
+      });
+    }
+    if (person.id) found.push({ person_id: person.id, name: a.name, plays: a.playcount, affinity: a.affinity });
+  });
+  return found.sort((x, y) => y.affinity - x.affinity).slice(0, BRIDGE.composers);
 }
 
 async function buildFeed(db: Db, userId: string, token: string, p: ReturnType<typeof pools>, genreNames: Record<Kind, Record<string, string>>) {
@@ -134,6 +172,12 @@ async function buildFeed(db: Db, userId: string, token: string, p: ReturnType<ty
     becauseTitles.set(key, { title: f.title, rating: f.my_rating });
     sources.push(p.list(f.media_type, `/${f.media_type}/${f.tmdb_id}/recommendations`, {}, key));
   }
+  const composers = await myComposers(db, userId, p).catch((err) => (console.error('composers', err), []));
+  for (const c of composers) {
+    for (const kind of ['movie', 'tv'] as Kind[]) {
+      sources.push(p.get(`/person/${c.person_id}/${kind}_credits`, {}).then((res) => composerCandidates(res, kind, c)));
+    }
+  }
   const candidates = (await Promise.all(sources)).flat();
 
   // Provider names for the reason text.
@@ -151,6 +195,7 @@ async function buildFeed(db: Db, userId: string, token: string, p: ReturnType<ty
     providerNames,
     genreNames,
     today: new Date().toISOString().slice(0, 10),
+    composers: new Map(composers.map((c) => [scoreSource(c.person_id), { name: c.name, plays: c.plays }])),
   });
 
   // Replace unanswered suggestions; liked/added/disliked rows stay and block duplicates.
@@ -158,7 +203,7 @@ async function buildFeed(db: Db, userId: string, token: string, p: ReturnType<ty
   if (!ranked.length) return 0;
   const expires = new Date(Date.now() + FEED_TTL_MS).toISOString();
   const { error } = await db.from('feed').upsert(
-    ranked.map(({ c, score, reason, reasons, fresh }) => ({
+    ranked.map(({ c, score, reason, reasons, fresh, composer }) => ({
       user_id: userId,
       type: c.media_type,
       external_id: String(c.tmdb_id),
@@ -166,10 +211,10 @@ async function buildFeed(db: Db, userId: string, token: string, p: ReturnType<ty
       subtitle: c.original_title && c.original_title !== c.title ? c.original_title.slice(0, 300) : null,
       image_url: c.poster_path,
       release_date: c.release_date,
-      source: c.sources[0].startsWith('because:') ? 'recommendations' : c.sources[0],
+      source: composer ? 'score_bridge' : c.sources[0].startsWith('because:') ? 'recommendations' : c.sources[0],
       score,
       reason,
-      data: { media_type: c.media_type, tmdb_id: c.tmdb_id, genre_ids: c.genre_ids, vote_average: c.vote_average, reasons, fresh },
+      data: { media_type: c.media_type, tmdb_id: c.tmdb_id, genre_ids: c.genre_ids, vote_average: c.vote_average, reasons, fresh, ...(composer ? { composer } : {}) },
       expires_at: expires,
     })),
     { onConflict: 'user_id,type,external_id', ignoreDuplicates: true },

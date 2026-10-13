@@ -52,7 +52,7 @@ export const NAV_GROUPS = [
   },
   {
     label: 'Ich',
-    items: [item('stats', '/stats', 'Statistik'), item('profile', '/profile', 'Profil'), item('import', '/import', 'Import / Export')],
+    items: [item('stats', '/stats', 'Rückblick'), item('profile', '/profile', 'Profil'), item('import', '/import', 'Import / Export')],
   },
 ];
 

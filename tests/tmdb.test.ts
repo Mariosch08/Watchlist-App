@@ -238,7 +238,7 @@ describe('details action', () => {
     const second = await handleTmdbRequest(body, 'k', fetchImpl, cache);
     expect(second.body).toEqual(first.body);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(cache.set).toHaveBeenCalledWith('details:movie:438631:de-CH', expect.anything(), 24 * 60 * 60 * 1000);
+    expect(cache.set).toHaveBeenCalledWith('details2:movie:438631:de-CH', expect.anything(), 24 * 60 * 60 * 1000);
   });
 
   it('keeps working when the cache fails and does not cache misses', async () => {

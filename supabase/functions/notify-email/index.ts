@@ -19,7 +19,8 @@ import {
   sendBrevo,
   unsubscribeLink,
 } from '../_shared/mail.ts';
-import { episodeCode } from '../_shared/series.ts';
+import { buildAgenda, KIND_LABEL } from '../_shared/agenda.ts';
+import { sanitizePlan } from '../_shared/rotation.ts';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'content-type': 'application/json' } });
@@ -94,26 +95,46 @@ async function sendDigests(db: Db, now: Date) {
     .limit(MAX_MAILS_PER_RUN);
   const people = await recipients(db, (due ?? []).map((r) => r.user_id));
   const today = now.toISOString().slice(0, 10);
-  const inAWeek = new Date(now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
   let sent = 0;
   for (const [userId, person] of people) {
-    const [{ data: notes }, { data: feed }, { data: series }, { data: titles }] = await Promise.all([
-      db.from('notifications').select('type, title, body, data, created_at').eq('user_id', userId).gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(10),
-      db.from('feed').select('type, external_id, title, reason, data').eq('user_id', userId).eq('status', 'new').in('type', ['movie', 'tv']).order('score', { ascending: false }).limit(5),
-      db.from('series_progress').select('tmdb_id, next_episode_to_air').eq('user_id', userId),
-      db.from('watchlist').select('tmdb_id, title').eq('user_id', userId).eq('media_type', 'tv'),
-    ]);
-    const names = new Map((titles ?? []).map((t) => [t.tmdb_id, t.title]));
+    const [{ data: notes }, { data: feed }, { data: series }, { data: titles }, { data: concerts }, { data: going }, { data: albums }, { data: plan }, { data: watched }, { data: dismissed }] =
+      await Promise.all([
+        db.from('notifications').select('type, title, body, data, created_at').eq('user_id', userId).gte('created_at', weekAgo).order('created_at', { ascending: false }).limit(10),
+        db.from('feed').select('type, external_id, title, reason, data').eq('user_id', userId).eq('status', 'new').in('type', ['movie', 'tv']).order('score', { ascending: false }).limit(5),
+        db.from('series_progress').select('tmdb_id, next_episode_to_air, last_episode_to_air, season_episodes, next_up_season, next_up_episode').eq('user_id', userId),
+        db.from('watchlist').select('media_type, tmdb_id, title, status, release_date').eq('user_id', userId),
+        db.from('concerts').select('event_id, artist, name, venue, city, local_date, url').eq('user_id', userId).gte('local_date', today),
+        db.from('concert_log').select('event_id, artist, venue, city, local_date').eq('user_id', userId).gte('local_date', today),
+        db.from('feed').select('external_id, title, subtitle, release_date').eq('user_id', userId).eq('type', 'album').neq('status', 'disliked').gt('release_date', today),
+        db.from('rotation_plans').select('months').eq('user_id', userId).maybeSingle(),
+        db.from('watched_episodes').select('tmdb_id').eq('user_id', userId).limit(20000),
+        db.from('catchup_plans').select('tmdb_id, season_number').eq('user_id', userId).eq('dismissed', true),
+      ]);
+    // "Diese Woche": the same agenda as the calendar (episodes, film starts, concerts, albums, catch-up, subscriptions).
+    const byKey = new Map((titles ?? []).map((t) => [`${t.media_type}:${t.tmdb_id}`, t]));
+    const watchedCount = new Map<number, number>();
+    for (const w of watched ?? []) watchedCount.set(w.tmdb_id, (watchedCount.get(w.tmdb_id) ?? 0) + 1);
+    const week = buildAgenda(
+      {
+        series: (series ?? []).map((s) => ({ ...s, title: byKey.get(`tv:${s.tmdb_id}`)?.title ?? 'Serie', watch_status: byKey.get(`tv:${s.tmdb_id}`)?.status, watched_count: watchedCount.get(s.tmdb_id) ?? 0 })),
+        watchlist: titles ?? [],
+        concerts: concerts ?? [],
+        going: going ?? [],
+        albums: albums ?? [],
+        rotation: sanitizePlan(plan?.months),
+        done: new Set((titles ?? []).filter((t) => t.status === 'completed').map((t) => `${t.media_type}:${t.tmdb_id}`)),
+        dismissedCatchUps: new Set((dismissed ?? []).map((c) => `${c.tmdb_id}:${c.season_number}`)),
+      },
+      { today, days: 7 },
+    );
     const data: DigestData = {
       notifications: (notes ?? []) as MailNotification[],
       suggestions: (feed ?? []).map((f) => ({ title: f.title, reason: f.reason, href: `${env.appUrl}title/${f.type}/${f.external_id}` })),
-      episodes: (series ?? [])
-        .filter((s) => s.next_episode_to_air?.air_date >= today && s.next_episode_to_air.air_date <= inAWeek)
-        .map((s) => ({
-          title: `${names.get(s.tmdb_id) ?? 'Serie'} ${episodeCode(s.next_episode_to_air)}`,
-          when: new Date(`${s.next_episode_to_air.air_date}T12:00:00Z`).toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' }),
-          href: `${env.appUrl}title/tv/${s.tmdb_id}`,
-        })),
+      episodes: week.slice(0, 12).map((i) => ({
+        title: i.kind === 'rotation' ? i.title : `${KIND_LABEL[i.kind]}: ${i.title}`,
+        when: `${new Date(`${i.date}T12:00:00Z`).toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' })}${i.kind === 'rotation' ? '' : ` · ${i.detail.split('\n')[0]}`}`,
+        href: `${env.appUrl}${(i.path ?? '/').replace(/^\//, '')}`,
+      })),
     };
     if (!digestIsEmpty(data)) {
       try {
