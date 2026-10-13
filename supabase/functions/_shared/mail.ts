@@ -98,14 +98,14 @@ export function instantMail(to: Mail['to'], notifications: MailNotification[], a
 export interface DigestData {
   notifications: MailNotification[];
   suggestions: { title: string; reason: string | null; href: string }[];
-  episodes: { title: string; when: string; href: string }[];
+  episodes: { title: string; when: string; href: string }[]; // the week ahead (same agenda as the calendar)
 }
 
 export const digestIsEmpty = (d: DigestData) => !d.notifications.length && !d.suggestions.length && !d.episodes.length;
 
 export function digestMail(to: Mail['to'], d: DigestData, appUrl: string, unsubscribeUrl: string): Mail {
   const sections = [
-    ...(d.episodes.length ? [{ title: 'Diese Woche neu in deinen Serien', items: d.episodes.map((e) => ({ title: e.title, body: e.when, href: e.href })) }] : []),
+    ...(d.episodes.length ? [{ title: 'Diese Woche bei dir', items: d.episodes.map((e) => ({ title: e.title, body: e.when, href: e.href })) }] : []),
     ...(d.suggestions.length ? [{ title: 'Für dich vorgeschlagen', items: d.suggestions.map((s) => ({ title: s.title, body: s.reason, href: s.href })) }] : []),
     ...(d.notifications.length
       ? [{ title: 'Was passiert ist', items: d.notifications.slice(0, 10).map((n) => ({ title: n.title, body: n.body, href: linkFor(n, appUrl) })) }]

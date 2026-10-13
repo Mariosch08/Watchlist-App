@@ -7,6 +7,7 @@ export const listKeys = {
   people: (id) => ['list', id, 'people'],
   items: (id) => ['list', id, 'items'],
   nights: (id) => ['list', id, 'nights'],
+  screen: (nightId) => ['night', nightId, 'screen'],
 };
 
 export async function fetchLists() {
@@ -68,6 +69,11 @@ export async function removeItem(listId, t) {
 // vote: 1, -1 or 0 (withdraw).
 export async function castVote(listId, t, vote) {
   unwrap(await supabase.rpc('cast_vote', { p_list_id: listId, p_media_type: t.media_type, p_tmdb_id: t.tmdb_id, p_vote: vote }));
+}
+
+// Who comes, their services (if shared) and what they have seen (if shared) – see night_screen().
+export async function fetchNightScreen(nightId) {
+  return unwrap(await supabase.rpc('night_screen', { p_night: nightId }));
 }
 
 export async function fetchNights(listId) {

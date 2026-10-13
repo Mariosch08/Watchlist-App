@@ -6,11 +6,24 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../src/auth/AuthContext.jsx', () => ({ useUser: () => ({ id: 'user-1' }) }));
-vi.mock('../src/lib/api/settings.js', () => ({ fetchSettings: vi.fn() }));
-vi.mock('../src/lib/api/streaming.js', () => ({ scanAvailability: vi.fn(), fetchAlerts: vi.fn(), createAlert: vi.fn(), deleteAlert: vi.fn() }));
+vi.mock('../src/lib/api/settings.js', () => ({ fetchSettings: vi.fn(), updateSettings: vi.fn() }));
+vi.mock('../src/lib/api/streaming.js', () => ({
+  scanAvailability: vi.fn(),
+  fetchAlerts: vi.fn(),
+  createAlert: vi.fn(),
+  deleteAlert: vi.fn(),
+  fetchRotationPlan: vi.fn(),
+  saveRotationPlan: vi.fn(),
+}));
+vi.mock('../src/lib/api/watchlist.js', () => ({ fetchWatchlist: vi.fn(), addTitle: vi.fn(), updateItem: vi.fn(), removeItem: vi.fn(), restoreItem: vi.fn() }));
+vi.mock('../src/lib/api/diary.js', () => ({ fetchDiary: vi.fn(), diaryKeys: { all: (id) => ['diary', id] } }));
+vi.mock('../src/lib/api/series.js', () => ({ fetchSeriesOverview: vi.fn(), fetchRecentEpisodes: vi.fn() }));
 
 const settingsApi = await import('../src/lib/api/settings.js');
 const streamingApi = await import('../src/lib/api/streaming.js');
+const watchlistApi = await import('../src/lib/api/watchlist.js');
+const diaryApi = await import('../src/lib/api/diary.js');
+const seriesApi = await import('../src/lib/api/series.js');
 const { ToastProvider } = await import('../src/components/toast/ToastProvider.jsx');
 const { default: StreamingPage } = await import('../src/pages/Streaming.jsx');
 
@@ -35,6 +48,11 @@ function renderPage() {
 beforeEach(() => {
   vi.resetAllMocks();
   streamingApi.fetchAlerts.mockResolvedValue([]);
+  streamingApi.fetchRotationPlan.mockResolvedValue(null);
+  watchlistApi.fetchWatchlist.mockResolvedValue([]);
+  diaryApi.fetchDiary.mockResolvedValue([]);
+  seriesApi.fetchSeriesOverview.mockResolvedValue([]);
+  seriesApi.fetchRecentEpisodes.mockResolvedValue([]);
 });
 
 describe('StreamingPage', () => {
@@ -67,5 +85,19 @@ describe('StreamingPage', () => {
     await userEvent.click(within(alerts).getByRole('button', { name: 'Entfernen' }));
     expect(streamingApi.deleteAlert.mock.calls[0][0]).toMatchObject({ media_type: 'tv', tmdb_id: 7 });
     expect(screen.queryByText('Severance')).not.toBeInTheDocument();
+  });
+
+  it('plans one service per month and saves it for the calendar', async () => {
+    settingsApi.fetchSettings.mockResolvedValue({ streaming_providers: [8, 337], streaming_prices: {} });
+    streamingApi.scanAvailability.mockResolvedValue({ items: [item(1, [NETFLIX]), item(2, [NETFLIX]), item(3, [DISNEY])], limited: false, failed: 0 });
+    watchlistApi.fetchWatchlist.mockResolvedValue([1, 2, 3].map((id) => ({ media_type: 'movie', tmdb_id: id, title: `Film ${id}`, status: 'planned', runtime: 120, added_at: `2026-0${id}-01` })));
+    streamingApi.saveRotationPlan.mockResolvedValue(undefined);
+    renderPage();
+    const card = await screen.findByRole('region', { name: 'Abo-Rotation' });
+    expect(within(card).getByText(/etwa 4 h pro Woche \(Schätzung/)).toBeInTheDocument();
+    expect(within(card).getAllByText('Netflix')[0]).toBeInTheDocument();
+    expect(within(card).getByText(/Spart etwa CHF/).closest('p')).toHaveTextContent('gegenüber Netflix + Disney Plus durchgehend');
+    await userEvent.click(within(card).getByRole('button', { name: 'In den Kalender' }));
+    expect(streamingApi.saveRotationPlan.mock.calls[0][0].map((m) => m.provider)).toEqual(['Netflix', 'Disney Plus']);
   });
 });

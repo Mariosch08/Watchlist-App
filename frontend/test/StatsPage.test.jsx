@@ -9,7 +9,7 @@ vi.mock('../src/auth/AuthContext.jsx', () => ({ useUser: () => ({ id: 'me' }) })
 vi.mock('../src/lib/api/watchlist.js', () => ({ fetchWatchlist: vi.fn(), addTitle: vi.fn(), updateItem: vi.fn(), removeItem: vi.fn(), restoreItem: vi.fn() }));
 vi.mock('../src/lib/api/diary.js', () => ({ fetchDiary: vi.fn(), diaryKeys: { all: (id) => ['diary', id] } }));
 vi.mock('../src/lib/api/discovery.js', () => ({ fetchGenres: vi.fn() }));
-vi.mock('../src/lib/api/music.js', () => ({ fetchArtists: vi.fn(), fetchMusicStats: vi.fn() }));
+vi.mock('../src/lib/api/music.js', () => ({ fetchArtists: vi.fn(), fetchMusicStats: vi.fn(), fetchMusicMonths: vi.fn(), fetchConcertLog: vi.fn() }));
 vi.mock('../src/lib/api/profile.js', () => ({ fetchProfile: vi.fn() }));
 vi.mock('../src/lib/api/tmdb.js', () => ({ fetchTopRated: vi.fn() }));
 
@@ -55,6 +55,8 @@ beforeEach(() => {
   diaryApi.fetchDiary.mockResolvedValue([{ media_type: 'movie', tmdb_id: 3, title: 'Film 3', watched_on: `${year}-02-10`, place: 'cinema', rating: 10, rewatch: false }]);
   discovery.fetchGenres.mockResolvedValue({ movie: [{ id: 18, name: 'Drama' }], tv: [] });
   music.fetchArtists.mockResolvedValue([{ artist_key: 'radiohead', name: 'Radiohead', rank: 1, playcount: 812 }]);
+  music.fetchMusicMonths.mockResolvedValue([]);
+  music.fetchConcertLog.mockResolvedValue([]);
   music.fetchMusicStats.mockResolvedValue({ streams: 5321, minutes: 20576, artists: 310 });
   profile.fetchProfile.mockResolvedValue({ display_name: 'Mario' });
   tmdb.fetchTopRated.mockResolvedValue([{ tmdb_id: 3 }, { tmdb_id: 99 }]);

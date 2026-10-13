@@ -43,7 +43,7 @@ export default function DiaryPage() {
           Tagebuch
         </PageTitle>
         <Link className="button-link btn-ghost btn-compact" to="/stats">
-          Statistik & Jahresrückblick
+          Rückblick & Zeitleiste
         </Link>
       </div>
       {diary.isError ? (

@@ -466,9 +466,16 @@ button.link:hover:not(:disabled) {
   border-color: var(--color-text-subtle);
 }
 
-.button-link.btn-primary,
+.button-link.btn-primary {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 .button-link.btn-primary:hover {
   color: var(--color-on-accent);
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
 }
 
 .button-link.btn-ghost:hover {
@@ -2285,4 +2292,191 @@ button.provider-stat-head:hover:not(:disabled) {
 
 .profile-groups {
   gap: var(--space-6) var(--space-5);
+}
+
+/* ---- Tonight: mood from today's listening ------------------------------------------------------ */
+.mood-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-body-sm);
+}
+
+/* ---- Streaming: subscription rotation ---------------------------------------------------------- */
+.rotation {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.rotation > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.rotation-month {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+.rotation-provider {
+  font-size: var(--text-h2);
+  font-weight: 600;
+}
+
+.rotation-titles summary {
+  cursor: pointer;
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+}
+
+.rotation-titles ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-body-sm);
+}
+
+.price-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.price-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---- Series: catch-up countdown ---------------------------------------------------------------- */
+.catchup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.catchup + .catchup {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.catchup-line {
+  margin: 0;
+}
+
+.catchup-sessions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-body-sm);
+}
+
+.catchup-sessions li {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+}
+
+/* ---- Rückblick: Life Reel ---------------------------------------------------------------------- */
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.reel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-5);
+}
+
+.reel-summary {
+  margin: 0;
+  font-size: var(--text-h2);
+  line-height: 1.4;
+}
+
+.reel-facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.reel-facts dt {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+}
+
+.reel-facts dd {
+  margin: 0;
+}
+
+.memories {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* ---- Movie night: shared screen ---------------------------------------------------------------- */
+.shared-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.shared-screen h4 {
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.screen-list {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* ---- Discover: the week ahead ------------------------------------------------------------------ */
+.week-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.week-list li {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+  font-size: var(--text-body-sm);
 }

@@ -2,7 +2,7 @@ import { unwrap } from '../errors.js';
 import { invokeFunction, supabase } from '../supabase.js';
 
 export async function fetchSettings() {
-  return unwrap(await supabase.from('user_settings').select('streaming_providers, lastfm_username, statsfm_username, email_digest, email_instant, share_ratings_with_friends, share_activity, hide_spoilers, calendar_token').single());
+  return unwrap(await supabase.from('user_settings').select('streaming_providers, lastfm_username, statsfm_username, email_digest, email_instant, share_ratings_with_friends, share_activity, hide_spoilers, calendar_token, music_mood, share_music_with_friends, share_services_with_friends, streaming_prices').single());
 }
 
 export async function updateSettings(changes) {

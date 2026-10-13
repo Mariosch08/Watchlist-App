@@ -21,6 +21,7 @@ function FeedRow({ entry, inList, onFeedback, onAdd, pending }) {
         <span className="poster-card-title">{title.title}</span>
       </Link>
       <span className="feed-reason">
+        {entry.data?.composer && <span className="badge badge--accent">Soundtrack</span>}
         {entry.data?.fresh && <span className="badge">Neu</span>} {entry.reason}
       </span>
       <div className="feed-actions">

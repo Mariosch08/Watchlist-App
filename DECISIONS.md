@@ -126,3 +126,40 @@
 - **Grösse:** Last.fm-Hörer (logarithmisch: 2 Mio → gross, 20 000 → klein) und Spotify-Popularität.
 
 Kleine Artists bekommen bei Neuerscheinungen bis zu 10 Punkte Vorrang, weil man ihre Releases sonst verpasst. Singles und angekündigte Releases (bis 60 Tage voraus) kommen nur von Favoriten und kleinen Artists, ähnliche Artists nur mit Alben/EPs. Ähnliche Artists stammen jetzt von 12 gemischten Seeds (Favoriten, Aufsteiger, kleine Artists) und zählen, wie vielen meiner Artists sie ähneln. MusicBrainz-Abfragen werden pro Lauf für alle Personen geteilt; `artist.getinfo` (IDs, Hörer, Genres) ist 30 Tage gecacht und wird auf mehrere Läufe verteilt (höchstens 150 pro Person und Lauf). Ein Lauf hört nach 100 s auf und der Cron ruft nach, bis alle dran waren (Edge-Function-Limit 150 s).
+
+## Über alle Medien hinweg (Wunsch von Mario: sechs Ideen umsetzen und das Produkt vereinheitlichen)
+
+**D61 – Score Bridge: Musik ↔ Filme.**
+- *Richtung Film:* Meine stärksten 40 Artists werden mit TMDb-Personen abgeglichen. Eine Person zählt nur, wenn ihre Abteilung „Sound“ ist und der Name exakt dem Artist entspricht; das Ergebnis wird 60 Tage gecacht, für alle gemeinsam. Deren Filme und Serien (Job „Original Music Composer“/„Music“) kommen als Kandidaten mit +14 in „Für dich“, mit der Begründung „Soundtrack von X – 312 Plays bei dir“. Die Detailseite zeigt dazu ein Abzeichen und unter „Musik“ die Komponisten.
+- *Richtung Musik:* Filme und Serien mit 9 oder 10 führen zu den Top-Alben ihrer Komponisten (Last.fm), der Soundtrack des Films zuerst. Sie stehen auf der Musikseite unter „Aus deinen Lieblingsfilmen“.
+- *Cache:* Der TMDb-Details-Cache hat einen neuen Schlüssel (`details2:`), weil die Komponisten neu dazukommen.
+
+**D62 – Abendstimmung aus den Scrobbles der letzten 6 Stunden.** Last.fm `user.getrecenttracks` (sonst stats.fm `streams/recent`) liefert die gehörten Artists. Ihre Tags kommen aus den gespeicherten Genres, dem Last.fm-Cache oder höchstens vier neuen Abfragen.
+- *Regeln:* Eine feste Regeltabelle (`_shared/mood.ts`) ordnet die Tags sechs Stimmungen zu: ruhig, entspannt, beschwingt, Tempo, düster, gross. Jede Stimmung hat passende und zu meidende Genres sowie eine Höchstlänge. Der spezifischste Tag gewinnt, also „dream pop“ vor „pop“.
+- *Schwellen:* Die Stimmung braucht mindestens 5 Plays und 40 % Anteil, sonst sagt die App nichts.
+- *Wirkung auf den Vorschlag:* Passende Genres bringen in „Was schauen wir heute?“ bis zu +2,5, Konflikte −3. Die Höchstlänge gilt nur, wenn keine Dauer gewählt ist und noch etwas übrig bleibt.
+- *Cache und Schalter:* Das Ergebnis ist 15 Minuten gecacht. „Aus“ schaltet die Stimmung mit einem Tipp ab (`user_settings.music_mood`).
+
+**D63 – Abo-Rotation statt Dauer-Abos.** Die App plant einen Dienst pro Monat für die nächsten 3 Monate (den laufenden nur, wenn noch mindestens 10 Tage übrig sind).
+- *Grundlagen:* Verfügbarkeit in der Schweiz, Restlaufzeit (Filme: Laufzeit; Serien: offene Folgen × Folgenlänge) und mein Tempo (Minuten pro Woche aus Tagebuch, fertigen Filmen und abgehakten Folgen der letzten 12 Wochen, sonst 4 h geschätzt).
+- *Auswahl:* Der Dienst mit den meisten schaubaren Minuten gewinnt, bei Gleichstand der günstigere. Gratis-Dienste brauchen kein Abo.
+- *Vergleich und Preise:* Verglichen wird mit „meine jetzigen Abos weiterlaufen lassen“. Die Preise sind Richtwerte in CHF und lassen sich pro Dienst überschreiben (`user_settings.streaming_prices`).
+- *Kalender:* Ein gespeicherter Plan (`rotation_plans`) erzeugt Termine: „Abo starten“ am 1., „bis 30.11. kündigen – noch 1 Titel offen“ drei Tage vor Monatsende, mit den noch offenen Titeln zum Zeitpunkt des Abrufs.
+
+**D64 – Aufhol-Countdown vor dem Staffelstart.**
+- *Wann:* Ist Folge 1 einer neuen Staffel angekündigt (höchstens 180 Tage voraus) und noch nicht alles Ausgestrahlte geschaut, rechnet die App einen Plan.
+- *Rechnung:* Offene Folgen (aus den Folgen pro Staffel, `series_progress.season_episodes`) werden auf die Samstage bis zum Start verteilt, „1 Folge pro Woche“. Die Sessions erscheinen mit Folgen-Codes im Kalender.
+- *Erinnerungen:* Der tägliche Serien-Check merkt sich pro Staffel den Startpunkt (`catchup_plans`). Liegt man mehr als eine Woche hinter dem Plan, kommt höchstens wöchentlich eine sanfte Erinnerung (Typ `catchup`). Ausblenden geht pro Plan.
+
+**D65 – Eine Agenda für alles mit Datum.** `_shared/agenda.ts` erzeugt aus Folgen, Filmstarts, Konzerten (gefunden und „Ich gehe hin“), angekündigten Alben, Aufhol-Sessions und Abo-Erinnerungen eine einzige Liste. Kalenderseite, Kalender-Abo (ICS, 180 Tage), Wochenrückblick-Mail („Diese Woche bei dir“) und „Für dich“ („Diese Woche“) nutzen dieselbe Funktion und zeigen damit immer dasselbe.
+
+**D66 – Life Reel im „Rückblick“ (vorher „Statistik“).**
+- *Daten:* Pro Monat speichert die App das Hören (`music_months`). Mit stats.fm ist es die echte Hörzeit; mit Last.fm sind es die Plays, geschätzt mit 3,5 Minuten pro Play und markiert mit „ca.“. Dazu kommen der meistgehörte Artist und Song. Die letzten 12 Monate werden nach und nach aufgefüllt, je Lauf zwei ältere.
+- *Konzerte:* Besuchte Konzerte stehen in `concert_log`, über „Ich gehe hin“ oder per Hand eingetragen.
+- *Ansicht:* Die neue Ansicht „Zeitleiste“ zeigt pro Monat einen Satz („März: 2 Filme, 41 h Musik, Phoenix live in Zürich“), den Top-Titel, den Song in Dauerschleife und „An diesem Tag“ über alle Medien. Das Jahresbild heisst mit Musikdaten „Mein Jahr“ und enthält Stunden Musik, Konzerte und den meistgehörten Artist.
+
+**D67 – Überschneidungen mit Freunden, nur mit Einwilligung.** Zwei neue Schalter, beide standardmässig aus: „Lieblings-Artists für Konzert-Buddys“ und „Streaming-Abos beim Filmabend“.
+- *Konzert-Buddys:* Die App zeigt sie nur, wenn *beide* ihre Musik teilen und der Freund den Artist mit mindestens 0,25 Affinität hört. Es gibt eine Benachrichtigung pro Konzert und Freund. Dafür speichert `concerts` jetzt den `artist_key`.
+- *Gemeinsamer Bildschirm:* Er nimmt beim Filmabend die Zugesagten (sonst alle in der Liste), lässt weg, was jemand von ihnen schon gesehen hat, und sagt, wessen Abo laufen kann („Läuft auf Laras MUBI“).
+- *Datenschutz:* Abos und Gesehenes anderer verrät `night_screen()` nur bei Freundschaft und eingeschaltetem Teilen; bei reinen Listen-Mitgliedern bleibt beides leer. Alle Teilen-Schalter stehen im Profil unter „Mit Freunden teilen“.
+

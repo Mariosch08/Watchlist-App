@@ -33,7 +33,7 @@ describe('mail content', () => {
       UNSUB,
     );
     expect(mail.subject).toBe('Deine Watchlist-Woche');
-    expect(mail.text).toMatch(/DIESE WOCHE NEU IN DEINEN SERIEN\n- Severance S02E05 – Freitag, 17. Oktober/);
+    expect(mail.text).toMatch(/DIESE WOCHE BEI DIR\n- Severance S02E05 – Freitag, 17. Oktober/);
     expect(mail.html).toContain('Für dich vorgeschlagen');
   });
 

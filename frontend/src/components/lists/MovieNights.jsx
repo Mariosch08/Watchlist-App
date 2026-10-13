@@ -8,6 +8,7 @@ import { detailPath } from '../../lib/labels.js';
 import { formatNightOption, groupPick, nightIcs, nightSummary } from '../../lib/lists.js';
 import { Messages } from '../Form.jsx';
 import { useToast } from '../toast/ToastProvider.jsx';
+import SharedScreen from './SharedScreen.jsx';
 
 const MAX_OPTIONS = 4;
 
@@ -142,6 +143,7 @@ function Night({ night, myId, canDecide, listName, pick, ranked, onChange }) {
           ))}
         </ul>
       )}
+      <SharedScreen nightId={night.id} ranked={ranked} />
       {!fixed && canDecide && <p className="caption">Beim Festlegen wird der Titel mit den meisten Stimmen gewählt{pick ? `: „${pick.title}“` : ''}.</p>}
     </li>
   );

@@ -1,5 +1,6 @@
 import { ExternalLink, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { memo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { formatDate } from '../../lib/labels.js';
 
 const lastfmUrl = (artist, title) => `https://www.last.fm/music/${encodeURIComponent(artist).replace(/%20/g, '+')}/${encodeURIComponent(title).replace(/%20/g, '+')}`;
@@ -9,6 +10,7 @@ function AlbumRow({ entry, pending, onFeedback }) {
   const [broken, setBroken] = useState(false);
   const liked = entry.status === 'liked';
   const upcoming = entry.data?.upcoming;
+  const film = entry.data?.bridge;
   const artist = entry.data?.artist ?? entry.subtitle ?? '';
   const label = `${entry.title} von ${artist}`;
   return (
@@ -55,9 +57,15 @@ function AlbumRow({ entry, pending, onFeedback }) {
             Spotify
           </a>
         )}
-        <a className="button-link btn-ghost btn-compact" href={lastfmUrl(artist, entry.title)} target="_blank" rel="noopener noreferrer">
-          Last.fm
-        </a>
+        {film ? (
+          <Link className="button-link btn-ghost btn-compact" to={`/title/${film.media_type}/${film.tmdb_id}`}>
+            Zum Film
+          </Link>
+        ) : (
+          <a className="button-link btn-ghost btn-compact" href={entry.data?.lastfm_url ?? lastfmUrl(artist, entry.title)} target="_blank" rel="noopener noreferrer">
+            Last.fm
+          </a>
+        )}
       </div>
     </li>
   );
