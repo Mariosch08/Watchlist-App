@@ -9,7 +9,7 @@ vi.mock('../src/auth/AuthContext.jsx', () => ({ useUser: () => ({ id: 'me' }) })
 vi.mock('../src/lib/api/watchlist.js', () => ({ fetchWatchlist: vi.fn(), addTitle: vi.fn(), updateItem: vi.fn(), removeItem: vi.fn(), restoreItem: vi.fn() }));
 vi.mock('../src/lib/api/diary.js', () => ({ fetchDiary: vi.fn(), diaryKeys: { all: (id) => ['diary', id] } }));
 vi.mock('../src/lib/api/discovery.js', () => ({ fetchGenres: vi.fn() }));
-vi.mock('../src/lib/api/music.js', () => ({ fetchArtists: vi.fn() }));
+vi.mock('../src/lib/api/music.js', () => ({ fetchArtists: vi.fn(), fetchMusicStats: vi.fn() }));
 vi.mock('../src/lib/api/profile.js', () => ({ fetchProfile: vi.fn() }));
 vi.mock('../src/lib/api/tmdb.js', () => ({ fetchTopRated: vi.fn() }));
 
@@ -54,7 +54,8 @@ beforeEach(() => {
   watchlistApi.fetchWatchlist.mockResolvedValue([movie(1, 1, 9), movie(2, 1, 7), movie(3, 2, 10), movie(4, 3, null, { watched_at: `${year - 1}-05-01T20:00:00Z` })]);
   diaryApi.fetchDiary.mockResolvedValue([{ media_type: 'movie', tmdb_id: 3, title: 'Film 3', watched_on: `${year}-02-10`, place: 'cinema', rating: 10, rewatch: false }]);
   discovery.fetchGenres.mockResolvedValue({ movie: [{ id: 18, name: 'Drama' }], tv: [] });
-  music.fetchArtists.mockResolvedValue([{ artist_key: 'radiohead', name: 'Radiohead', rank: 1 }]);
+  music.fetchArtists.mockResolvedValue([{ artist_key: 'radiohead', name: 'Radiohead', rank: 1, playcount: 812 }]);
+  music.fetchMusicStats.mockResolvedValue({ streams: 5321, minutes: 20576, artists: 310 });
   profile.fetchProfile.mockResolvedValue({ display_name: 'Mario' });
   tmdb.fetchTopRated.mockResolvedValue([{ tmdb_id: 3 }, { tmdb_id: 99 }]);
 });
@@ -70,7 +71,10 @@ describe('StatsPage', () => {
     expect(within(screen.getByRole('region', { name: `Lieblinge ${year}` })).getAllByRole('link')[0]).toHaveTextContent('Film 3');
     const top = await screen.findByRole('progressbar', { name: 'TMDb Top 100' });
     expect(top).toHaveAttribute('aria-valuenow', '1');
-    expect(screen.getByRole('region', { name: 'Musik: meistgehört' })).toHaveTextContent('Radiohead');
+    const musicStats = screen.getByRole('region', { name: 'Musik: meistgehört' });
+    expect(musicStats).toHaveTextContent('Radiohead');
+    expect(await within(musicStats).findByText('343')).toBeInTheDocument(); // 20576 min ≈ 343 h
+    expect(within(musicStats).getByText(/812 Streams/)).toBeInTheDocument();
   });
 
   it('switches to an earlier year', async () => {

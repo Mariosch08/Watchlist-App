@@ -11,7 +11,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js';
 import { useWatchlist } from '../hooks/useWatchlist.js';
 import { diaryKeys, fetchDiary } from '../lib/api/diary.js';
 import { fetchGenres } from '../lib/api/discovery.js';
-import { fetchArtists } from '../lib/api/music.js';
+import { fetchArtists, fetchMusicStats } from '../lib/api/music.js';
 import { fetchProfile } from '../lib/api/profile.js';
 import { fetchTopRated } from '../lib/api/tmdb.js';
 import { errorMessage } from '../lib/errors.js';
@@ -83,6 +83,7 @@ export default function StatsPage() {
   const genres = useQuery({ queryKey: ['genres'], queryFn: fetchGenres, staleTime: 24 * 60 * 60_000 });
   const topRated = useQuery({ queryKey: ['topRated'], queryFn: fetchTopRated, staleTime: 24 * 60 * 60_000 });
   const artists = useQuery({ queryKey: queryKeys.music(user.id, 'artists'), queryFn: fetchArtists });
+  const listening = useQuery({ queryKey: queryKeys.music(user.id, 'stats'), queryFn: fetchMusicStats });
   const profile = useQuery({ queryKey: queryKeys.profile(user.id), queryFn: () => fetchProfile(user.id) });
   const [sharing, setSharing] = useState(false);
 
@@ -214,9 +215,34 @@ export default function StatsPage() {
       {artists.data?.length > 0 && (
         <section className="card" aria-labelledby="music-stats-title">
           <h2 id="music-stats-title">Musik: meistgehört</h2>
-          <BarList items={artists.data.slice(0, 8).map((a, i, all) => ({ key: a.artist_key, label: a.name, value: all.length - i, display: `#${a.rank}` }))} />
+          {listening.data && (
+            <dl className="stats">
+              <div className="stat">
+                <dt>Streams</dt>
+                <dd>{listening.data.streams.toLocaleString('de-CH')}</dd>
+              </div>
+              <div className="stat">
+                <dt>Stunden gehört</dt>
+                <dd>{Math.round(listening.data.minutes / 60).toLocaleString('de-CH')}</dd>
+              </div>
+              {listening.data.artists != null && (
+                <div className="stat">
+                  <dt>Verschiedene Artists</dt>
+                  <dd>{listening.data.artists.toLocaleString('de-CH')}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+          <BarList
+            items={artists.data.slice(0, 8).map((a, i, all) => ({
+              key: a.artist_key,
+              label: a.name,
+              value: a.playcount ?? all.length - i,
+              display: a.playcount ? `${a.playcount.toLocaleString('de-CH')} Streams` : `#${a.rank}`,
+            }))}
+          />
           <p className="caption">
-            Aus deinen Hördaten der letzten 6 Monate – mehr auf <Link to="/music">Musik</Link>.
+            Aus deinen Hördaten der letzten 6 Monate{listening.data ? ' (Summen von stats.fm)' : ''} – mehr auf <Link to="/music">Musik</Link>.
           </p>
         </section>
       )}

@@ -10,31 +10,74 @@ import { spotifyAuthorizeUrl, spotifyClientId } from '../../lib/spotify.js';
 import { Messages } from '../Form.jsx';
 import { useToast } from '../toast/ToastProvider.jsx';
 
-const LASTFM_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{1,14}$/;
+const SOURCES = {
+  lastfm_username: {
+    label: 'Last.fm-Benutzername',
+    pattern: /^[A-Za-z][A-Za-z0-9_-]{1,14}$/,
+    rule: 'Last.fm-Namen haben 2–15 Zeichen, beginnen mit einem Buchstaben und enthalten nur Buchstaben, Ziffern, _ oder -.',
+    placeholder: 'z. B. mario_08',
+    max: 15,
+  },
+  statsfm_username: {
+    label: 'stats.fm-Profilname',
+    pattern: /^[A-Za-z0-9_.-]{2,40}$/,
+    rule: 'Den Profilnamen findest du in der stats.fm-App unter „Profil“ (Link stats.fm/<name>).',
+    placeholder: 'z. B. mario08',
+    max: 40,
+  },
+};
 
-// Where my listening data comes from: Last.fm user name and/or Spotify login.
-export default function MusicSources() {
+// One user-name source (Last.fm or stats.fm): save, change or remove; saving searches right away.
+function UsernameField({ field }) {
+  const cfg = SOURCES[field];
   const user = useUser();
   const queryClient = useQueryClient();
   const toast = useToast();
   const refresh = useMusicRefresh();
   const settings = useQuery({ queryKey: queryKeys.settings(user.id), queryFn: fetchSettings });
-  const spotify = useQuery({ queryKey: queryKeys.music(user.id, 'spotify'), queryFn: fetchSpotifyConnection, enabled: Boolean(spotifyClientId) });
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState('');
-  const current = settings.data?.lastfm_username ?? '';
+  const current = settings.data?.[field] ?? '';
   const value = draft ?? current;
-
-  const saveLastfm = useMutation({
-    mutationFn: (name) => updateSettings({ lastfm_username: name || null }),
+  const save = useMutation({
+    mutationFn: (name) => updateSettings({ [field]: name || null }),
     onSuccess: (saved) => {
       queryClient.setQueryData(queryKeys.settings(user.id), saved);
       setDraft(null);
-      if (saved.lastfm_username) refresh.mutate();
-      else toast.success('Last.fm getrennt.');
+      if (saved[field]) refresh.mutate();
+      else toast.success(`${cfg.label.split('-')[0]} getrennt.`);
     },
     onError: (err) => setError(errorMessage(err)),
   });
+  const submit = (e) => {
+    e.preventDefault();
+    const name = value.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?stats\.fm\/(user\/)?/i, '');
+    setError('');
+    if (name && !cfg.pattern.test(name)) return setError(cfg.rule);
+    save.mutate(name);
+  };
+  return (
+    <>
+      <form className="inline-form" onSubmit={submit} noValidate>
+        <label>
+          {cfg.label}
+          <input value={value} onChange={(e) => setDraft(e.target.value)} autoComplete="off" spellCheck="false" maxLength={cfg.max + 30} placeholder={cfg.placeholder} />
+        </label>
+        <button type="submit" className="btn-compact" disabled={save.isPending || refresh.isPending || !settings.data || value.trim() === current}>
+          {save.isPending || refresh.isPending ? 'Wird geladen …' : value.trim() || !current ? 'Speichern' : 'Trennen'}
+        </button>
+      </form>
+      <Messages error={error} />
+    </>
+  );
+}
+
+// Where my listening data comes from: Last.fm, stats.fm and/or Spotify login.
+export default function MusicSources() {
+  const user = useUser();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const spotify = useQuery({ queryKey: queryKeys.music(user.id, 'spotify'), queryFn: fetchSpotifyConnection, enabled: Boolean(spotifyClientId) });
   const disconnect = useMutation({
     mutationFn: disconnectSpotify,
     onSuccess: () => {
@@ -43,14 +86,6 @@ export default function MusicSources() {
     },
     onError: (err) => toast.error(errorMessage(err)),
   });
-
-  const submit = (e) => {
-    e.preventDefault();
-    const name = value.trim();
-    setError('');
-    if (name && !LASTFM_PATTERN.test(name)) return setError('Last.fm-Namen haben 2–15 Zeichen, beginnen mit einem Buchstaben und enthalten nur Buchstaben, Ziffern, _ oder -.');
-    saveLastfm.mutate(name);
-  };
   const connect = async () => {
     try {
       window.location.assign(await spotifyAuthorizeUrl());
@@ -61,16 +96,9 @@ export default function MusicSources() {
 
   return (
     <div className="stack">
-      <form className="inline-form" onSubmit={submit} noValidate>
-        <label>
-          Last.fm-Benutzername
-          <input value={value} onChange={(e) => setDraft(e.target.value)} autoComplete="off" spellCheck="false" maxLength={15} placeholder="z. B. mario_08" />
-        </label>
-        <button type="submit" className="btn-compact" disabled={saveLastfm.isPending || refresh.isPending || !settings.data || value.trim() === current}>
-          {saveLastfm.isPending || refresh.isPending ? 'Wird geladen …' : value.trim() || !current ? 'Speichern' : 'Trennen'}
-        </button>
-      </form>
-      <Messages error={error} />
+      <UsernameField field="lastfm_username" />
+      <UsernameField field="statsfm_username" />
+      <p className="caption">stats.fm: In der App unter Einstellungen → Privatsphäre „Top-Artists“ und „Statistiken“ öffentlich lassen.</p>
       {spotifyClientId &&
         (spotify.data ? (
           <div className="actions">
@@ -89,7 +117,8 @@ export default function MusicSources() {
           </div>
         ))}
       <p className="caption">
-        Gelesen werden nur deine meistgehörten und gefolgten Artists – keine Playlists, kein Verlauf. Neuerscheinungen: MusicBrainz, ähnliche Artists: Last.fm.
+        Gelesen werden nur deine meistgehörten und gefolgten Artists sowie deine Hör-Summen – keine Playlists, kein Verlauf. Neuerscheinungen: MusicBrainz, ähnliche
+        Artists: Last.fm.
       </p>
     </div>
   );

@@ -114,3 +114,5 @@
 
 **D56 – Service Worker nur für die App-Shell:** Gecacht werden nur die eigene index.html (Netzwerk zuerst, offline aus dem Cache) und die gehashten Build-Dateien (Cache zuerst). Anfragen an Supabase und TMDb gehen nie über den Cache – keine veralteten oder fremden Daten auf geteilten Geräten.
 
+**D57 – stats.fm über die öffentliche Profil-API** (Nachtrag): stats.fm hat keine OAuth-Freigabe für Drittanbieter, aber öffentliche Profile sind ohne Login lesbar (`api.stats.fm/api/v1/users/{name}/top/artists` und `/streams/stats`, Pfade wie im offiziellen SDK `@statsfm/statsfm.js`). Gespeichert wird nur der Profilname; was stats.fm privat schaltet, bleibt privat (Fehler „Profil ist privat“). stats.fm liefert Spotify-IDs, aber keine MusicBrainz-IDs – die werden über Last.fm `artist.getinfo` nachgeschlagen und dauerhaft gecacht, damit die Neuerscheinungs-Suche auch ohne Last.fm-Konto funktioniert (braucht nur den API-Schlüssel der App).
+

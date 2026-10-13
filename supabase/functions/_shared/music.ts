@@ -18,12 +18,14 @@ type Fetch = typeof fetch;
 type Sleep = (ms: number) => Promise<void>;
 const defaultSleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export type MusicSource = 'lastfm' | 'spotify' | 'statsfm';
+
 export interface Artist {
   key: string;
   name: string;
   mbid: string | null;
   spotify_id: string | null;
-  sources: ('lastfm' | 'spotify')[];
+  sources: MusicSource[];
   rank: number; // 1 = most listened
   playcount: number | null;
   followed: boolean;
@@ -267,6 +269,55 @@ export function mergeArtists(lists: Artist[][]): Artist[] {
   return [...byKey.values()]
     .sort((a, b) => a.rank - b.rank || b.sources.length - a.sources.length || Number(b.followed) - Number(a.followed))
     .map((a, i) => ({ ...a, rank: i + 1 }));
+}
+
+// ---- stats.fm (public profiles; endpoints as in the official @statsfm/statsfm.js SDK) ------------
+
+export const STATSFM_API = 'https://api.stats.fm/api/v1';
+export const STATSFM_NAME = /^[A-Za-z0-9_.-]{2,40}$/;
+
+export async function statsfmGet(path: string, fetchImpl: Fetch = fetch) {
+  const res = await fetchImpl(`${STATSFM_API}${path}`, { headers: { 'User-Agent': MB_USER_AGENT, Accept: 'application/json' } });
+  if (res.status === 404) throw new HttpError(404, 'stats.fm user not found', 'STATSFM_USER_NOT_FOUND');
+  if (res.status === 401 || res.status === 403) throw new HttpError(403, 'stats.fm profile is private', 'STATSFM_PRIVATE');
+  if (!res.ok) throw new HttpError(502, `stats.fm failed (${res.status})`, 'STATSFM_UNAVAILABLE');
+  return res.json();
+}
+
+// /users/{name}/top/artists → artists with Spotify ids, genres and stream counts.
+export function statsfmTopArtists(json: any): Artist[] {
+  return asList(json?.items)
+    .filter((i: any) => typeof i?.artist?.name === 'string' && i.artist.name.trim())
+    .map((i: any, n: number) => {
+      const spotify = asList(i.artist.externalIds?.spotify).find((id: any) => typeof id === 'string' && /^[A-Za-z0-9]{1,40}$/.test(id)) ?? null;
+      const image = typeof i.artist.image === 'string' && i.artist.image.startsWith('https://') && i.artist.image.length <= 500 ? i.artist.image : null;
+      return {
+        key: artistKey(i.artist.name),
+        name: i.artist.name.trim().slice(0, 200),
+        mbid: null,
+        spotify_id: spotify,
+        sources: ['statsfm' as const],
+        rank: Number.isInteger(i.position) && i.position > 0 ? i.position : n + 1,
+        playcount: Number.isFinite(i.streams) ? Math.min(i.streams, 2_000_000_000) : null,
+        followed: false,
+        image_url: image,
+        genres: asList(i.artist.genres).map((g: any) => String(g).toLowerCase().slice(0, 40)).slice(0, 3),
+      };
+    });
+}
+
+// /users/{name}/streams/stats → totals for the music statistics (null if the profile hides them).
+export function statsfmStreamStats(json: any) {
+  const s = json?.items;
+  if (!s || !Number.isFinite(s.count) || !Number.isFinite(s.durationMs)) return null;
+  const int = (v: unknown) => (Number.isFinite(v) ? Math.max(0, Math.round(v as number)) : null);
+  return {
+    streams: int(s.count)!,
+    minutes: Math.round(s.durationMs / 60_000),
+    tracks: int(s.cardinality?.tracks),
+    artists: int(s.cardinality?.artists),
+    albums: int(s.cardinality?.albums),
+  };
 }
 
 // ---- Scoring ------------------------------------------------------------------------------------

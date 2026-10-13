@@ -4,7 +4,7 @@
 
 ## Status
 - **Erledigt:** alle Phasen 0–13 (3b Frontend-Logik, 4 Detailseite, 5 Serien, 6 Empfehlungen, 7 Streaming-Tools, 8 Musik, 9 Freunde & Listen, 10 Tagebuch & Importe, 11 Statistik, 12 Mails & App, 13 Abschluss), Design „Quiet Ink“, Sicherheits-Fix
-- **Aktuelle Phase:** – (Plan abgeschlossen; PR #8 wartet auf Merge)
+- **Aktuelle Phase:** – (Plan abgeschlossen, live seit Merge von PR #8; Nachtrag stats.fm in eigenem PR)
 - **Nächster konkreter Schritt:** Nach dem Merge Rückmeldungen aus dem echten Betrieb einarbeiten; offene Review-Befunde (`docs/reviews/`) prüfen; Ideen unten.
 
 ## Repo-Überblick
@@ -123,6 +123,7 @@ Regel für neue Tabellen: `references auth.users on delete cascade`, RLS an, min
   - [x] Edge Function `discovery-music` (Cron 06:45 + „Neu suchen“): Top-Artists (Last.fm 6 Monate, Spotify top/gefolgt) → ähnliche Artists (Last.fm) → Neuerscheinungen der letzten 30 Tage (MusicBrainz, 1 Anfrage/s, Spotify-Alben) → Feed `album` mit Grund, 👍/👎 lernt Tags
   - [x] Konzerte in der Schweiz (Ticketmaster, optional) inkl. Kalender-Abo; Benachrichtigungen für neue Alben der Top-10-Artists und Konzerte
   - [x] Seite „Musik“: Neuerscheinungen, Konzerte, Top-Artists; Soundtrack-Link auf der Detailseite
+  - [x] Nachtrag: stats.fm als dritte Quelle (öffentliches Profil, kein Schlüssel): Top-Artists mit Streams + Hör-Summen (Tabelle `music_stats`) auf „Statistik“; fehlende MusicBrainz-IDs via Last.fm `artist.getinfo` (gecacht)
   - [x] Tests: Root 142, Frontend 55 grün
 - [x] Phase 9 – Freunde & gemeinsame Listen
   - [x] Freundschaften per Benutzername oder E-Mail (Ablehnung bleibt unsichtbar, Gegenanfrage nimmt an), Seite „Freunde“

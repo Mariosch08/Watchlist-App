@@ -161,7 +161,7 @@ describe('isolation of user-owned tables', () => {
 
   it('export contains the new tables', async () => {
     const [{ data }] = await rows(a, 'select public.export_my_data() as data');
-    expect(data.version).toBe(7);
+    expect(data.version).toBe(8);
     expect(data.settings.calendar_token).toBeUndefined();
     expect(data.series_progress).toHaveLength(1);
     expect(data.watched_episodes).toHaveLength(1);
@@ -371,7 +371,7 @@ describe('music (phase 8)', () => {
       asUser(db, b, "insert into public.spotify_connections (user_id, spotify_user_id, refresh_token_enc) values ($1, 'x', 'y')", [b]),
     ).rejects.toThrow(/permission denied/);
     const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.spotify).toMatchObject({ display_name: 'Mario' });
     expect(JSON.stringify(exported)).not.toContain('v1.secret');
     expect(exported.music_artists).toHaveLength(1);
@@ -428,5 +428,20 @@ describe('e-mail settings (phase 12)', () => {
     await asUser(db, a, 'update public.user_settings set email_digest = false, email_instant = false where user_id = $1', [a]);
     await expect(asUser(db, a, 'update public.user_settings set digest_sent_at = now() where user_id = $1', [a])).rejects.toThrow(/permission denied/);
     await expect(asUser(db, a, 'update public.user_settings set unsubscribe_token = gen_random_uuid() where user_id = $1', [a])).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe('stats.fm (music)', () => {
+  it('validates the profile name and keeps listening totals private and read-only', async () => {
+    await asUser(db, a, "update public.user_settings set statsfm_username = 'mario.08' where user_id = $1", [a]);
+    await expect(asUser(db, a, "update public.user_settings set statsfm_username = 'a b/c' where user_id = $1", [a])).rejects.toThrow(/check constraint/);
+    await asAdmin(db, "insert into public.music_stats (user_id, source, streams, minutes) values ($1, 'statsfm', 1200, 3600)", [a]);
+    await asAdmin(db, "insert into public.music_artists (user_id, artist_key, name, sources, rank) values ($1, 'radiohead', 'Radiohead', '{statsfm}', 1)", [a]);
+    expect(await rows(a, 'select streams, minutes from public.music_stats')).toEqual([{ streams: 1200, minutes: 3600 }]);
+    expect(await rows(b, 'select * from public.music_stats')).toEqual([]);
+    await expect(asUser(db, a, 'update public.music_stats set streams = 0')).rejects.toThrow(/permission denied/);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.music_stats).toMatchObject({ streams: 1200 });
+    expect(exported.settings.statsfm_username).toBe('mario.08');
   });
 });

@@ -15,6 +15,9 @@ import {
   releaseQuery,
   spotifyAlbums,
   spotifyArtists,
+  statsfmGet,
+  statsfmStreamStats,
+  statsfmTopArtists,
 } from '../supabase/functions/_shared/music.ts';
 
 const RH = '0383dadf-2a4e-4d10-a46a-e9e041da8eb3';
@@ -296,5 +299,51 @@ describe('token encryption', () => {
     await expect(decryptText(flipped, key)).rejects.toThrow();
     await expect(decryptText(a, await deriveKey('another-long-secret-value'))).rejects.toThrow();
     await expect(deriveKey('short')).rejects.toThrow();
+  });
+});
+
+describe('stats.fm', () => {
+  it('reads top artists with Spotify ids, streams and genres', () => {
+    const artists = statsfmTopArtists({
+      items: [
+        { position: 1, streams: 812, indicator: 'SAME', artist: { id: 1, name: 'Radiohead', image: 'https://i.stats.fm/rh.jpg', genres: ['Art Rock', 'Alternative'], externalIds: { spotify: ['4Z8W4fKeB5YxbusRsdQVPb'] } } },
+        { position: 2, streams: 400, indicator: 'UP', artist: { id: 2, name: 'Björk', image: 'http://insecure', genres: [], externalIds: { spotify: ['bad id!'] } } },
+        { position: 3, streams: 1, artist: { id: 3, name: '' } },
+      ],
+    });
+    expect(artists).toEqual([
+      expect.objectContaining({ key: 'radiohead', spotify_id: '4Z8W4fKeB5YxbusRsdQVPb', playcount: 812, rank: 1, sources: ['statsfm'], genres: ['art rock', 'alternative'], image_url: 'https://i.stats.fm/rh.jpg' }),
+      expect.objectContaining({ name: 'Björk', spotify_id: null, image_url: null, rank: 2 }),
+    ]);
+    expect(statsfmTopArtists(null)).toEqual([]);
+  });
+
+  it('reads listening totals and tolerates hidden stats', () => {
+    expect(statsfmStreamStats({ items: { count: 5321, durationMs: 1_234_567_890, cardinality: { tracks: 900, artists: 310, albums: 420 } } })).toEqual({
+      streams: 5321,
+      minutes: 20576,
+      tracks: 900,
+      artists: 310,
+      albums: 420,
+    });
+    expect(statsfmStreamStats({ items: {} })).toBeNull();
+    expect(statsfmStreamStats(null)).toBeNull();
+  });
+
+  it('calls the public API and explains private or unknown profiles', async () => {
+    const ok = vi.fn(async () => new Response(JSON.stringify({ items: [] })));
+    await statsfmGet('/users/mario/top/artists?range=months&limit=50', ok);
+    expect(ok.mock.calls[0][0]).toBe('https://api.stats.fm/api/v1/users/mario/top/artists?range=months&limit=50');
+    await expect(statsfmGet('/users/x', vi.fn(async () => new Response('', { status: 404 })))).rejects.toMatchObject({ code: 'STATSFM_USER_NOT_FOUND' });
+    await expect(statsfmGet('/users/x', vi.fn(async () => new Response('', { status: 403 })))).rejects.toMatchObject({ code: 'STATSFM_PRIVATE' });
+    await expect(statsfmGet('/users/x', vi.fn(async () => new Response('', { status: 500 })))).rejects.toMatchObject({ code: 'STATSFM_UNAVAILABLE' });
+  });
+
+  it('merges stats.fm with Last.fm into one artist with both sources', () => {
+    const merged = mergeArtists([
+      lastfmTopArtists({ topartists: { artist: [{ name: 'Radiohead', mbid: RH, '@attr': { rank: '2' } }] } }),
+      statsfmTopArtists({ items: [{ position: 1, streams: 10, artist: { name: 'Radiohead', externalIds: { spotify: ['abc'] }, genres: [] } }] }),
+    ]);
+    expect(merged).toEqual([expect.objectContaining({ mbid: RH, spotify_id: 'abc', sources: ['lastfm', 'statsfm'], rank: 1 })]);
   });
 });
