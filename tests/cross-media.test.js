@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { asAdmin, asUser, createDb, signUp } from './db.js';
 
@@ -41,7 +42,7 @@ describe('rotation plan', () => {
     await expect(asUser(db, a, "select public.save_rotation_plan('{}')")).rejects.toThrow(/check constraint/);
     await expect(asUser(db, a, "select public.save_rotation_plan('[]')")).rejects.toThrow(/check constraint/);
     const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
-    expect(exported.version).toBe(9);
+    expect(exported.version).toBe(10);
     expect(exported.rotation_plan.months).toHaveLength(2);
   });
 });
@@ -152,3 +153,42 @@ describe('shared screen of a movie night', () => {
     expect(await rows(d, 'select * from public.night_screen($1)', [night])).toEqual([]);
   });
 });
+
+describe('small artists (D68)', () => {
+  it('recomputes stored sizes from Last.fm listeners and drops popularity 0', async () => {
+    const add = (key, listeners, popularity) =>
+      asAdmin(db, "insert into public.music_artists (user_id, artist_key, name, sources, rank, listeners, popularity, niche) values ($1, $2, $2, '{statsfm}', 1, $3, $4, 0.5)", [a, key, listeners, popularity]);
+    await add('kendrick lamar', 5_600_000, 0);
+    await add('black hippy', 300_000, 0);
+    await add('montanablack', 40_000, null);
+    await add('spotify only', null, 45);
+    await add('unknown', null, 0);
+    await db.exec('reset role');
+    await db.exec(readFileSync(new URL('../supabase/migrations/20261014030000_music_niche_fix.sql', import.meta.url), 'utf8'));
+    const rows = await rows_(a);
+    expect(rows).toEqual([
+      { artist_key: 'black hippy', popularity: null, niche: expect.closeTo(0.412, 3) },
+      { artist_key: 'kendrick lamar', popularity: null, niche: 0 },
+      { artist_key: 'montanablack', popularity: null, niche: expect.closeTo(0.849, 3) },
+      { artist_key: 'spotify only', popularity: 45, niche: 0.5 },
+      { artist_key: 'unknown', popularity: null, niche: null },
+    ]);
+  });
+});
+
+const rows_ = (user) => rows(user, 'select artist_key, popularity, niche from public.music_artists order by artist_key');
+
+describe('music per day (calendar)', () => {
+  it('is private, read-only for clients and exported', async () => {
+    await asAdmin(db, "insert into public.music_days (user_id, day, plays, minutes, top_artist, source) values ($1, '2026-10-10', 40, 140, 'Phoenix', 'lastfm')", [a]);
+    await expect(asAdmin(db, "insert into public.music_days (user_id, day, plays, source) values ($1, '2026-10-11', -1, 'lastfm')", [a])).rejects.toThrow(/check constraint/);
+    expect(await rows(a, 'select top_artist from public.music_days')).toEqual([{ top_artist: 'Phoenix' }]);
+    expect(await rows(b, 'select * from public.music_days')).toEqual([]);
+    await expect(asUser(db, a, 'update public.music_days set plays = 1')).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, a, "insert into public.music_days (user_id, day, plays, source) values ($1, '2026-10-12', 1, 'lastfm')", [a])).rejects.toThrow(/permission denied/);
+    const exported = (await asUser(db, a, 'select public.export_my_data() as e')).rows[0].e;
+    expect(exported.version).toBe(10);
+    expect(exported.music_days).toEqual([expect.objectContaining({ day: '2026-10-10', top_artist: 'Phoenix' })]);
+  });
+});
+

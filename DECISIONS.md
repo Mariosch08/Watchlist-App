@@ -163,3 +163,7 @@ Kleine Artists bekommen bei Neuerscheinungen bis zu 10 Punkte Vorrang, weil man 
 - *Gemeinsamer Bildschirm:* Er nimmt beim Filmabend die Zugesagten (sonst alle in der Liste), lässt weg, was jemand von ihnen schon gesehen hat, und sagt, wessen Abo laufen kann („Läuft auf Laras MUBI“).
 - *Datenschutz:* Abos und Gesehenes anderer verrät `night_screen()` nur bei Freundschaft und eingeschaltetem Teilen; bei reinen Listen-Mitgliedern bleibt beides leer. Alle Teilen-Schalter stehen im Profil unter „Mit Freunden teilen“.
 
+
+**D68 – Grösse eines Artists nur aus Last.fm-Hörern** (Rückmeldung: „Kendrick Lamar ist kein kleiner Artist“): stats.fm liefert `spotifyPopularity: 0`, wenn kein Wert da ist. Der Mittelwert aus „gross“ (Hörer) und „winzig“ (0) landete genau auf der Geheimtipp-Grenze. Jetzt entscheiden die Last.fm-Hörer; Popularity ist nur Ersatz, 0 heisst unbekannt. Eine Migration korrigiert gespeicherte Werte und Feed-Labels.
+
+**D69 – Kalender als Monatsansicht, immer sichtbar** (Wunsch von Mario): Monatsraster (Mo–So, KW) mit Vergangenem (Tagebuch, fertige Filme, abgehakte Folgen nach Zürcher Tag, besuchte Konzerte) und Kommendem (gemeinsame Agenda). Musik pro Zürcher Tag (`music_days`: Minuten, Plays, Top-Artist; stats.fm mit echter Hörzeit, sonst Last.fm geschätzt) wird täglich für heute, gestern und je 7 ältere Tage der letzten 5 Wochen geholt. Pro Woche eine Zeile mit Musikzeit und dem Artist, der an den meisten Tagen vorne lag.

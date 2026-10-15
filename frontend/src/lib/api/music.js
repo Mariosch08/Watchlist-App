@@ -51,6 +51,13 @@ export async function fetchMusicMonths() {
   return unwrap(await supabase.from('music_months').select('month, plays, minutes, minutes_estimated, top_artist, top_artist_plays, top_track, top_track_artist, source').order('month'));
 }
 
+// Listening per local day (calendar), inclusive range of ISO dates.
+export async function fetchMusicDays(from, to) {
+  return unwrap(
+    await supabase.from('music_days').select('day, plays, minutes, minutes_estimated, top_artist, top_artist_plays, source').gte('day', from).lte('day', to).order('day'),
+  );
+}
+
 export async function fetchMusicStats() {
   return unwrap(await supabase.from('music_stats').select('streams, minutes, tracks, artists, albums, updated_at').maybeSingle());
 }
